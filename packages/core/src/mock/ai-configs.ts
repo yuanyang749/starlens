@@ -1,0 +1,40 @@
+import type { AiConfig } from "../types";
+
+export const mockAiConfigs: AiConfig[] = [
+  {
+    id: "ai-1",
+    displayName: "Vercel Gateway Primary",
+    providerType: "vercel_gateway",
+    model: "openai/gpt-5.4",
+    baseUrl: null,
+    enabled: true,
+    isDefault: true,
+    lastValidatedAt: "2026-05-05T09:10:00.000Z",
+    lastValidationStatus: "success",
+    lastValidationError: null,
+  },
+  {
+    id: "ai-2",
+    displayName: "DeepSeek Gateway",
+    providerType: "openai_compatible",
+    model: "deepseek-chat",
+    baseUrl: "https://api.deepseek.com",
+    enabled: true,
+    isDefault: false,
+    lastValidatedAt: "2026-05-04T17:20:00.000Z",
+    lastValidationStatus: "success",
+    lastValidationError: null,
+  },
+  {
+    id: "ai-3",
+    displayName: "Anthropic Native",
+    providerType: "anthropic_native",
+    model: "claude-sonnet-4.5",
+    baseUrl: null,
+    enabled: false,
+    isDefault: false,
+    lastValidatedAt: "2026-05-03T08:45:00.000Z",
+    lastValidationStatus: "warning",
+    lastValidationError: "Model access pending on this account",
+  },
+];

@@ -1,0 +1,12 @@
+{
+  "name": "@starlens/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "stars": "src/index.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.mjs"
+  }
+}
