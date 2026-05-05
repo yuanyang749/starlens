@@ -1,23 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { mockRepoDetails, type PaginatedResult, type RepoSummary } from "@starlens/core";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { PaginatedResult, RepoSummary, SearchSort } from "@starlens/core";
 import {
   Bot,
+  Check,
   Clock3,
-  Filter,
   FolderGit2,
+  Plus,
   Search,
   Sparkles,
   Star,
   Tag,
+  X,
 } from "lucide-react";
 
+type ApiSuccess<T> = { ok: true; data: T };
+type ApiFailure = { ok: false; error: { code: string; message: string } };
+type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
+
+type SyncResult = {
+  status: string;
+  counts: {
+    fetched: number;
+    insertedOrUpdated: number;
+    unstarred: number;
+  };
+};
+
 function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime()) || date.getTime() === 0) {
+    return "No date";
+  }
+
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatCompactNumber(value: number) {
@@ -27,67 +47,171 @@ function formatCompactNumber(value: number) {
   }).format(value);
 }
 
+async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, init);
+  const payload = (await response.json()) as ApiResponse<T>;
+
+  if (!payload.ok) {
+    throw new Error(payload.error.message);
+  }
+
+  return payload.data;
+}
+
 export function WorkbenchView() {
   const [query, setQuery] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [repos, setRepos] = useState<RepoSummary[]>(mockRepoDetails);
-  const [total, setTotal] = useState(mockRepoDetails.length);
-  const [selectedId, setSelectedId] = useState<string>(mockRepoDetails[0].id);
+  const [sort, setSort] = useState<SearchSort>("updated");
+  const [language, setLanguage] = useState("");
+  const [owner, setOwner] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [repos, setRepos] = useState<RepoSummary[]>([]);
+  const [total, setTotal] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<RepoSummary | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [newTag, setNewTag] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const searchParams = useMemo(() => {
     const params = new URLSearchParams({
       pageSize: "20",
-      sort: query.trim() ? "relevance" : "updated",
+      sort: query.trim() ? "relevance" : sort,
     });
 
-    if (query.trim()) {
-      params.set("q", query.trim());
-    }
+    if (query.trim()) params.set("q", query.trim());
+    if (favoritesOnly) params.set("favorite", "true");
+    if (language.trim()) params.set("language", language.trim());
+    if (owner.trim()) params.set("owner", owner.trim());
+    if (tagFilter.trim()) params.set("tag", tagFilter.trim().toLowerCase());
 
-    if (favoritesOnly) {
-      params.set("favorite", "true");
-    }
+    return params;
+  }, [favoritesOnly, language, owner, query, sort, tagFilter]);
 
-    fetch(`/api/search?${params.toString()}`, { signal: controller.signal })
-      .then((response) => response.json())
-      .then(
-        (payload: {
-          ok: boolean;
-          data?: PaginatedResult<RepoSummary>;
-        }) => {
-          const data = payload.data;
+  const refreshList = useCallback(() => {
+    const controller = new AbortController();
 
-          if (payload.ok && data) {
-            setRepos(data.items);
-            setTotal(data.total);
-            setSelectedId((current) =>
-              data.items.some((repo) => repo.id === current)
-                ? current
-                : data.items[0]?.id ?? mockRepoDetails[0].id,
-            );
-          }
-        },
-      )
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") {
+    apiJson<PaginatedResult<RepoSummary>>(`/api/search?${searchParams.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        setRepos(data.items);
+        setTotal(data.total);
+        setError(null);
+        setSelectedId((current) =>
+          data.items.some((repo) => repo.id === current)
+            ? current
+            : data.items[0]?.id ?? null,
+        );
+        if (data.items.length === 0) {
+          setSelectedRepo(null);
+          setNoteDraft("");
+        }
+      })
+      .catch((caught: unknown) => {
+        if (caught instanceof DOMException && caught.name === "AbortError") {
           return;
         }
+
+        setError(caught instanceof Error ? caught.message : "Search failed.");
+      });
+
+    return controller;
+  }, [searchParams]);
+
+  useEffect(() => {
+    const controller = refreshList();
+    return () => controller.abort();
+  }, [refreshList]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      return;
+    }
+
+    const controller = new AbortController();
+    apiJson<RepoSummary>(`/api/repos/${selectedId}`, { signal: controller.signal })
+      .then((repo) => {
+        setSelectedRepo(repo);
+        setNoteDraft(repo.note);
+        setError(null);
+      })
+      .catch((caught: unknown) => {
+        if (caught instanceof DOMException && caught.name === "AbortError") {
+          return;
+        }
+
+        setError(caught instanceof Error ? caught.message : "Detail loading failed.");
       });
 
     return () => controller.abort();
-  }, [favoritesOnly, query]);
+  }, [selectedId]);
 
-  const selectedRepo =
-    repos.find((repo) => repo.id === selectedId) ??
-    repos[0] ??
-    mockRepoDetails[0];
+  async function syncNow() {
+    setSyncing(true);
+    setSyncMessage(null);
+    setError(null);
+
+    try {
+      const result = await apiJson<SyncResult>("/api/sync", { method: "POST" });
+      setSyncMessage(
+        `Synced ${result.counts.fetched} repos, ${result.counts.unstarred} unstarred.`,
+      );
+      refreshList();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function updateSelected(updates: { isFavorite?: boolean; note?: string }) {
+    if (!selectedRepo) return;
+
+    const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    setSelectedRepo(repo);
+    setNoteDraft(repo.note);
+    refreshList();
+  }
+
+  async function addTag() {
+    if (!selectedRepo || !newTag.trim()) return;
+
+    await apiJson<{ tags: string[] }>(`/api/repos/${selectedRepo.id}/tags`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tag: newTag.trim() }),
+    });
+    setNewTag("");
+    setSelectedId(selectedRepo.id);
+    const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`);
+    setSelectedRepo(repo);
+    refreshList();
+  }
+
+  async function deleteTag(tag: string) {
+    if (!selectedRepo) return;
+
+    await apiJson<{ tags: string[] }>(
+      `/api/repos/${selectedRepo.id}/tags/${encodeURIComponent(tag)}`,
+      { method: "DELETE" },
+    );
+    const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`);
+    setSelectedRepo(repo);
+    refreshList();
+  }
 
   return (
     <div className="flex flex-col gap-5">
       <section className="app-panel rounded-[24px] p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <label className="flex min-w-0 flex-1 items-center gap-3 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 py-3 text-sm text-[color:var(--muted)]">
               <Search className="h-4 w-4 shrink-0" />
               <input
@@ -97,42 +221,79 @@ export function WorkbenchView() {
                 className="w-full bg-transparent text-[color:var(--foreground)] outline-none placeholder:text-[color:var(--muted)]"
               />
             </label>
-            <button
-              type="button"
-              onClick={() => setFavoritesOnly((value) => !value)}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition ${
-                favoritesOnly
-                  ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--foreground)]"
-                  : "border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[color:var(--muted)]"
-              }`}
-            >
-              <Star className="h-4 w-4" />
-              Favorites
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setFavoritesOnly((value) => !value)}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition ${
+                  favoritesOnly
+                    ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--foreground)]"
+                    : "border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[color:var(--muted)]"
+                }`}
+              >
+                <Star className="h-4 w-4" />
+                Favorites
+              </button>
+              <button
+                type="button"
+                onClick={syncNow}
+                disabled={syncing}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm font-medium text-[color:var(--foreground)] disabled:opacity-60"
+              >
+                <Clock3 className="h-4 w-4 text-[color:var(--accent)]" />
+                {syncing ? "Syncing" : "Sync now"}
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI search
+              </button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm font-medium text-[color:var(--foreground)]"
+
+          <div className="grid gap-3 md:grid-cols-4">
+            <input
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+              placeholder="Language"
+              className="h-10 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm outline-none"
+            />
+            <input
+              value={owner}
+              onChange={(event) => setOwner(event.target.value)}
+              placeholder="Owner"
+              className="h-10 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm outline-none"
+            />
+            <input
+              value={tagFilter}
+              onChange={(event) => setTagFilter(event.target.value)}
+              placeholder="Tag"
+              className="h-10 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm outline-none"
+            />
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as SearchSort)}
+              className="h-10 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm outline-none"
             >
-              <Filter className="h-4 w-4 text-[color:var(--accent)]" />
-              Filters
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 text-sm font-medium text-[color:var(--foreground)]"
-            >
-              <Clock3 className="h-4 w-4 text-[color:var(--accent)]" />
-              Sync now
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white"
-            >
-              <Sparkles className="h-4 w-4" />
-              AI search
-            </button>
+              <option value="updated">Updated</option>
+              <option value="recent">Recently starred</option>
+              <option value="stars">Most stars</option>
+              <option value="relevance">Relevance</option>
+            </select>
           </div>
+
+          {error ? (
+            <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+          {syncMessage ? (
+            <div className="rounded-[18px] border border-[color:var(--line)] bg-[color:var(--accent-soft)] px-4 py-3 text-sm text-[color:var(--accent)]">
+              {syncMessage}
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -144,11 +305,11 @@ export function WorkbenchView() {
                 Starred repositories
               </p>
               <p className="text-sm text-[color:var(--muted)]">
-                {total} matching repos from /api/search.
+                {total} matching repos from your synced GitHub stars.
               </p>
             </div>
             <div className="rounded-full bg-[color:var(--surface-2)] px-3 py-1 text-xs text-[color:var(--muted)]">
-              Updated May 5
+              Live data
             </div>
           </div>
           <div className="divide-y divide-[color:var(--line)]">
@@ -207,105 +368,175 @@ export function WorkbenchView() {
               );
             })}
             {repos.length === 0 ? (
-              <div className="px-5 py-12 text-center text-sm text-[color:var(--muted)]">
-                No matching repositories in the mock API result set.
+              <div className="px-5 py-12 text-center">
+                <p className="text-sm font-medium text-[color:var(--foreground)]">
+                  No synced repositories yet.
+                </p>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-7 text-[color:var(--muted)]">
+                  Run your first GitHub sync to import public starred repos into
+                  the workbench.
+                </p>
+                <button
+                  type="button"
+                  onClick={syncNow}
+                  disabled={syncing}
+                  className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  <Clock3 className="h-4 w-4" />
+                  {syncing ? "Syncing" : "Start first sync"}
+                </button>
               </div>
             ) : null}
           </div>
         </div>
 
         <div className="app-panel rounded-[24px] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-[color:var(--muted)]">
-                Selected repository
-              </p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
-                {selectedRepo.fullName}
-              </h2>
-            </div>
-            <a
-              href={selectedRepo.htmlUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 items-center rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
-            >
-              Open on GitHub
-            </a>
-          </div>
-
-          <div className="mt-6 grid gap-4 2xl:grid-cols-3">
-            <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4 2xl:col-span-1">
-              <p className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                Summary
-              </p>
-              <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
-                {selectedRepo.repoSummary}
-              </p>
-            </div>
-            <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                Stats
-              </p>
-              <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
-                {formatCompactNumber(selectedRepo.stargazersCount)} stars,{" "}
-                {formatCompactNumber(selectedRepo.forksCount)} forks,{" "}
-                {selectedRepo.openIssuesCount} open issues.
-              </p>
-            </div>
-            <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                Source context
-              </p>
-              <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
-                {selectedRepo.visibility}, {selectedRepo.licenseName},{" "}
-                branch {selectedRepo.defaultBranch}.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-[22px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-[color:var(--foreground)]">
-                  Personal note
-                </p>
-                <span className="text-xs text-[color:var(--muted)]">
-                  Static for milestone one
-                </span>
-              </div>
-              <textarea
-                readOnly
-                value={selectedRepo.note}
-                className="min-h-36 w-full resize-none rounded-[18px] border border-[color:var(--line)] bg-[color:var(--surface-2)] px-4 py-3 text-sm leading-7 text-[color:var(--foreground)] outline-none"
-              />
-              <div className="mt-4 flex flex-wrap gap-2">
-                {selectedRepo.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--accent)]"
+          {selectedRepo ? (
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-[color:var(--muted)]">
+                    Selected repository
+                  </p>
+                  <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
+                    {selectedRepo.fullName}
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateSelected({ isFavorite: !selectedRepo.isFavorite })
+                    }
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
                   >
-                    {tag}
-                  </span>
-                ))}
+                    <Star
+                      className={`h-4 w-4 ${
+                        selectedRepo.isFavorite ? "fill-current text-[color:var(--accent)]" : ""
+                      }`}
+                    />
+                    {selectedRepo.isFavorite ? "Favorited" : "Favorite"}
+                  </button>
+                  <a
+                    href={selectedRepo.htmlUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-10 items-center rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
+                  >
+                    Open on GitHub
+                  </a>
+                </div>
               </div>
-            </div>
 
-            <div className="rounded-[22px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                <Bot className="h-4 w-4 text-[color:var(--accent)]" />
-                AI summary
+              <div className="mt-6 grid gap-4 2xl:grid-cols-3">
+                <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4 2xl:col-span-1">
+                  <p className="text-xs uppercase text-[color:var(--muted)]">
+                    Summary
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
+                    {selectedRepo.repoSummary}
+                  </p>
+                </div>
+                <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
+                  <p className="text-xs uppercase text-[color:var(--muted)]">Stats</p>
+                  <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
+                    {formatCompactNumber(selectedRepo.stargazersCount)} stars,{" "}
+                    {formatCompactNumber(selectedRepo.forksCount)} forks,{" "}
+                    {selectedRepo.openIssuesCount} open issues.
+                  </p>
+                </div>
+                <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
+                  <p className="text-xs uppercase text-[color:var(--muted)]">
+                    Source context
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
+                    {selectedRepo.visibility}, {selectedRepo.licenseName}, branch{" "}
+                    {selectedRepo.defaultBranch}.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm leading-7 text-[color:var(--muted)]">
-                {selectedRepo.aiSummary ?? selectedRepo.readmeExcerpt}
-              </p>
-              <div className="mt-5 rounded-[18px] border border-dashed border-[color:var(--line)] bg-[rgba(57,95,130,0.06)] p-4 text-sm text-[color:var(--muted)]">
-                Next milestone: wire this panel to `/api/ai/summarize` and
-                `/api/ai/rerank`, keeping the database search layer in charge of
-                recall.
+
+              <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-[22px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm font-medium text-[color:var(--foreground)]">
+                      Personal note
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => updateSelected({ note: noteDraft })}
+                      className="inline-flex h-8 items-center gap-1 rounded-full bg-[color:var(--foreground)] px-3 text-xs font-medium text-white"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Save
+                    </button>
+                  </div>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                    className="min-h-36 w-full resize-none rounded-[18px] border border-[color:var(--line)] bg-[color:var(--surface-2)] px-4 py-3 text-sm leading-7 text-[color:var(--foreground)] outline-none"
+                  />
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {selectedRepo.tags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => deleteTag(tag)}
+                        className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--accent)]"
+                      >
+                        {tag}
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      value={newTag}
+                      onChange={(event) => setNewTag(event.target.value)}
+                      placeholder="New tag"
+                      className="h-9 min-w-0 flex-1 rounded-full border border-[color:var(--line)] bg-white px-3 text-sm outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={addTag}
+                      className="inline-flex h-9 items-center gap-1 rounded-full border border-[color:var(--line)] px-3 text-sm"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-[22px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
+                    <Bot className="h-4 w-4 text-[color:var(--accent)]" />
+                    AI summary
+                  </div>
+                  <p className="text-sm leading-7 text-[color:var(--muted)]">
+                    {selectedRepo.aiSummary ??
+                      selectedRepo.readmeExcerpt ??
+                      "AI summary will be connected after provider configuration is live."}
+                  </p>
+                  <div className="mt-5 rounded-[18px] border border-dashed border-[color:var(--line)] bg-[rgba(57,95,130,0.06)] p-4 text-sm text-[color:var(--muted)]">
+                    AI calls stay disabled in this milestone; database search
+                    remains the source of recall.
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex min-h-96 items-center justify-center text-center">
+              <div>
+                <p className="text-sm font-medium text-[color:var(--foreground)]">
+                  Select a repository
+                </p>
+                <p className="mt-2 max-w-sm text-sm leading-7 text-[color:var(--muted)]">
+                  After your first sync, choose a repo from the list to inspect
+                  metadata, notes, tags, and summaries.
+                </p>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
     </div>

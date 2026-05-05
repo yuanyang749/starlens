@@ -1,7 +1,11 @@
 import { getMockRepo } from "@starlens/core";
-import { fail, ok } from "@/lib/api-response";
+import { fail, ok, unauthorized } from "@/lib/api-response";
+import { getSessionUser } from "@/server/auth/session";
 
 export async function POST(request: Request) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+
   const body = await request.json().catch(() => ({}));
 
   if (typeof body.repoId !== "string") {

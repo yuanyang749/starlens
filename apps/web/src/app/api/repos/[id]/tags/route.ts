@@ -1,11 +1,18 @@
-import { addMockRepoTag } from "@starlens/core";
-import { fail, ok } from "@/lib/api-response";
+import { fail, ok, unauthorized } from "@/lib/api-response";
+import { getSessionUser } from "@/server/auth/session";
+import { addRepoTag } from "@/server/repos/repository";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  const user = await getSessionUser();
+
+  if (!user) {
+    return unauthorized();
+  }
+
   const { id } = await context.params;
   const body = await request.json().catch(() => ({}));
 
@@ -13,10 +20,10 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("invalid_tag", "Tag is required.");
   }
 
-  const result = addMockRepoTag(id, body.tag);
-  if (!result) {
+  const repo = await addRepoTag(user.id, id, body.tag);
+  if (!repo) {
     return fail("repo_not_found", "Repository was not found.", 404);
   }
 
-  return ok(result);
+  return ok({ tags: repo.tags });
 }

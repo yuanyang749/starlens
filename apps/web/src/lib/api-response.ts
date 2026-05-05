@@ -13,3 +13,7 @@ export function fail(code: string, message: string, status = 400) {
     { status },
   );
 }
+
+export function unauthorized() {
+  return fail("unauthorized", "Authentication is required.", 401);
+}

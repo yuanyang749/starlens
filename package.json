@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "corepack pnpm --filter @starlens/web dev",
     "build": "corepack pnpm --filter @starlens/web build",
-    "lint": "corepack pnpm --filter @starlens/web lint"
+    "lint": "corepack pnpm --filter @starlens/web lint",
+    "test": "corepack pnpm --filter @starlens/web test",
+    "db:generate": "corepack pnpm --filter @starlens/web db:generate",
+    "db:migrate": "corepack pnpm --filter @starlens/web db:migrate"
   }
 }

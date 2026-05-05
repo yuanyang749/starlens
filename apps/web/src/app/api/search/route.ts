@@ -1,5 +1,7 @@
-import { searchMockRepos, type SearchSort } from "@starlens/core";
-import { ok } from "@/lib/api-response";
+import type { SearchSort } from "@starlens/core";
+import { ok, unauthorized } from "@/lib/api-response";
+import { getSessionUser } from "@/server/auth/session";
+import { searchRepos } from "@/server/repos/repository";
 
 function numberParam(value: string | null) {
   return value ? Number(value) : undefined;
@@ -11,11 +13,17 @@ function booleanParam(value: string | null) {
   return undefined;
 }
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  const user = await getSessionUser();
+
+  if (!user) {
+    return unauthorized();
+  }
+
   const params = new URL(request.url).searchParams;
   const sort = params.get("sort") as SearchSort | null;
 
-  const data = searchMockRepos({
+  const data = await searchRepos(user.id, {
     q: params.get("q") ?? undefined,
     page: numberParam(params.get("page")),
     pageSize: numberParam(params.get("pageSize")),

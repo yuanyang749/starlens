@@ -73,7 +73,8 @@ export function LandingPage() {
               GitHub
             </a>
             <Link
-              href="/app"
+              href="/api/auth/signin/github?callbackUrl=/app"
+              prefetch={false}
               className="flex h-10 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white transition hover:bg-[color:var(--accent)]"
             >
               Enter workspace
@@ -102,7 +103,8 @@ export function LandingPage() {
 
             <div className="flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/app"
+                href="/api/auth/signin/github?callbackUrl=/app"
+                prefetch={false}
                 className="flex h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--foreground)] px-6 text-sm font-medium text-white transition hover:bg-[color:var(--accent)]"
               >
                 Use GitHub login
@@ -385,7 +387,9 @@ export function LandingPage() {
             <a href="https://github.com/yuanyang749/starlens" target="_blank" rel="noreferrer">
               GitHub
             </a>
-            <Link href="/app">Workspace</Link>
+            <Link href="/api/auth/signin/github?callbackUrl=/app" prefetch={false}>
+              Workspace
+            </Link>
           </div>
         </div>
       </footer>

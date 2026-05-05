@@ -1,5 +1,6 @@
 import { getMockAiConfig } from "@starlens/core";
-import { fail, ok } from "@/lib/api-response";
+import { fail, ok, unauthorized } from "@/lib/api-response";
+import { getSessionUser } from "@/server/auth/session";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -13,6 +14,9 @@ const modelsByProvider = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+
   const { id } = await context.params;
   const config = getMockAiConfig(id);
 
