@@ -9,7 +9,7 @@ import {
   listAllStarredRepos,
   summarizeSyncedRepo,
 } from "./client";
-import { buildSearchDocument } from "@/server/repos/text";
+import { buildSearchDocument } from "@starlens/core";
 import { findUnstarredRepoIds } from "./sync-utils";
 import type { NormalizedGitHubStarredRepo } from "./normalize";
 
@@ -94,6 +94,7 @@ async function upsertSyncedRepo(
           description: repo.description,
           topics: repo.topics,
           repoSummary,
+          readmeExcerpt,
         }),
         isStarred: true,
         unstarredAt: null,
@@ -121,6 +122,7 @@ async function upsertSyncedRepo(
         repoSummary,
         tags: decorations.tags,
         note: decorations.note,
+        readmeExcerpt,
       }),
       isStarred: true,
       unstarredAt: null,

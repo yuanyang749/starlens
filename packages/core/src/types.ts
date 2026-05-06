@@ -1,3 +1,5 @@
+import type { RepoTextSource } from "./repo-text";
+
 export type ProviderType =
   | "vercel_gateway"
   | "openai_compatible"
@@ -23,14 +25,30 @@ export type RepoSummary = {
   openIssuesCount: number;
   defaultBranch: string;
   licenseName: string;
-  visibility: "public" | "private";
+  license: {
+    key: string;
+    name: string;
+  };
+  visibility: "public" | "private" | "internal";
   archived: boolean;
+  disabled: boolean;
+  isFork: boolean;
+  watchersCount: number;
+  homepage: string;
   isFavorite: boolean;
   tags: string[];
   note: string;
+  createdAtGithub: string;
+  updatedAtGithub: string;
   pushedAtGithub: string;
   starredAtGithub: string;
   lastSyncedAt: string;
+  repoSummarySource: RepoTextSource;
+  repoSummaryUpdatedAt: string;
+  readmeExcerptSource: RepoTextSource;
+  readmeExcerptUpdatedAt: string;
+  searchDocumentSource: RepoTextSource;
+  searchDocumentUpdatedAt: string;
 };
 
 export type AiConfig = {

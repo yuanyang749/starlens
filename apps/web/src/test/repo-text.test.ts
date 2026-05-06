@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRepoSummary,
+  buildRepoSummaryDetails,
   buildSearchDocument,
   extractReadmeExcerpt,
 } from "@/server/repos/text";
@@ -33,6 +34,17 @@ console.log("noise");
         readmeExcerpt: "Long fallback",
       }),
     ).toBe("React components for efficiently rendering large lists.");
+  });
+
+  it("reports the text source used by generated summaries", () => {
+    expect(
+      buildRepoSummaryDetails({
+        description: "",
+        topics: ["react", "performance"],
+        readmeExcerpt: "README fallback text",
+        fullName: "owner/repo",
+      }),
+    ).toMatchObject({ source: "github_topics" });
   });
 
   it("builds search documents from metadata, tags, and notes", () => {
