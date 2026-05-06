@@ -58,6 +58,12 @@ export type TokenRecord = {
 
 export type SearchSort = "relevance" | "recent" | "stars" | "updated";
 
+export const SEARCH_SORTS = ["relevance", "recent", "stars", "updated"] as const;
+export const DEFAULT_SEARCH_SORT: SearchSort = "updated";
+export const DEFAULT_SEARCH_PAGE = 1;
+export const DEFAULT_SEARCH_PAGE_SIZE = 20;
+export const MAX_SEARCH_PAGE_SIZE = 100;
+
 export type SearchReposInput = {
   q?: string;
   page?: number;
