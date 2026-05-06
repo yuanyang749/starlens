@@ -1,7 +1,14 @@
 import "server-only";
 
 import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
-import type { RepoSummary, SearchReposInput } from "@starlens/core";
+import {
+  DEFAULT_SEARCH_PAGE,
+  DEFAULT_SEARCH_PAGE_SIZE,
+  DEFAULT_SEARCH_SORT,
+  MAX_SEARCH_PAGE_SIZE,
+  type RepoSummary,
+  type SearchReposInput,
+} from "@starlens/core";
 import { getDb } from "@/db/client";
 import { repoNotes, repoTags, starredRepos } from "@/db/schema";
 import { buildSearchDocument } from "./text";
@@ -122,30 +129,32 @@ function repoWhere(userId: string, input: SearchReposInput) {
 
 export async function searchRepos(userId: string, input: SearchReposInput = {}) {
   const db = getDb();
-  const page = Math.max(input.page ?? 1, 1);
-  const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 100);
+  const page = Math.max(input.page ?? DEFAULT_SEARCH_PAGE, 1);
+  const pageSize = Math.min(
+    Math.max(input.pageSize ?? DEFAULT_SEARCH_PAGE_SIZE, 1),
+    MAX_SEARCH_PAGE_SIZE,
+  );
   const offset = (page - 1) * pageSize;
   const where = repoWhere(userId, input);
 
+  const normalizedSort = input.sort ?? DEFAULT_SEARCH_SORT;
   const orderBy =
-    input.sort === "stars"
+    normalizedSort === "stars"
       ? desc(starredRepos.stargazersCount)
-      : input.sort === "recent"
+      : normalizedSort === "recent"
         ? desc(starredRepos.starredAtGithub)
-        : input.sort === "updated"
-          ? desc(starredRepos.pushedAtGithub)
-          : input.q?.trim()
-            ? desc(
-                sql`ts_rank(to_tsvector('simple', ${starredRepos.searchDocument}), plainto_tsquery('simple', ${input.q.trim()}))`,
-              )
-            : desc(starredRepos.pushedAtGithub);
+        : normalizedSort === "relevance" && input.q?.trim()
+          ? desc(
+              sql`ts_rank(to_tsvector('simple', ${starredRepos.searchDocument}), plainto_tsquery('simple', ${input.q.trim()}))`,
+            )
+          : desc(starredRepos.pushedAtGithub);
 
   const [rows, totalRows] = await Promise.all([
     db
       .select()
       .from(starredRepos)
       .where(where)
-      .orderBy(orderBy)
+      .orderBy(orderBy, desc(starredRepos.id))
       .limit(pageSize)
       .offset(offset),
     db.select({ value: count() }).from(starredRepos).where(where),
