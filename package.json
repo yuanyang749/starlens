@@ -4,10 +4,15 @@
   "packageManager": "pnpm@10.33.3",
   "scripts": {
     "dev": "corepack pnpm --filter @starlens/web dev",
+    "dev:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web dev",
     "build": "corepack pnpm --filter @starlens/web build",
     "lint": "corepack pnpm --filter @starlens/web lint",
     "test": "corepack pnpm --filter @starlens/web test",
     "db:generate": "corepack pnpm --filter @starlens/web db:generate",
-    "db:migrate": "corepack pnpm --filter @starlens/web db:migrate"
+    "db:migrate": "corepack pnpm --filter @starlens/web db:migrate",
+    "db:migrate:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web db:migrate",
+    "db:migrate:neon": "node scripts/with-env.mjs .env.neon -- corepack pnpm --filter @starlens/web db:migrate",
+    "db:check:local": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env",
+    "db:check:neon": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env.neon"
   }
 }
