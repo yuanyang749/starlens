@@ -39,10 +39,12 @@ async function githubFetch(token: string, url: string, accept: string) {
 
 export async function listAllStarredRepos(token: string) {
   const repos: NormalizedGitHubStarredRepo[] = [];
+  let pages = 0;
   let url: string | null =
     "https://api.github.com/user/starred?sort=created&direction=desc&per_page=100";
 
   while (url) {
+    pages += 1;
     const response = await githubFetch(
       token,
       url,
@@ -53,7 +55,10 @@ export async function listAllStarredRepos(token: string) {
     url = nextPageUrl(response.headers.get("link"));
   }
 
-  return repos;
+  return {
+    repos,
+    pages,
+  };
 }
 
 export async function fetchReadmeExcerpt(token: string, owner: string, repo: string) {
