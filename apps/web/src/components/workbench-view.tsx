@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PaginatedResult, RepoSummary, SearchSort } from "@starlens/core";
 import {
   Bot,
@@ -48,11 +48,25 @@ function formatCompactNumber(value: number) {
 }
 
 async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init);
-  const payload = (await response.json()) as ApiResponse<T>;
+  let response: Response;
+  try {
+    response = await fetch(input, init);
+  } catch (caught) {
+    throw new Error(
+      `Network request failed: ${
+        caught instanceof Error ? caught.message : "Please check your connection."
+      }`,
+    );
+  }
+  let payload: ApiResponse<T>;
+  try {
+    payload = (await response.json()) as ApiResponse<T>;
+  } catch {
+    throw new Error("Response parsing failed: server returned invalid JSON.");
+  }
 
   if (!payload.ok) {
-    throw new Error(payload.error.message);
+    throw new Error(`Business request failed: ${payload.error.message}`);
   }
 
   return payload.data;
@@ -74,6 +88,11 @@ export function WorkbenchView() {
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [favoriteUpdating, setFavoriteUpdating] = useState(false);
+  const [tagSubmitting, setTagSubmitting] = useState(false);
+  const [tagDeleting, setTagDeleting] = useState<string | null>(null);
+  const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingNoteRef = useRef<string | null>(null);
 
   const searchParams = useMemo(() => {
     const params = new URLSearchParams({
@@ -115,11 +134,21 @@ export function WorkbenchView() {
           return;
         }
 
-        setError(caught instanceof Error ? caught.message : "Search failed.");
+        setError(
+          caught instanceof Error
+            ? `List request failed: ${caught.message}`
+            : "List request failed: search failed.",
+        );
       });
 
     return controller;
   }, [searchParams]);
+
+  const patchRepoInList = useCallback((repo: RepoSummary) => {
+    setRepos((items) =>
+      items.map((item) => (item.id === repo.id ? { ...item, ...repo } : item)),
+    );
+  }, []);
 
   useEffect(() => {
     const controller = refreshList();
@@ -143,7 +172,11 @@ export function WorkbenchView() {
           return;
         }
 
-        setError(caught instanceof Error ? caught.message : "Detail loading failed.");
+        setError(
+          caught instanceof Error
+            ? `Detail request failed: ${caught.message}`
+            : "Detail request failed: loading failed.",
+        );
       });
 
     return () => controller.abort();
@@ -168,44 +201,121 @@ export function WorkbenchView() {
   }
 
   async function updateSelected(updates: { isFavorite?: boolean; note?: string }) {
-    if (!selectedRepo) return;
+    if (!selectedRepo) return false;
 
-    const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(updates),
-    });
-    setSelectedRepo(repo);
-    setNoteDraft(repo.note);
-    refreshList();
+    const prevRepo = selectedRepo;
+    const optimisticRepo = { ...selectedRepo, ...updates };
+    setSelectedRepo(optimisticRepo);
+    patchRepoInList(optimisticRepo);
+
+    try {
+      const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      setSelectedRepo(repo);
+      setNoteDraft(repo.note);
+      patchRepoInList(repo);
+      setError(null);
+      return true;
+    } catch (caught) {
+      setSelectedRepo(prevRepo);
+      setNoteDraft(prevRepo.note);
+      patchRepoInList(prevRepo);
+      setError(
+        caught instanceof Error
+          ? `Detail request failed: ${caught.message}`
+          : "Detail request failed: update failed.",
+      );
+      return false;
+    }
   }
 
-  async function addTag() {
-    if (!selectedRepo || !newTag.trim()) return;
+  const scheduleNoteSave = useCallback(
+    (nextNote: string) => {
+      pendingNoteRef.current = nextNote;
+      if (noteDebounceRef.current) {
+        clearTimeout(noteDebounceRef.current);
+      }
+      noteDebounceRef.current = setTimeout(() => {
+        if (pendingNoteRef.current === null) return;
+        const noteToSave = pendingNoteRef.current;
+        pendingNoteRef.current = null;
+        void updateSelected({ note: noteToSave });
+      }, 600);
+    },
+    [updateSelected],
+  );
 
-    await apiJson<{ tags: string[] }>(`/api/repos/${selectedRepo.id}/tags`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ tag: newTag.trim() }),
-    });
+  async function addTag() {
+    if (!selectedRepo || !newTag.trim() || tagSubmitting) return;
+
+    const tag = newTag.trim().toLowerCase();
+    if (selectedRepo.tags.includes(tag)) return;
+
+    setTagSubmitting(true);
+    const prevRepo = selectedRepo;
+    const optimisticRepo = { ...selectedRepo, tags: [...selectedRepo.tags, tag] };
+    setSelectedRepo(optimisticRepo);
+    patchRepoInList(optimisticRepo);
     setNewTag("");
-    setSelectedId(selectedRepo.id);
-    const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`);
-    setSelectedRepo(repo);
-    refreshList();
+
+    try {
+      await apiJson<{ tags: string[] }>(`/api/repos/${selectedRepo.id}/tags`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tag }),
+      });
+      setError(null);
+    } catch (caught) {
+      setSelectedRepo(prevRepo);
+      patchRepoInList(prevRepo);
+      setNewTag(tag);
+      setError(
+        caught instanceof Error ? `Detail request failed: ${caught.message}` : "Detail request failed: add tag failed.",
+      );
+    } finally {
+      setTagSubmitting(false);
+    }
   }
 
   async function deleteTag(tag: string) {
-    if (!selectedRepo) return;
+    if (!selectedRepo || tagDeleting) return;
 
-    await apiJson<{ tags: string[] }>(
-      `/api/repos/${selectedRepo.id}/tags/${encodeURIComponent(tag)}`,
-      { method: "DELETE" },
-    );
-    const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`);
-    setSelectedRepo(repo);
-    refreshList();
+    setTagDeleting(tag);
+    const prevRepo = selectedRepo;
+    const optimisticRepo = {
+      ...selectedRepo,
+      tags: selectedRepo.tags.filter((item) => item !== tag),
+    };
+    setSelectedRepo(optimisticRepo);
+    patchRepoInList(optimisticRepo);
+
+    try {
+      await apiJson<{ tags: string[] }>(
+        `/api/repos/${selectedRepo.id}/tags/${encodeURIComponent(tag)}`,
+        { method: "DELETE" },
+      );
+      setError(null);
+    } catch (caught) {
+      setSelectedRepo(prevRepo);
+      patchRepoInList(prevRepo);
+      setError(
+        caught instanceof Error ? `Detail request failed: ${caught.message}` : "Detail request failed: delete tag failed.",
+      );
+    } finally {
+      setTagDeleting(null);
+    }
   }
+
+  useEffect(
+    () => () => {
+      if (noteDebounceRef.current) clearTimeout(noteDebounceRef.current);
+    },
+    [],
+  );
+
 
   return (
     <div className="flex flex-col gap-5">
@@ -405,9 +515,13 @@ export function WorkbenchView() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      updateSelected({ isFavorite: !selectedRepo.isFavorite })
-                    }
+                    onClick={async () => {
+                      if (favoriteUpdating) return;
+                      setFavoriteUpdating(true);
+                      await updateSelected({ isFavorite: !selectedRepo.isFavorite });
+                      setFavoriteUpdating(false);
+                    }}
+                    disabled={favoriteUpdating}
                     className="inline-flex h-10 items-center gap-2 rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
                   >
                     <Star
@@ -464,7 +578,7 @@ export function WorkbenchView() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => updateSelected({ note: noteDraft })}
+                      onClick={() => scheduleNoteSave(noteDraft)}
                       className="inline-flex h-8 items-center gap-1 rounded-full bg-[color:var(--foreground)] px-3 text-xs font-medium text-white"
                     >
                       <Check className="h-3.5 w-3.5" />
@@ -473,7 +587,11 @@ export function WorkbenchView() {
                   </div>
                   <textarea
                     value={noteDraft}
-                    onChange={(event) => setNoteDraft(event.target.value)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setNoteDraft(value);
+                      scheduleNoteSave(value);
+                    }}
                     className="min-h-36 w-full resize-none rounded-[18px] border border-[color:var(--line)] bg-[color:var(--surface-2)] px-4 py-3 text-sm leading-7 text-[color:var(--foreground)] outline-none"
                   />
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -482,6 +600,7 @@ export function WorkbenchView() {
                         key={tag}
                         type="button"
                         onClick={() => deleteTag(tag)}
+                        disabled={Boolean(tagDeleting)}
                         className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--accent)]"
                       >
                         {tag}
@@ -499,6 +618,7 @@ export function WorkbenchView() {
                     <button
                       type="button"
                       onClick={addTag}
+                      disabled={tagSubmitting}
                       className="inline-flex h-9 items-center gap-1 rounded-full border border-[color:var(--line)] px-3 text-sm"
                     >
                       <Plus className="h-3.5 w-3.5" />
