@@ -54,6 +54,26 @@ describe("tokens settings interactions", () => {
     await act(async () => revoke?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(el.textContent).toContain("No tokens yet");
   });
+
+  it("clears the one-time token after revoke", async () => {
+    const token = { id: "t1", name: "Token 1", tokenPrefix: "stl", createdAt: new Date().toISOString(), lastUsedAt: null };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { ...token, token: "stl_secret_token" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [token] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { revoked: true } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const { el } = mount(<TokensSettingsView />);
+    await act(async () => Promise.resolve());
+    const create = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("New token"));
+    await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(el.textContent).toContain("stl_secret_token");
+    const revoke = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Revoke"));
+    await act(async () => revoke?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(el.textContent).not.toContain("stl_secret_token");
+    expect(el.textContent).toContain("Token revoked");
+  });
 });
 
 describe("AI settings interactions", () => {
@@ -100,5 +120,33 @@ describe("AI settings interactions", () => {
       displayName: "DeepSeek",
       model: "deepseek-chat",
     });
+  });
+
+  it("shows provider validation failures as errors", async () => {
+    const config = {
+      id: "ai-1",
+      displayName: "Broken provider",
+      providerType: "openai_compatible",
+      model: "bad-model",
+      baseUrl: "https://example.invalid",
+      enabled: true,
+      isDefault: false,
+      lastValidatedAt: null,
+      lastValidationStatus: "warning",
+      lastValidationError: null,
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [config] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { status: "error", message: "fetch failed" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [{ ...config, lastValidationStatus: "error" }] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const { el } = mount(<AISettingsView />);
+    await act(async () => Promise.resolve());
+    const validate = Array.from(el.querySelectorAll("button")).find((item) =>
+      item.textContent?.includes("Validate"),
+    );
+    await act(async () => validate?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(el.textContent).toContain("fetch failed");
+    expect(el.querySelector(".text-red-500")?.textContent).toContain("fetch failed");
   });
 });

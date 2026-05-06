@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   Bot,
@@ -45,7 +46,40 @@ const workflowNotes = [
   "Agent-ready tokens so Hermes or OpenClaw can reuse the same capability set.",
 ];
 
-export function LandingPage() {
+function WorkspaceLink({
+  children,
+  className,
+  githubAuthEnabled,
+}: {
+  children: ReactNode;
+  className: string;
+  githubAuthEnabled: boolean;
+}) {
+  if (!githubAuthEnabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        title="GitHub OAuth is not configured in this local environment."
+        className={`${className} cursor-not-allowed opacity-55`}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href="/api/auth/signin/github?callbackUrl=/app"
+      prefetch={false}
+      className={className}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
   return (
     <div className="grain min-h-screen overflow-x-hidden">
       <header className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[rgba(245,247,248,0.8)] backdrop-blur-xl">
@@ -72,14 +106,13 @@ export function LandingPage() {
               <Github className="h-4 w-4" />
               GitHub
             </a>
-            <Link
-              href="/api/auth/signin/github?callbackUrl=/app"
-              prefetch={false}
+            <WorkspaceLink
+              githubAuthEnabled={githubAuthEnabled}
               className="flex h-10 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white transition hover:bg-[color:var(--accent)]"
             >
               Enter workspace
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </WorkspaceLink>
           </div>
         </div>
       </header>
@@ -102,14 +135,13 @@ export function LandingPage() {
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row">
-              <Link
-                href="/api/auth/signin/github?callbackUrl=/app"
-                prefetch={false}
+              <WorkspaceLink
+                githubAuthEnabled={githubAuthEnabled}
                 className="flex h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--foreground)] px-6 text-sm font-medium text-white transition hover:bg-[color:var(--accent)]"
               >
                 Use GitHub login
                 <ArrowRight className="h-4 w-4" />
-              </Link>
+              </WorkspaceLink>
               <a
                 href="https://github.com/yuanyang749/starlens"
                 target="_blank"
@@ -387,9 +419,15 @@ export function LandingPage() {
             <a href="https://github.com/yuanyang749/starlens" target="_blank" rel="noreferrer">
               GitHub
             </a>
-            <Link href="/api/auth/signin/github?callbackUrl=/app" prefetch={false}>
-              Workspace
-            </Link>
+            {githubAuthEnabled ? (
+              <Link href="/api/auth/signin/github?callbackUrl=/app" prefetch={false}>
+                Workspace
+              </Link>
+            ) : (
+              <span title="GitHub OAuth is not configured in this local environment.">
+                Workspace
+              </span>
+            )}
           </div>
         </div>
       </footer>

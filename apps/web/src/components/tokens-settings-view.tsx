@@ -52,6 +52,7 @@ export function TokensSettingsView() {
   const revokeToken = async (id: string) => {
     try {
       await fetchApi<{ revoked: true }>(`/api/tokens/${id}`, { method: "DELETE" });
+      setCreatedToken(null);
       await loadTokens();
       setToast("Token revoked.");
     } catch (err) {

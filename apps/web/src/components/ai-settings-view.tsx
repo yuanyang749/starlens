@@ -102,6 +102,12 @@ export function AISettingsView() {
         { method: "POST" },
       );
       await loadConfigs();
+      if (result.status === "error") {
+        setMessage(null);
+        setError(result.message || "Provider validation failed.");
+        return;
+      }
+      setError(null);
       setMessage(result.message || `Validation ${result.status}.`);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Failed to validate AI config.");
