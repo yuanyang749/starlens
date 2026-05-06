@@ -20,12 +20,25 @@ type ApiFailure = { ok: false; error: { code: string; message: string } };
 type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
 type SyncResult = {
-  status: string;
+  status: "success" | "error";
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  pageCount: number;
+  failedCount: number;
+  errorSummary: string | null;
+  errorLevel: "auth" | "rate_limit" | "network" | "unknown" | null;
   counts: {
     fetched: number;
     insertedOrUpdated: number;
     unstarred: number;
   };
+  history: Array<{
+    startedAt: string;
+    status: "success" | "error";
+    counts: { fetched: number; insertedOrUpdated: number; unstarred: number };
+    errorSummary: string | null;
+  }>;
 };
 
 function formatDate(value: string) {
@@ -73,6 +86,7 @@ export function WorkbenchView() {
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [lastSync, setLastSync] = useState<SyncResult | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const searchParams = useMemo(() => {
@@ -156,9 +170,21 @@ export function WorkbenchView() {
 
     try {
       const result = await apiJson<SyncResult>("/api/sync", { method: "POST" });
-      setSyncMessage(
-        `Synced ${result.counts.fetched} repos, ${result.counts.unstarred} unstarred.`,
-      );
+      setLastSync(result);
+      const statusText = result.status === "success" ? "completed" : "failed";
+      setSyncMessage(`Sync ${statusText}: ${result.counts.fetched} fetched, ${result.counts.unstarred} unstarred.`);
+
+      if (result.status === "error") {
+        const levelHint =
+          result.errorLevel === "auth"
+            ? "GitHub token may be expired, please reconnect."
+            : result.errorLevel === "rate_limit"
+              ? "GitHub API rate limit reached, retry later."
+              : result.errorLevel === "network"
+                ? "Network issue detected, please retry."
+                : "Unknown sync issue.";
+        setError(`${levelHint}${result.errorSummary ? ` (${result.errorSummary})` : ""}`);
+      }
       refreshList();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Sync failed.");
@@ -292,6 +318,11 @@ export function WorkbenchView() {
           {syncMessage ? (
             <div className="rounded-[18px] border border-[color:var(--line)] bg-[color:var(--accent-soft)] px-4 py-3 text-sm text-[color:var(--accent)]">
               {syncMessage}
+            </div>
+          ) : null}
+          {lastSync ? (
+            <div className="rounded-[18px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 py-3 text-sm text-[color:var(--muted)]">
+              Last sync: {new Date(lastSync.finishedAt).toLocaleString()} · {lastSync.counts.fetched} repos · {lastSync.status}
             </div>
           ) : null}
         </div>

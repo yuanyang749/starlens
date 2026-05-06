@@ -19,6 +19,61 @@ type SyncCounts = {
   unstarred: number;
 };
 
+type SyncErrorLevel = "auth" | "rate_limit" | "network" | "unknown";
+
+export type SyncHistoryEntry = {
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  pageCount: number;
+  failedCount: number;
+  errorSummary: string | null;
+  status: "success" | "error";
+  counts: SyncCounts;
+  errorLevel: SyncErrorLevel | null;
+};
+
+export type SyncGitHubStarsResult = {
+  counts: SyncCounts;
+  pageCount: number;
+  failedCount: number;
+};
+
+const SYNC_HISTORY_LIMIT = 8;
+const syncHistoryByUser = new Map<string, SyncHistoryEntry[]>();
+
+export function addSyncHistory(userId: string, entry: SyncHistoryEntry) {
+  const history = syncHistoryByUser.get(userId) ?? [];
+  const nextHistory = [entry, ...history].slice(0, SYNC_HISTORY_LIMIT);
+  syncHistoryByUser.set(userId, nextHistory);
+}
+
+export function getSyncHistory(userId: string) {
+  return syncHistoryByUser.get(userId) ?? [];
+}
+
+export function resolveSyncErrorLevel(error: unknown): SyncErrorLevel {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (message.includes("401") || message.includes("403") || message.includes("token")) {
+    return "auth";
+  }
+
+  if (message.includes("429") || message.includes("rate limit")) {
+    return "rate_limit";
+  }
+
+  if (
+    message.includes("network") ||
+    message.includes("fetch") ||
+    message.includes("econn")
+  ) {
+    return "network";
+  }
+
+  return "unknown";
+}
+
 async function getGitHubAccessToken(userId: string) {
   const db = getDb();
   const account = await db.query.githubAccounts.findFirst({
@@ -135,7 +190,7 @@ async function upsertSyncedRepo(
   return existing.id;
 }
 
-export async function syncGitHubStars(userId: string): Promise<SyncCounts> {
+export async function syncGitHubStars(userId: string): Promise<SyncGitHubStarsResult> {
   const db = getDb();
   const { account, token } = await getGitHubAccessToken(userId);
   const now = new Date();
@@ -151,7 +206,7 @@ export async function syncGitHubStars(userId: string): Promise<SyncCounts> {
     .where(eq(githubAccounts.id, account.id));
 
   try {
-    const repos = await listAllStarredRepos(token);
+    const { repos, pages } = await listAllStarredRepos(token);
     const syncedIds: string[] = [];
 
     for (const repo of repos) {
@@ -198,9 +253,13 @@ export async function syncGitHubStars(userId: string): Promise<SyncCounts> {
       .where(eq(githubAccounts.id, account.id));
 
     return {
-      fetched: repos.length,
-      insertedOrUpdated: repos.length,
-      unstarred,
+      counts: {
+        fetched: repos.length,
+        insertedOrUpdated: repos.length,
+        unstarred,
+      },
+      pageCount: pages,
+      failedCount: 0,
     };
   } catch (error) {
     await db
