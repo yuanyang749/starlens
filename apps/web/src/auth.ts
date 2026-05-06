@@ -2,6 +2,11 @@ import type { NextAuthOptions } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 import { upsertGitHubOAuthUser } from "@/server/auth/oauth-user";
 
+const githubOAuthTimeoutMs = Number.parseInt(
+  process.env.AUTH_GITHUB_OAUTH_TIMEOUT_MS ?? "30000",
+  10,
+);
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: {
@@ -11,6 +16,11 @@ export const authOptions: NextAuthOptions = {
     GitHubProvider({
       clientId: process.env.AUTH_GITHUB_ID ?? "",
       clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
+      httpOptions: {
+        timeout: Number.isFinite(githubOAuthTimeoutMs)
+          ? githubOAuthTimeoutMs
+          : 30000,
+      },
       authorization: {
         params: {
           scope: "read:user user:email",

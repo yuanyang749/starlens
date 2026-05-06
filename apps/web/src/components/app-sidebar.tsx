@@ -70,7 +70,7 @@ export function AppSidebar() {
           Public and app split
         </div>
         <p className="leading-7">
-          `/` stays public and product-facing while `/app` holds the real workspace flow.
+          The public site stays product-facing while the app holds the real workspace flow.
         </p>
       </div>
     </aside>
