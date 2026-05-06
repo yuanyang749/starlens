@@ -435,7 +435,7 @@ export function WorkbenchView() {
     }
   }
 
-  async function updateSelected(updates: { isFavorite?: boolean; note?: string }) {
+  const updateSelected = useCallback(async (updates: { isFavorite?: boolean; note?: string }) => {
     if (!selectedRepo) return false;
 
     const prevRepo = selectedRepo;
@@ -465,7 +465,7 @@ export function WorkbenchView() {
       );
       return false;
     }
-  }
+  }, [patchRepoInList, selectedRepo]);
 
   const scheduleNoteSave = useCallback(
     (nextNote: string) => {

@@ -13,8 +13,8 @@ export function TokensSettingsView() {
 
   const loadTokens = async (signal?: AbortSignal) => {
     try {
-      setError(null);
       const data = await fetchApi<TokenRecord[]>("/api/tokens", { signal });
+      setError(null);
       setTokens(data);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -26,7 +26,7 @@ export function TokensSettingsView() {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadTokens(controller.signal);
+    void Promise.resolve().then(() => loadTokens(controller.signal));
     return () => controller.abort();
   }, []);
 

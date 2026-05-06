@@ -13,8 +13,8 @@ export function AISettingsView() {
 
   const loadConfigs = async (signal?: AbortSignal) => {
     try {
-      setError(null);
       const data = await fetchApi<AiConfig[]>("/api/ai/configs", { signal });
+      setError(null);
       setConfigs(data);
       setSelectedId((prev) => prev ?? data[0]?.id ?? null);
     } catch (err) {
@@ -27,7 +27,7 @@ export function AISettingsView() {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadConfigs(controller.signal);
+    void Promise.resolve().then(() => loadConfigs(controller.signal));
     return () => controller.abort();
   }, []);
 
