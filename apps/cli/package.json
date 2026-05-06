@@ -7,6 +7,7 @@
     "stars": "src/index.mjs"
   },
   "scripts": {
-    "start": "node src/index.mjs"
+    "start": "node src/index.mjs",
+    "test": "node --test src/test/*.test.mjs"
   }
 }
