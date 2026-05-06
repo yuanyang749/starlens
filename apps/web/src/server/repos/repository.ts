@@ -11,16 +11,37 @@ import {
 } from "@starlens/core";
 import { getDb } from "@/db/client";
 import { repoNotes, repoTags, starredRepos } from "@/db/schema";
-import { buildSearchDocument } from "./text";
+import {
+  REPO_TEXT_FALLBACKS,
+  buildRepoSummaryDetails,
+  buildSearchDocument,
+} from "./text";
 
 type RepoRow = typeof starredRepos.$inferSelect;
 type NoteRow = typeof repoNotes.$inferSelect;
 
 function dateString(value: Date | null) {
-  return value?.toISOString() ?? new Date(0).toISOString();
+  return value?.toISOString() ?? REPO_TEXT_FALLBACKS.date;
+}
+
+function visibility(value: string) {
+  return value === "private" || value === "internal" ? value : "public";
 }
 
 function toApiRepo(repo: RepoRow, tags: string[], note?: NoteRow): RepoSummary {
+  const summaryDetails = buildRepoSummaryDetails({
+    description: repo.description,
+    topics: repo.topics,
+    readmeExcerpt: repo.readmeExcerpt,
+    fullName: repo.fullName,
+  });
+  const repoSummary = repo.repoSummary || summaryDetails.text;
+  const readmeExcerpt = repo.readmeExcerpt || REPO_TEXT_FALLBACKS.readmeExcerpt;
+  const repoSummaryUpdatedAt = dateString(
+    repo.readmeLastProcessedAt ?? repo.lastSyncedAt,
+  );
+  const searchDocumentUpdatedAt = dateString(repo.updatedAt ?? repo.lastSyncedAt);
+
   return {
     id: repo.id,
     githubRepoId: repo.githubRepoId,
@@ -29,25 +50,41 @@ function toApiRepo(repo: RepoRow, tags: string[], note?: NoteRow): RepoSummary {
     ownerLogin: repo.ownerLogin,
     ownerAvatarUrl: repo.ownerAvatarUrl ?? "",
     htmlUrl: repo.htmlUrl,
-    description: repo.description ?? "",
-    repoSummary: repo.repoSummary,
-    readmeExcerpt: repo.readmeExcerpt,
+    description: repo.description ?? REPO_TEXT_FALLBACKS.description,
+    repoSummary,
+    readmeExcerpt,
     aiSummary: repo.aiSummary ?? undefined,
-    language: repo.language ?? "Unknown",
+    language: repo.language ?? REPO_TEXT_FALLBACKS.language,
     topics: repo.topics,
     stargazersCount: repo.stargazersCount,
     forksCount: repo.forksCount,
     openIssuesCount: repo.openIssuesCount,
-    defaultBranch: repo.defaultBranch ?? "main",
-    licenseName: repo.licenseName ?? "No license",
-    visibility: repo.visibility === "private" ? "private" : "public",
+    defaultBranch: repo.defaultBranch ?? REPO_TEXT_FALLBACKS.defaultBranch,
+    licenseName: repo.licenseName ?? REPO_TEXT_FALLBACKS.licenseName,
+    license: {
+      key: repo.licenseKey ?? REPO_TEXT_FALLBACKS.licenseKey,
+      name: repo.licenseName ?? REPO_TEXT_FALLBACKS.licenseName,
+    },
+    visibility: visibility(repo.visibility),
     archived: repo.archived,
+    disabled: repo.disabled,
+    isFork: repo.isFork,
+    watchersCount: repo.watchersCount,
+    homepage: repo.homepage ?? "",
     isFavorite: repo.isFavorite,
     tags,
     note: note?.note ?? "",
+    createdAtGithub: dateString(repo.createdAtGithub),
+    updatedAtGithub: dateString(repo.updatedAtGithub),
     pushedAtGithub: dateString(repo.pushedAtGithub),
     starredAtGithub: dateString(repo.starredAtGithub),
     lastSyncedAt: dateString(repo.lastSyncedAt),
+    repoSummarySource: summaryDetails.source,
+    repoSummaryUpdatedAt,
+    readmeExcerptSource: repo.readmeExcerpt ? "github_readme_excerpt" : "system_fallback",
+    readmeExcerptUpdatedAt: dateString(repo.readmeLastProcessedAt),
+    searchDocumentSource: "repo_metadata",
+    searchDocumentUpdatedAt,
   };
 }
 
@@ -219,6 +256,7 @@ async function refreshSearchDocument(userId: string, repoId: string) {
         repoSummary: detail.repoSummary,
         tags: detail.tags,
         note: detail.note,
+        readmeExcerpt: detail.readmeExcerpt,
       }),
       updatedAt: new Date(),
     })

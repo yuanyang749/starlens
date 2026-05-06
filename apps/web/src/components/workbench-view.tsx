@@ -14,6 +14,7 @@ import {
   Bot,
   Check,
   Clock3,
+  ExternalLink,
   FolderGit2,
   Plus,
   Search,
@@ -106,6 +107,69 @@ function readFiltersFromParams(params: Pick<URLSearchParams, "get">) {
     owner: normalizeUrlValue(params.get("owner")),
     tagFilter: normalizeUrlValue(params.get("tag"), { lowercase: true }),
   };
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  github_description: "GitHub original description",
+  github_topics: "GitHub topics",
+  github_readme: "GitHub README",
+  github_readme_excerpt: "GitHub README excerpt",
+  repo_metadata: "Repository metadata",
+  curation_metadata: "Notes and tags",
+  system_fallback: "System fallback",
+};
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime()) || date.getTime() === 0) {
+    return "Not updated yet";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function safeExternalUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function CollapsibleText({
+  text,
+  className = "",
+  limit = 280,
+}: {
+  text: string;
+  className?: string;
+  limit?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const shouldCollapse = text.length > limit;
+  const visibleText =
+    shouldCollapse && !expanded ? `${text.slice(0, limit).trim()}...` : text;
+
+  return (
+    <div>
+      <p className={className}>{visibleText}</p>
+      {shouldCollapse ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-2 text-xs font-medium text-[color:var(--accent)]"
+        >
+          {expanded ? "Collapse" : "Expand"}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 function formatDate(value: string) {
@@ -487,6 +551,12 @@ export function WorkbenchView() {
     [],
   );
 
+  const selectedGithubUrl = selectedRepo
+    ? safeExternalUrl(selectedRepo.htmlUrl)
+    : null;
+  const selectedHomepageUrl = selectedRepo?.homepage
+    ? safeExternalUrl(selectedRepo.homepage)
+    : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -725,42 +795,91 @@ export function WorkbenchView() {
                     />
                     {selectedRepo.isFavorite ? "Favorited" : "Favorite"}
                   </button>
-                  <a
-                    href={selectedRepo.htmlUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-10 items-center rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
-                  >
-                    Open on GitHub
-                  </a>
+                  {selectedGithubUrl ? (
+                    <a
+                      href={selectedGithubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-10 items-center gap-2 rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
+                    >
+                      Open on GitHub
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ) : null}
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 2xl:grid-cols-3">
                 <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4 2xl:col-span-1">
                   <p className="text-xs uppercase text-[color:var(--muted)]">
-                    Summary
+                    GitHub original description
                   </p>
-                  <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
-                    {selectedRepo.repoSummary}
+                  <CollapsibleText
+                    text={selectedRepo.description}
+                    limit={220}
+                    className="mt-2 text-sm leading-7 text-[color:var(--foreground)]"
+                  />
+                </div>
+                <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4 2xl:col-span-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs uppercase text-[color:var(--muted)]">
+                      System summary
+                    </p>
+                    <span className="text-[11px] text-[color:var(--muted)]">
+                      {formatDateTime(selectedRepo.repoSummaryUpdatedAt)}
+                    </span>
+                  </div>
+                  <CollapsibleText
+                    text={selectedRepo.repoSummary}
+                    limit={260}
+                    className="mt-2 text-sm leading-7 text-[color:var(--foreground)]"
+                  />
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">
+                    Source:{" "}
+                    {SOURCE_LABELS[selectedRepo.repoSummarySource] ??
+                      selectedRepo.repoSummarySource}
                   </p>
                 </div>
                 <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
                   <p className="text-xs uppercase text-[color:var(--muted)]">Stats</p>
                   <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
                     {formatCompactNumber(selectedRepo.stargazersCount)} stars,{" "}
+                    {formatCompactNumber(selectedRepo.watchersCount)} watchers,{" "}
                     {formatCompactNumber(selectedRepo.forksCount)} forks,{" "}
                     {selectedRepo.openIssuesCount} open issues.
                   </p>
                 </div>
-                <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
+                <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4 2xl:col-span-3">
                   <p className="text-xs uppercase text-[color:var(--muted)]">
                     Source context
                   </p>
                   <p className="mt-2 text-sm leading-7 text-[color:var(--foreground)]">
-                    {selectedRepo.visibility}, {selectedRepo.licenseName}, branch{" "}
+                    {selectedRepo.visibility}, {selectedRepo.license.name}, branch{" "}
                     {selectedRepo.defaultBranch}.
+                    {selectedRepo.archived ? " Archived." : ""}
+                    {selectedRepo.isFork ? " Fork." : ""}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
+                    <span>Created {formatDateTime(selectedRepo.createdAtGithub)}</span>
+                    <span>Updated {formatDateTime(selectedRepo.updatedAtGithub)}</span>
+                    <span>Synced {formatDateTime(selectedRepo.lastSyncedAt)}</span>
+                    <span>
+                      Search index:{" "}
+                      {SOURCE_LABELS[selectedRepo.searchDocumentSource] ??
+                        selectedRepo.searchDocumentSource}
+                      , {formatDateTime(selectedRepo.searchDocumentUpdatedAt)}
+                    </span>
+                    {selectedHomepageUrl ? (
+                      <a
+                        href={selectedHomepageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[color:var(--accent)]"
+                      >
+                        Homepage <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -822,18 +941,26 @@ export function WorkbenchView() {
                 </div>
 
                 <div className="rounded-[22px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                    <Bot className="h-4 w-4 text-[color:var(--accent)]" />
-                    AI summary
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
+                      <Bot className="h-4 w-4 text-[color:var(--accent)]" />
+                      System summary / README context
+                    </div>
+                    <span className="text-[11px] text-[color:var(--muted)]">
+                      README {formatDateTime(selectedRepo.readmeExcerptUpdatedAt)}
+                    </span>
                   </div>
-                  <p className="text-sm leading-7 text-[color:var(--muted)]">
-                    {selectedRepo.aiSummary ??
-                      selectedRepo.readmeExcerpt ??
-                      "AI summary will be connected after provider configuration is live."}
-                  </p>
+                  <CollapsibleText
+                    text={selectedRepo.aiSummary || selectedRepo.readmeExcerpt}
+                    limit={520}
+                    className="text-sm leading-7 text-[color:var(--muted)]"
+                  />
                   <div className="mt-5 rounded-[18px] border border-dashed border-[color:var(--line)] bg-[rgba(57,95,130,0.06)] p-4 text-sm text-[color:var(--muted)]">
-                    AI calls stay disabled in this milestone; database search
-                    remains the source of recall.
+                    README source:{" "}
+                    {SOURCE_LABELS[selectedRepo.readmeExcerptSource] ??
+                      selectedRepo.readmeExcerptSource}
+                    . AI calls stay disabled in this milestone; database search remains
+                    the source of recall.
                   </div>
                 </div>
               </div>
