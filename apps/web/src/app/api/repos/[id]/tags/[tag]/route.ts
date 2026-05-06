@@ -1,13 +1,13 @@
 import { fail, ok, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/server/auth/session";
+import { getApiUser } from "@/server/auth/api-user";
 import { deleteRepoTag } from "@/server/repos/repository";
 
 type RouteContext = {
   params: Promise<{ id: string; tag: string }>;
 };
 
-export async function DELETE(_request: Request, context: RouteContext) {
-  const user = await getSessionUser();
+export async function DELETE(request: Request, context: RouteContext) {
+  const user = await getApiUser(request);
 
   if (!user) {
     return unauthorized();

@@ -1,12 +1,15 @@
-import { createMockToken, listMockTokens } from "@starlens/core";
 import { fail, ok, unauthorized } from "@/lib/api-response";
 import { getSessionUser } from "@/server/auth/session";
+import {
+  createPersonalApiToken,
+  listPersonalApiTokens,
+} from "@/server/auth/personal-tokens";
 
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
 
-  return ok(listMockTokens());
+  return ok(await listPersonalApiTokens(user.id));
 }
 
 export async function POST(request: Request) {
@@ -19,5 +22,5 @@ export async function POST(request: Request) {
     return fail("invalid_token_name", "Token name is required.");
   }
 
-  return ok(createMockToken(body.name.trim()));
+  return ok(await createPersonalApiToken(user.id, body.name.trim()));
 }

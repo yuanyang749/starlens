@@ -59,8 +59,8 @@ export type AiConfig = {
   baseUrl: string | null;
   enabled: boolean;
   isDefault: boolean;
-  lastValidatedAt: string;
-  lastValidationStatus: "success" | "warning";
+  lastValidatedAt: string | null;
+  lastValidationStatus: "success" | "warning" | "error" | null;
   lastValidationError: string | null;
 };
 

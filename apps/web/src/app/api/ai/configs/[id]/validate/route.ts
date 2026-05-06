@@ -1,27 +1,21 @@
-import { getMockAiConfig } from "@starlens/core";
 import { fail, ok, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/server/auth/session";
+import { getApiUser } from "@/server/auth/api-user";
+import { validateAiConfig } from "@/server/ai/configs";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
-  const user = await getSessionUser();
+export async function POST(request: Request, context: RouteContext) {
+  const user = await getApiUser(request);
   if (!user) return unauthorized();
 
   const { id } = await context.params;
-  const config = getMockAiConfig(id);
+  const result = await validateAiConfig(user.id, id);
 
-  if (!config) {
+  if (!result) {
     return fail("ai_config_not_found", "AI config was not found.", 404);
   }
 
-  return ok({
-    status: config.lastValidationStatus,
-    validatedAt: new Date().toISOString(),
-    message:
-      config.lastValidationError ??
-      "Mock validation completed. Real provider checks come in the next data milestone.",
-  });
+  return ok(result);
 }

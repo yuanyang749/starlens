@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AISettingsView } from "@/components/ai-settings-view";
 import { TokensSettingsView } from "@/components/tokens-settings-view";
 
 function mount(node: React.ReactNode) {
@@ -21,7 +22,7 @@ describe("tokens settings interactions", () => {
   it("create success", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { id: "x" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { id: "x", token: "stl_secret_token" } })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [{ id: "x", name: "T", tokenPrefix: "stl", createdAt: new Date().toISOString(), lastUsedAt: null }] })));
     vi.stubGlobal("fetch", fetchMock);
     const { el } = mount(<TokensSettingsView />);
@@ -30,6 +31,7 @@ describe("tokens settings interactions", () => {
     expect(btn).toBeTruthy();
     await act(async () => btn?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(fetchMock).toHaveBeenCalledWith("/api/tokens", expect.objectContaining({ method: "POST" }));
+    expect(el.textContent).toContain("stl_secret_token");
   });
 
   it("server error", async () => {
@@ -51,5 +53,52 @@ describe("tokens settings interactions", () => {
     const revoke = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Revoke"));
     await act(async () => revoke?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(el.textContent).toContain("No tokens yet");
+  });
+});
+
+describe("AI settings interactions", () => {
+  it("creates provider configs with entered connection details", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { id: "ai-1" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })));
+    vi.stubGlobal("fetch", fetchMock);
+    const { el } = mount(<AISettingsView />);
+    await act(async () => Promise.resolve());
+
+    const setInput = (placeholder: string, value: string) => {
+      const input = Array.from(el.querySelectorAll("input")).find(
+        (item) => item.getAttribute("placeholder") === placeholder,
+      );
+      expect(input).toBeTruthy();
+      act(() => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          "value",
+        )?.set;
+        setter?.call(input, value);
+        input!.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    };
+
+    setInput("Display name", "DeepSeek");
+    setInput("Model", "deepseek-chat");
+    setInput("Base URL", "https://api.deepseek.com");
+    setInput("API key", "sk-test");
+
+    const button = Array.from(el.querySelectorAll("button")).find((item) =>
+      item.textContent?.includes("Create config"),
+    );
+    await act(async () => button?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    const createCall = fetchMock.mock.calls.find(([url, init]) =>
+      url === "/api/ai/configs" && init?.method === "POST",
+    );
+    expect(JSON.parse(createCall?.[1]?.body as string)).toMatchObject({
+      apiKey: "sk-test",
+      baseUrl: "https://api.deepseek.com",
+      displayName: "DeepSeek",
+      model: "deepseek-chat",
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { ok, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/server/auth/session";
+import { getApiUser } from "@/server/auth/api-user";
 import {
   addSyncHistory,
   getSyncHistory,
@@ -7,8 +7,8 @@ import {
   syncGitHubStars,
 } from "@/server/github/sync";
 
-export async function POST() {
-  const user = await getSessionUser();
+export async function POST(request: Request) {
+  const user = await getApiUser(request);
 
   if (!user) {
     return unauthorized();

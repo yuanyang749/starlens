@@ -139,8 +139,60 @@ export const repoNotes = pgTable("repo_notes", {
   repoUnique: uniqueIndex("repo_notes_repo_unique").on(table.starredRepoId),
 }));
 
+export const personalApiTokens = pgTable("personal_api_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  tokenPrefix: text("token_prefix").notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  ...timestamps,
+}, (table) => ({
+  tokenHashUnique: uniqueIndex("personal_api_tokens_token_hash_unique").on(
+    table.tokenHash,
+  ),
+  userActiveIndex: index("personal_api_tokens_user_active_idx").on(
+    table.userId,
+    table.revokedAt,
+  ),
+}));
+
+export const userAiConfigs = pgTable("user_ai_configs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  providerType: text("provider_type").notNull(),
+  model: text("model").notNull(),
+  baseUrl: text("base_url"),
+  apiKeyEncrypted: text("api_key_encrypted"),
+  extraHeadersEncrypted: text("extra_headers_encrypted"),
+  enabled: boolean("enabled").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
+  lastValidatedAt: timestamp("last_validated_at", { withTimezone: true }),
+  lastValidationStatus: text("last_validation_status"),
+  lastValidationError: text("last_validation_error"),
+  ...timestamps,
+}, (table) => ({
+  userEnabledIndex: index("user_ai_configs_user_enabled_idx").on(
+    table.userId,
+    table.enabled,
+  ),
+  userDefaultIndex: index("user_ai_configs_user_default_idx").on(
+    table.userId,
+    table.isDefault,
+  ),
+}));
+
 export type User = typeof users.$inferSelect;
 export type GitHubAccount = typeof githubAccounts.$inferSelect;
 export type StarredRepo = typeof starredRepos.$inferSelect;
 export type RepoTag = typeof repoTags.$inferSelect;
 export type RepoNote = typeof repoNotes.$inferSelect;
+export type PersonalApiToken = typeof personalApiTokens.$inferSelect;
+export type UserAiConfig = typeof userAiConfigs.$inferSelect;

@@ -8,7 +8,7 @@ import {
   type SearchSort,
 } from "@starlens/core";
 import { ok, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/server/auth/session";
+import { getApiUser } from "@/server/auth/api-user";
 import { searchRepos } from "@/server/repos/repository";
 
 const SEARCH_SORT_SET = new Set<SearchSort>(SEARCH_SORTS);
@@ -68,7 +68,7 @@ export function normalizeSearchParams(params: URLSearchParams): SearchReposInput
 }
 
 export async function GET(request: Request) {
-  const user = await getSessionUser();
+  const user = await getApiUser(request);
 
   if (!user) {
     return unauthorized();

@@ -1,13 +1,13 @@
 import { fail, ok, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/server/auth/session";
+import { getApiUser } from "@/server/auth/api-user";
 import { getRepoDetail, updateRepoCuration } from "@/server/repos/repository";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
-  const user = await getSessionUser();
+export async function GET(request: Request, context: RouteContext) {
+  const user = await getApiUser(request);
 
   if (!user) {
     return unauthorized();
@@ -24,7 +24,7 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const user = await getSessionUser();
+  const user = await getApiUser(request);
 
   if (!user) {
     return unauthorized();

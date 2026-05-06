@@ -438,12 +438,13 @@ Authorization: Bearer <token>
   "ok": true,
   "data": {
     "token": "stl_xxx_generated_once",
-    "tokenMeta": {
-      "id": "uuid",
-      "name": "CLI on MacBook",
-      "tokenPrefix": "stl_xxx",
-      "createdAt": "2026-05-05T12:00:00.000Z"
-    }
+    "id": "uuid",
+    "name": "CLI on MacBook",
+    "tokenPrefix": "stl_xxx",
+    "lastUsedAt": null,
+    "expiresAt": null,
+    "revokedAt": null,
+    "createdAt": "2026-05-05T12:00:00.000Z"
   }
 }
 ```
@@ -451,6 +452,7 @@ Authorization: Bearer <token>
 说明：
 
 - 明文 token 只在创建时返回一次
+- Token 管理接口只面向浏览器会话；CLI / agent 使用 Bearer Token 调用业务接口，不允许用 Bearer Token 继续签发新 token
 
 ### 7.3 `DELETE /api/tokens/:id`
 
@@ -513,6 +515,11 @@ Authorization: Bearer <token>
 
 - 返回创建后的 `AI Config Object`
 
+说明：
+
+- `apiKey` 只在请求中接收，服务端加密保存，响应中不返回明文
+- 如果 `isDefault = true`，同一用户其他配置会自动取消默认状态
+
 ### 8.3 `PATCH /api/ai/configs/:id`
 
 用途：
@@ -532,6 +539,11 @@ Authorization: Bearer <token>
 响应：
 
 - 返回更新后的 `AI Config Object`
+
+说明：
+
+- 传入新的 `apiKey` 会覆盖旧密钥；不传则保留旧密钥
+- 传入 `apiKey: null` 或空字符串表示清空密钥
 
 ### 8.4 `DELETE /api/ai/configs/:id`
 
@@ -569,19 +581,21 @@ Authorization: Bearer <token>
   "ok": true,
   "data": {
     "status": "success",
-    "validatedAt": "2026-05-05T12:00:00.000Z"
+    "validatedAt": "2026-05-05T12:00:00.000Z",
+    "message": "Provider validation succeeded."
   }
 }
 ```
 
-失败示例：
+校验失败时仍返回结构化结果，并同步写回 `lastValidationStatus` 与 `lastValidationError`：
 
 ```json
 {
-  "ok": false,
-  "error": {
-    "code": "provider_auth_failed",
-    "message": "Authentication failed for provider"
+  "ok": true,
+  "data": {
+    "status": "error",
+    "validatedAt": "2026-05-05T12:00:00.000Z",
+    "message": "Provider validation failed with status 401."
   }
 }
 ```

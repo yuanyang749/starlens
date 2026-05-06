@@ -5,11 +5,14 @@ import type { TokenRecord } from "@starlens/core";
 import { KeyRound, Plus, ShieldCheck, TerminalSquare } from "lucide-react";
 import { ApiClientError, fetchApi } from "@/lib/api-client";
 
+type CreatedToken = TokenRecord & { token?: string };
+
 export function TokensSettingsView() {
   const [tokens, setTokens] = useState<TokenRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [createdToken, setCreatedToken] = useState<string | null>(null);
 
   const loadTokens = async (signal?: AbortSignal) => {
     try {
@@ -33,11 +36,12 @@ export function TokensSettingsView() {
   const createToken = async () => {
     const name = `Token ${new Date().toISOString().slice(0, 16).replace("T", " ")}`;
     try {
-      await fetchApi<TokenRecord>("/api/tokens", {
+      const token = await fetchApi<CreatedToken>("/api/tokens", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name }),
       });
+      setCreatedToken(token.token ?? null);
       await loadTokens();
       setToast("Token created successfully.");
     } catch (err) {
@@ -71,6 +75,16 @@ export function TokensSettingsView() {
         </div>
 
         {toast ? <p className="mb-3 text-sm text-emerald-500">{toast}</p> : null}
+        {createdToken ? (
+          <div className="mb-3 rounded-[18px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-3">
+            <p className="text-xs font-medium text-[color:var(--muted)]">
+              New token
+            </p>
+            <p className="mt-2 break-all font-mono text-sm text-[color:var(--foreground)]">
+              {createdToken}
+            </p>
+          </div>
+        ) : null}
         {error ? <div className="mb-3 rounded border border-red-400 p-3 text-sm text-red-500">{error} <button onClick={() => { setLoading(true); loadTokens(); }} className="underline">Retry</button></div> : null}
 
         {loading ? (

@@ -8,6 +8,20 @@
       "when": 1777995709939,
       "tag": "0000_yielding_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778037090250,
+      "tag": "0001_lumpy_frog_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778038820139,
+      "tag": "0002_wide_the_captain",
+      "breakpoints": true
     }
   ]
 }

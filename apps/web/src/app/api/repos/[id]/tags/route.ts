@@ -1,5 +1,5 @@
 import { fail, ok, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/server/auth/session";
+import { getApiUser } from "@/server/auth/api-user";
 import { addRepoTag } from "@/server/repos/repository";
 
 type RouteContext = {
@@ -7,7 +7,7 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
-  const user = await getSessionUser();
+  const user = await getApiUser(request);
 
   if (!user) {
     return unauthorized();

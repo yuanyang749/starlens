@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchReposInput } from "@starlens/core";
 
-const { searchReposMock, getSessionUserMock } = vi.hoisted(() => ({
+const { searchReposMock, getApiUserMock } = vi.hoisted(() => ({
   searchReposMock: vi.fn(),
-  getSessionUserMock: vi.fn(),
+  getApiUserMock: vi.fn(),
 }));
 
-vi.mock("@/server/auth/session", () => ({
-  getSessionUser: getSessionUserMock,
+vi.mock("@/server/auth/api-user", () => ({
+  getApiUser: getApiUserMock,
 }));
 
 vi.mock("@/server/repos/repository", () => ({
@@ -21,7 +21,7 @@ async function json(response: Response) {
 describe("search API contract", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getSessionUserMock.mockResolvedValue({ id: "user-1" });
+    getApiUserMock.mockResolvedValue({ id: "user-1" });
     searchReposMock.mockResolvedValue({
       items: [],
       page: 1,
