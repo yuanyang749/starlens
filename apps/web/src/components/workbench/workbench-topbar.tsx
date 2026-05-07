@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand-logo";
+import Image from "next/image";
 import { useState } from "react";
 import { LoaderCircle, Search, Sparkles } from "lucide-react";
 import { SignOutButton } from "../sign-out-button";
@@ -84,9 +85,12 @@ export function WorkbenchTopbar({
         <div className="workbench-user-pill" aria-label={userName}>
           <span className="workbench-user-pill__avatar">
             {canShowAvatarImage ? (
-              <img
+              <Image
                 src={userAvatarUrl ?? ""}
                 alt={userName}
+                fill
+                sizes="40px"
+                unoptimized
                 className="workbench-user-pill__avatar-image"
                 onError={() => setAvatarFailed(true)}
               />
