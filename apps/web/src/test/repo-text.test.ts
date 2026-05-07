@@ -26,6 +26,18 @@ console.log("noise");
     expect(excerpt).not.toContain("![logo]");
   });
 
+  it("removes malformed HTML fragments from README excerpts", () => {
+    const excerpt = extractReadmeExcerpt(`
+<p align="center" <a href="https://librechat.ai">
+<img src="client/public/assets/logo.svg"
+<h1 align="center">LibreChat</h1>
+`);
+
+    expect(excerpt).toContain("LibreChat");
+    expect(excerpt).not.toContain("<p");
+    expect(excerpt).not.toContain("<img");
+  });
+
   it("prefers a clear GitHub description for repo summary", () => {
     expect(
       buildRepoSummary({

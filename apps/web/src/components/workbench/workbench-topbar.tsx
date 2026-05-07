@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Bell, Search, Settings2, Sparkles, Star } from "lucide-react";
 import { SignOutButton } from "../sign-out-button";
 
@@ -7,17 +8,28 @@ type WorkbenchTopbarProps = {
   query: string;
   onQueryChange: (value: string) => void;
   syncing: boolean;
+  aiSearching: boolean;
+  aiStatusMessage: string | null;
   onSync: () => void;
+  onAiSearch: () => void;
   userName: string;
+  userAvatarUrl?: string | null;
 };
 
 export function WorkbenchTopbar({
   query,
   onQueryChange,
   syncing,
+  aiSearching,
+  aiStatusMessage,
   onSync,
+  onAiSearch,
   userName,
+  userAvatarUrl,
 }: WorkbenchTopbarProps) {
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const canShowAvatarImage = Boolean(userAvatarUrl) && !avatarFailed;
+
   return (
     <header data-testid="workbench-topbar" className="workbench-topbar">
       <div className="workbench-brand">
@@ -53,10 +65,21 @@ export function WorkbenchTopbar({
         >
           {syncing ? "Syncing" : "Sync now"}
         </button>
-        <button type="button" className="workbench-button workbench-button--primary">
+        <button
+          type="button"
+          onClick={onAiSearch}
+          disabled={aiSearching}
+          className="workbench-button workbench-button--primary"
+          aria-label={aiSearching ? "AI searching" : "AI Search"}
+        >
           <Sparkles className="h-4 w-4" />
-          AI Search
+          {aiSearching ? "Searching..." : "AI Search"}
         </button>
+        {aiStatusMessage ? (
+          <span className="workbench-topbar__ai-status" role="status" aria-live="polite">
+            {aiStatusMessage}
+          </span>
+        ) : null}
         <button type="button" className="workbench-button workbench-button--ghost">
           Filters
         </button>
@@ -77,7 +100,16 @@ export function WorkbenchTopbar({
         <SignOutButton className="workbench-button workbench-button--ghost" />
         <div className="workbench-user-pill" aria-label={userName}>
           <span className="workbench-user-pill__avatar">
-            {userName.slice(0, 1).toUpperCase()}
+            {canShowAvatarImage ? (
+              <img
+                src={userAvatarUrl ?? ""}
+                alt={userName}
+                className="workbench-user-pill__avatar-image"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              userName.slice(0, 1).toUpperCase()
+            )}
           </span>
           <span className="workbench-user-pill__label">{userName}</span>
         </div>

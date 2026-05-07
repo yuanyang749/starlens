@@ -7,6 +7,7 @@ import {
   SOURCE_LABELS,
   formatDateTime,
   safeExternalUrl,
+  sanitizeSummaryText,
 } from "./workbench-formatters";
 import { RepoDetailMetadata } from "./repo-detail-metadata";
 
@@ -86,6 +87,9 @@ export function RepoDetailPanel({
 
   const githubUrl = safeExternalUrl(repo.htmlUrl);
   const homepageUrl = repo.homepage ? safeExternalUrl(repo.homepage) : null;
+  const summaryText =
+    sanitizeSummaryText(repo.aiSummary || repo.readmeExcerpt || repo.repoSummary) ||
+    "README summary is not available yet.";
 
   return (
     <aside data-testid="repo-detail-panel" className="repo-detail-panel" aria-label="Selected repository">
@@ -178,7 +182,7 @@ export function RepoDetailPanel({
         <div className="repo-summary-card">
           <Bot className="h-4 w-4 text-[color:var(--accent)]" />
           <CollapsibleText
-            text={repo.aiSummary || repo.readmeExcerpt}
+            text={summaryText}
             limit={360}
             className="repo-summary-card__body"
           />

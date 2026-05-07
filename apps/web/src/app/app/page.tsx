@@ -4,5 +4,10 @@ import { WorkbenchView } from "@/components/workbench-view";
 export default async function AppPage() {
   const user = await getSessionUser();
 
-  return <WorkbenchView userName={user?.name ?? user?.email ?? "GitHub user"} />;
+  return (
+    <WorkbenchView
+      userName={user?.name ?? user?.email ?? "GitHub user"}
+      userAvatarUrl={user?.image ?? null}
+    />
+  );
 }

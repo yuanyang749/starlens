@@ -40,6 +40,12 @@ type SyncResult = {
   }>;
 };
 
+type AiAskResult = {
+  answer: string;
+  candidates: Array<{ id: string; fullName: string }>;
+  providerConfigId: string | null;
+};
+
 async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   let response: Response;
 
@@ -68,7 +74,13 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   return payload.data;
 }
 
-export function WorkbenchView({ userName = "GitHub user" }: { userName?: string }) {
+export function WorkbenchView({
+  userName = "GitHub user",
+  userAvatarUrl = null,
+}: {
+  userName?: string;
+  userAvatarUrl?: string | null;
+}) {
   const {
     query,
     setQuery,
@@ -95,8 +107,10 @@ export function WorkbenchView({ userName = "GitHub user" }: { userName?: string 
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [aiStatusMessage, setAiStatusMessage] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<SyncResult | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [aiSearching, setAiSearching] = useState(false);
   const [favoriteUpdating, setFavoriteUpdating] = useState(false);
   const [tagSubmitting, setTagSubmitting] = useState(false);
   const [tagDeleting, setTagDeleting] = useState<string | null>(null);
@@ -303,6 +317,55 @@ export function WorkbenchView({ userName = "GitHub user" }: { userName?: string 
     }
   }
 
+  async function aiSearch() {
+    if (aiSearching) return;
+
+    const question =
+      query.trim() ||
+      selectedRepo?.fullName ||
+      selectedRepo?.repoSummary ||
+      "";
+
+    if (!question) {
+      setAiStatusMessage("请输入关键词，或先选择一个仓库。");
+      setError("AI Search needs a query or a selected repository.");
+      return;
+    }
+
+    setAiSearching(true);
+    setAiStatusMessage("正在检索...");
+    setError(null);
+
+    try {
+      const result = await apiJson<AiAskResult>("/api/ai/ask", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+
+      const firstCandidate = result.candidates[0];
+      if (firstCandidate?.id) {
+        setSelectedId(firstCandidate.id);
+      }
+
+      setAiStatusMessage(
+        result.candidates.length > 0
+          ? `已匹配 ${result.candidates.length} 个候选仓库`
+          : "未找到匹配仓库",
+      );
+      setSyncMessage(`AI Search: ${result.answer}`);
+    } catch (caught) {
+      setAiStatusMessage("搜索失败，请稍后重试。");
+      setError(
+        caught instanceof Error
+          ? `AI Search failed: ${caught.message}`
+          : "AI Search failed.",
+      );
+    } finally {
+      setAiSearching(false);
+    }
+  }
+
   async function deleteTag(tag: string) {
     if (!selectedRepo || tagDeleting) return;
 
@@ -359,10 +422,14 @@ export function WorkbenchView({ userName = "GitHub user" }: { userName?: string 
     <div className="workbench-shell">
       <WorkbenchTopbar
         userName={userName}
+        userAvatarUrl={userAvatarUrl}
         query={query}
         onQueryChange={setQuery}
         syncing={syncing}
+        aiSearching={aiSearching}
+        aiStatusMessage={aiStatusMessage}
         onSync={syncNow}
+        onAiSearch={aiSearch}
       />
 
       {error ? <div className="workbench-banner workbench-banner--error">{error}</div> : null}

@@ -49,3 +49,44 @@ export function safeExternalUrl(value: string) {
     return null;
   }
 }
+
+function decodeHtmlEntities(input: string) {
+  return input
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
+function stripBrokenHtmlFragments(input: string) {
+  return input
+    // Remove complete tags first.
+    .replace(/<[^>\n]*>/g, " ")
+    // Remove malformed tags that never reached ">" (common in raw README snippets).
+    .replace(/<\/?[a-zA-Z][^<\n]*/g, " ")
+    // Remove leftover angle brackets.
+    .replace(/[<>]/g, " ");
+}
+
+export function sanitizeSummaryText(input: string) {
+  if (!input) return "";
+
+  const cleaned = stripBrokenHtmlFragments(
+    decodeHtmlEntities(input)
+      // Remove fenced code blocks while keeping text around it.
+      .replace(/```[\s\S]*?```/g, " ")
+      // Remove inline code markers.
+      .replace(/`([^`]+)`/g, "$1")
+      // Convert markdown links and images to visible text.
+      .replace(/!\[([^\]]*)]\([^)]+\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      // Strip markdown tables/separators.
+      .replace(/[|*_#~]/g, " "),
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned;
+}

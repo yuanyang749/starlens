@@ -35,6 +35,9 @@ export function cleanMarkdown(input: string) {
     .replace(/`([^`]+)`/g, "$1")
     .replace(/!\[[^\]]*]\([^)]+\)/g, " ")
     .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
+    .replace(/<[^>\n]*>/g, " ")
+    .replace(/<\/?[a-zA-Z][^<\n]*/g, " ")
+    .replace(/[<>]/g, " ")
     .replace(/[#>*_\-~|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
