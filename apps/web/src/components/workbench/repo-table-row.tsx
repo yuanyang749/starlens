@@ -1,20 +1,48 @@
 "use client";
 
 import type { RepoSummary } from "@starlens/core";
-import { FolderGit2, Heart, Pin, Star, Tag } from "lucide-react";
+import { KeyboardEvent } from "react";
+import { FolderGit2, Heart, Pin, Star } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatCompactNumber, formatDate } from "./workbench-formatters";
 
 type RepoTableRowProps = {
   repo: RepoSummary;
   selected: boolean;
   onSelect: () => void;
+  onOpenDetails: () => void;
+  onToggleFavorite: (repo: RepoSummary) => Promise<void>;
+  favoriteUpdating: boolean;
 };
 
-export function RepoTableRow({ repo, selected, onSelect }: RepoTableRowProps) {
+export function RepoTableRow({
+  repo,
+  selected,
+  onSelect,
+  onOpenDetails,
+  onToggleFavorite,
+  favoriteUpdating,
+}: RepoTableRowProps) {
+  const displayTags = repo.tags.slice(0, 3);
+  const favoriteTitle = repo.isFavorite ? "取消收藏" : "加入收藏";
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect();
+    }
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
       className={selected ? "repo-table-row is-selected" : "repo-table-row"}
     >
       <span className="repo-table-row__select" aria-hidden="true" />
@@ -32,19 +60,51 @@ export function RepoTableRow({ repo, selected, onSelect }: RepoTableRowProps) {
       </span>
       <span className="repo-table-row__updated">{formatDate(repo.pushedAtGithub)}</span>
       <span className="repo-table-row__tags">
-        {repo.tags.slice(0, 3).map((tag) => (
+        {displayTags.length > 0 ? displayTags.map((tag) => (
           <span key={tag} className="repo-chip">
-            <Tag className="h-3 w-3" />
             {tag}
           </span>
-        ))}
+        )) : <span className="repo-table-row__tag-empty">—</span>}
       </span>
-      <span className="repo-table-row__favorite" aria-label={repo.isFavorite ? "Favorited" : "Favorite"}>
-        {repo.isFavorite ? <Star className="h-4 w-4 fill-current" /> : <Heart className="h-4 w-4" />}
+      <span className="repo-table-row__actions">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={favoriteTitle}
+              disabled={favoriteUpdating}
+              className="repo-table-row__action-button repo-table-row__favorite"
+              onClick={(event) => {
+                event.stopPropagation();
+                void onToggleFavorite(repo);
+              }}
+            >
+              {repo.isFavorite ? <Star className="h-4 w-4 fill-current" /> : <Heart className="h-4 w-4" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span>{favoriteTitle}</span>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="查看详情"
+              className="repo-table-row__action-button repo-table-row__pin"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenDetails();
+              }}
+            >
+              <Pin className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span>查看详情</span>
+          </TooltipContent>
+        </Tooltip>
       </span>
-      <span className="repo-table-row__pin" aria-hidden="true">
-        <Pin className="h-4 w-4" />
-      </span>
-    </button>
+    </div>
   );
 }

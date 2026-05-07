@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BrandLogo } from "./brand-logo";
 import {
   ArrowRight,
   Bot,
@@ -9,7 +10,6 @@ import {
   Play,
   Search,
   Server,
-  Sparkles,
   TerminalSquare,
   Tags,
   Workflow,
@@ -79,9 +79,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
       <header className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[rgba(245,247,248,0.8)] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
           <Link href="/" className="flex items-center gap-3 text-sm font-semibold">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[color:var(--accent)]">
-              <Sparkles className="h-4 w-4" />
-            </span>
+            <BrandLogo size={36} className="rounded-lg" priority />
             <span className="text-base tracking-tight">Starlens</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-[color:var(--muted)] md:flex">

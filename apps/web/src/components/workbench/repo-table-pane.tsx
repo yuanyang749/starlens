@@ -1,12 +1,13 @@
 "use client";
 
 import type { RepoSummary, SearchSort } from "@starlens/core";
-import { Search, Star, X } from "lucide-react";
+import { RefreshCw, Star, X } from "lucide-react";
 import { RepoTableRow } from "./repo-table-row";
 
 type RepoTablePaneProps = {
   repos: RepoSummary[];
   total: number;
+  mode: "default" | "ai_search";
   page: number;
   pageSize: number;
   selectedId: string | null;
@@ -14,18 +15,16 @@ type RepoTablePaneProps = {
   syncNow: () => void;
   syncing: boolean;
   language: string;
-  owner: string;
-  tagFilter: string;
   favoritesOnly: boolean;
   sort: SearchSort;
   onLanguageChange: (value: string) => void;
-  onOwnerChange: (value: string) => void;
-  onTagFilterChange: (value: string) => void;
   onFavoritesToggle: () => void;
   onClearFilters: () => void;
   onResetSort: () => void;
   onSortChange: (value: SearchSort) => void;
   onPageChange: (page: number) => void;
+  onFavoriteToggleRepo: (repo: RepoSummary) => Promise<void>;
+  favoriteUpdatingId: string | null;
 };
 
 function buildPaginationItems(currentPage: number, totalPages: number) {
@@ -52,6 +51,7 @@ function buildPaginationItems(currentPage: number, totalPages: number) {
 export function RepoTablePane({
   repos,
   total,
+  mode,
   page,
   pageSize,
   selectedId,
@@ -59,19 +59,18 @@ export function RepoTablePane({
   syncNow,
   syncing,
   language,
-  owner,
-  tagFilter,
   favoritesOnly,
   sort,
   onLanguageChange,
-  onOwnerChange,
-  onTagFilterChange,
   onFavoritesToggle,
   onClearFilters,
   onResetSort,
   onSortChange,
   onPageChange,
+  onFavoriteToggleRepo,
+  favoriteUpdatingId,
 }: RepoTablePaneProps) {
+  const isAiSearchMode = mode === "ai_search";
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const pageItems = buildPaginationItems(safePage, totalPages);
@@ -80,37 +79,20 @@ export function RepoTablePane({
 
   return (
     <section data-testid="repo-table-pane" className="repo-table-pane">
-      <div className="repo-table-pane__toolbar">
-        <button type="button" className="workbench-checkbox" aria-label="Bulk selection disabled" />
-        <label className="repo-table-filter">
-          <Search className="h-4 w-4" />
-          <input
-            aria-label="Filter repositories"
-            value={owner}
-            onChange={(event) => onOwnerChange(event.target.value)}
-            placeholder="Filter repositories..."
-          />
-        </label>
-      </div>
-
       <div className="repo-table-pane__filters">
         <input
           value={language}
           onChange={(event) => onLanguageChange(event.target.value)}
           placeholder="Language"
           className="workbench-input"
-        />
-        <input
-          value={tagFilter}
-          onChange={(event) => onTagFilterChange(event.target.value)}
-          placeholder="Tag"
-          className="workbench-input"
+          disabled={isAiSearchMode}
         />
         <select
           value={sort}
           onChange={(event) => onSortChange(event.target.value as SearchSort)}
           className="workbench-input"
           aria-label="Sort repositories"
+          disabled={isAiSearchMode}
         >
           <option value="updated">Updated</option>
           <option value="recent">Recent</option>
@@ -121,16 +103,38 @@ export function RepoTablePane({
           type="button"
           onClick={onFavoritesToggle}
           className={favoritesOnly ? "workbench-button workbench-button--active" : "workbench-button workbench-button--ghost"}
+          disabled={isAiSearchMode}
         >
           <Star className="h-4 w-4" />
           Favorites
         </button>
-        <button type="button" onClick={onClearFilters} className="workbench-button workbench-button--ghost">
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="workbench-button workbench-button--ghost"
+          disabled={isAiSearchMode}
+        >
           <X className="h-4 w-4" />
           Clear
         </button>
-        <button type="button" onClick={onResetSort} className="workbench-button workbench-button--ghost">
+        <button
+          type="button"
+          onClick={onResetSort}
+          className="workbench-button workbench-button--ghost"
+          disabled={isAiSearchMode}
+        >
           Reset sort
+        </button>
+        <span className="repo-table-pane__filters-spacer" />
+        <button
+          type="button"
+          onClick={syncNow}
+          disabled={syncing}
+          className="workbench-button workbench-button--ghost"
+          aria-label={syncing ? "Syncing" : "Sync now"}
+        >
+          <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
+          {syncing ? "Syncing" : "Sync now"}
         </button>
       </div>
 
@@ -141,8 +145,7 @@ export function RepoTablePane({
         <span>Language</span>
         <span>Updated</span>
         <span>Tags</span>
-        <span />
-        <span />
+        <span>Actions</span>
       </div>
 
       <div className="repo-table-pane__body">
@@ -152,22 +155,36 @@ export function RepoTablePane({
             repo={repo}
             selected={repo.id === selectedId}
             onSelect={() => onSelect(repo.id)}
+            onOpenDetails={() => onSelect(repo.id)}
+            onToggleFavorite={onFavoriteToggleRepo}
+            favoriteUpdating={favoriteUpdatingId === repo.id}
           />
         ))}
         {repos.length === 0 ? (
           <div className="repo-table-empty">
-            <p className="repo-table-empty__title">No synced repositories yet.</p>
-            <p className="repo-table-empty__body">
-              Run your first GitHub sync to import public starred repositories into the workbench.
-            </p>
-            <button
-              type="button"
-              onClick={syncNow}
-              disabled={syncing}
-              className="workbench-button workbench-button--primary"
-            >
-              {syncing ? "Syncing" : "Start first sync"}
-            </button>
+            {isAiSearchMode ? (
+              <>
+                <p className="repo-table-empty__title">No AI matched repositories yet.</p>
+                <p className="repo-table-empty__body">
+                  Run AI Search with a more specific query to see relevance-ranked repositories here.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="repo-table-empty__title">No synced repositories yet.</p>
+                <p className="repo-table-empty__body">
+                  Run your first GitHub sync to import public starred repositories into the workbench.
+                </p>
+                <button
+                  type="button"
+                  onClick={syncNow}
+                  disabled={syncing}
+                  className="workbench-button workbench-button--primary"
+                >
+                  {syncing ? "Syncing" : "Start first sync"}
+                </button>
+              </>
+            )}
           </div>
         ) : null}
       </div>

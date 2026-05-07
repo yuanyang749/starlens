@@ -5,9 +5,11 @@ import { Clock3, KeyRound, Search, Settings2, Sparkles, Star, Tag } from "lucide
 
 type WorkbenchSidebarProps = {
   favoritesOnly: boolean;
+  aiSearchActive: boolean;
   onFavoritesClick: () => void;
   onAllStarsClick: () => void;
   onRecentClick: () => void;
+  onAiSearchClick: () => void;
   recentActive: boolean;
   total: number;
   favoriteCount: number;
@@ -17,9 +19,11 @@ type WorkbenchSidebarProps = {
 
 export function WorkbenchSidebar({
   favoritesOnly,
+  aiSearchActive,
   onFavoritesClick,
   onAllStarsClick,
   onRecentClick,
+  onAiSearchClick,
   recentActive,
   total,
   favoriteCount,
@@ -34,7 +38,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onAllStarsClick}
-            className={!favoritesOnly && !recentActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={!favoritesOnly && !recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Search className="h-4 w-4" />
@@ -45,7 +49,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onFavoritesClick}
-            className={favoritesOnly ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={favoritesOnly && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Star className="h-4 w-4" />
@@ -56,7 +60,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onRecentClick}
-            className={recentActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Clock3 className="h-4 w-4" />
@@ -79,12 +83,16 @@ export function WorkbenchSidebar({
               Tags
             </span>
           </div>
-          <div className="workbench-nav-item is-passive">
+          <button
+            type="button"
+            onClick={onAiSearchClick}
+            className={aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+          >
             <span className="workbench-nav-item__leading">
               <Sparkles className="h-4 w-4" />
               AI Search
             </span>
-          </div>
+          </button>
         </section>
 
         <section className="workbench-nav-section" aria-label="Tools">

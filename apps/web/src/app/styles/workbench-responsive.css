@@ -52,7 +52,6 @@
     display: none;
   }
 
-  .repo-table-pane__toolbar,
   .repo-table-pane__filters,
   .repo-table-pane__footer,
   .repo-table-pane__header,
@@ -68,8 +67,7 @@
     gap: 8px;
   }
 
-  .repo-table-row__select,
-  .repo-table-row__pin {
+  .repo-table-row__select {
     display: none;
   }
 

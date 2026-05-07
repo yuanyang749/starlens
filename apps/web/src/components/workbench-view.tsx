@@ -6,6 +6,7 @@ import {
   type PaginatedResult,
   type RepoSummary,
 } from "@starlens/core";
+import { X } from "lucide-react";
 import { RepoDetailPanel } from "./workbench/repo-detail-panel";
 import { RepoTablePane } from "./workbench/repo-table-pane";
 import { useWorkbenchQueryState } from "./workbench/use-workbench-query-state";
@@ -89,10 +90,6 @@ export function WorkbenchView({
     setSort,
     language,
     setLanguage,
-    owner,
-    setOwner,
-    tagFilter,
-    setTagFilter,
     page,
     setPage,
     clearFilters,
@@ -102,19 +99,23 @@ export function WorkbenchView({
 
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [total, setTotal] = useState(0);
+  const [allStarsTotal, setAllStarsTotal] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<RepoSummary | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [queryDraft, setQueryDraft] = useState(query);
+  const [queryDirty, setQueryDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [aiStatusMessage, setAiStatusMessage] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<SyncResult | null>(null);
   const [pageSize, setPageSize] = useState(20);
   const [syncing, setSyncing] = useState(false);
   const [aiSearching, setAiSearching] = useState(false);
+  const [aiSearchMode, setAiSearchMode] = useState(false);
+  const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
-  const [favoriteUpdating, setFavoriteUpdating] = useState(false);
+  const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
   const [tagDeleting, setTagDeleting] = useState<string | null>(null);
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,6 +130,9 @@ export function WorkbenchView({
       .then((data) => {
         setRepos(data.items);
         setTotal(data.total);
+        if (!favoritesOnly && !aiSearchMode) {
+          setAllStarsTotal(data.total);
+        }
         setPageSize(data.pageSize);
         setError(null);
         setSelectedId((current) =>
@@ -155,13 +159,26 @@ export function WorkbenchView({
       });
 
     return controller;
-  }, [searchParams]);
+  }, [aiSearchMode, favoritesOnly, searchParams]);
 
   const patchRepoInList = useCallback((repo: RepoSummary) => {
     setRepos((items) =>
       items.map((item) => (item.id === repo.id ? { ...item, ...repo } : item)),
     );
+    setAiSearchResults((items) =>
+      items.map((item) => (item.id === repo.id ? { ...item, ...repo } : item)),
+    );
   }, []);
+
+  const findRepoById = useCallback((repoId: string) => {
+    if (selectedRepo?.id === repoId) {
+      return selectedRepo;
+    }
+
+    return repos.find((item) => item.id === repoId)
+      ?? aiSearchResults.find((item) => item.id === repoId)
+      ?? null;
+  }, [aiSearchResults, repos, selectedRepo]);
 
   useEffect(() => {
     const controller = refreshList();
@@ -195,30 +212,40 @@ export function WorkbenchView({
     return () => controller.abort();
   }, [selectedId]);
 
-  const updateSelected = useCallback(
-    async (updates: { isFavorite?: boolean; note?: string }) => {
-      if (!selectedRepo) return false;
+  const updateRepo = useCallback(
+    async (repoId: string, updates: { isFavorite?: boolean; note?: string }) => {
+      const currentRepo = findRepoById(repoId);
+      if (!currentRepo) return false;
 
-      const prevRepo = selectedRepo;
-      const optimisticRepo = { ...selectedRepo, ...updates };
-      setSelectedRepo(optimisticRepo);
+      const isSelectedRepo = selectedRepo?.id === repoId;
+      const prevSelectedRepo = selectedRepo;
+      const optimisticRepo = { ...currentRepo, ...updates };
+
+      if (isSelectedRepo) {
+        setSelectedRepo(optimisticRepo);
+        setNoteDraft(optimisticRepo.note);
+      }
       patchRepoInList(optimisticRepo);
 
       try {
-        const repo = await apiJson<RepoSummary>(`/api/repos/${selectedRepo.id}`, {
+        const repo = await apiJson<RepoSummary>(`/api/repos/${repoId}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(updates),
         });
-        setSelectedRepo(repo);
-        setNoteDraft(repo.note);
+        if (isSelectedRepo || selectedId === repoId) {
+          setSelectedRepo(repo);
+          setNoteDraft(repo.note);
+        }
         patchRepoInList(repo);
         setError(null);
         return true;
       } catch (caught) {
-        setSelectedRepo(prevRepo);
-        setNoteDraft(prevRepo.note);
-        patchRepoInList(prevRepo);
+        if (isSelectedRepo && prevSelectedRepo) {
+          setSelectedRepo(prevSelectedRepo);
+          setNoteDraft(prevSelectedRepo.note);
+        }
+        patchRepoInList(currentRepo);
         setError(
           caught instanceof Error
             ? `Detail request failed: ${caught.message}`
@@ -227,7 +254,7 @@ export function WorkbenchView({
         return false;
       }
     },
-    [patchRepoInList, selectedRepo],
+    [findRepoById, patchRepoInList, selectedId, selectedRepo],
   );
 
   const scheduleNoteSave = useCallback(
@@ -242,10 +269,11 @@ export function WorkbenchView({
         if (pendingNoteRef.current === null) return;
         const noteToSave = pendingNoteRef.current;
         pendingNoteRef.current = null;
-        void updateSelected({ note: noteToSave });
+        if (!selectedRepo) return;
+        void updateRepo(selectedRepo.id, { note: noteToSave });
       }, 600);
     },
-    [updateSelected],
+    [selectedRepo, updateRepo],
   );
 
   useEffect(
@@ -324,21 +352,16 @@ export function WorkbenchView({
   async function aiSearch() {
     if (aiSearching) return;
 
-    const question =
-      query.trim() ||
-      selectedRepo?.fullName ||
-      selectedRepo?.repoSummary ||
-      "";
+    const question = (queryDirty ? queryDraft : query).trim();
 
     if (!question) {
-      setAiStatusMessage("请输入关键词，或先选择一个仓库。");
-      setError("AI Search needs a query or a selected repository.");
+      setError("AI Search needs a query.");
       return;
     }
 
     setAiSearching(true);
-    setAiStatusMessage("正在检索...");
     setError(null);
+    setSyncMessage(null);
 
     try {
       const result = await apiJson<AiAskResult>("/api/ai/ask", {
@@ -347,19 +370,30 @@ export function WorkbenchView({
         body: JSON.stringify({ question }),
       });
 
-      const firstCandidate = result.candidates[0];
+      const candidateIds = result.candidates.map((item) => item.id);
+      const aiRepos = await Promise.all(
+        candidateIds.map((id) => apiJson<RepoSummary>(`/api/repos/${id}`)),
+      );
+
+      setAiSearchResults(aiRepos);
+      setAiSearchMode(true);
+      setFavoritesOnly(false);
+      setRecentMode(false);
+      setPage(1);
+
+      const firstCandidate = aiRepos[0];
       if (firstCandidate?.id) {
         setSelectedId(firstCandidate.id);
+      } else {
+        setSelectedId(null);
       }
 
-      setAiStatusMessage(
-        result.candidates.length > 0
-          ? `已匹配 ${result.candidates.length} 个候选仓库`
-          : "未找到匹配仓库",
+      setSyncMessage(
+        aiRepos.length > 0
+          ? `AI Search: ${result.answer}`
+          : "AI Search: 未找到匹配仓库，请尝试更具体关键词。",
       );
-      setSyncMessage(`AI Search: ${result.answer}`);
     } catch (caught) {
-      setAiStatusMessage("搜索失败，请稍后重试。");
       setError(
         caught instanceof Error
           ? `AI Search failed: ${caught.message}`
@@ -368,6 +402,42 @@ export function WorkbenchView({
     } finally {
       setAiSearching(false);
     }
+  }
+
+  function submitSearch() {
+    const nextQuery = (queryDirty ? queryDraft : query).trim();
+
+    if (!nextQuery) {
+      return;
+    }
+
+    setError(null);
+    setSyncMessage(null);
+    setAiSearchMode(false);
+    setRecentMode(false);
+
+    const shouldRefreshImmediately =
+      nextQuery === query.trim() && page === 1 && !aiSearchMode && !recentMode;
+
+    setQuery(nextQuery);
+    setQueryDraft(nextQuery);
+    setQueryDirty(false);
+    setPage(1);
+
+    if (shouldRefreshImmediately) {
+      refreshList();
+    }
+  }
+
+  function updateQueryDraft(value: string) {
+    setQueryDraft(value);
+    setQueryDirty(true);
+  }
+
+  function clearFiltersAndDraft() {
+    clearFilters();
+    setQueryDraft("");
+    setQueryDirty(false);
   }
 
   async function deleteTag(tag: string) {
@@ -422,110 +492,156 @@ export function WorkbenchView({
     [repos],
   );
 
+  const aiSearchPageSize = Math.max(1, pageSize);
+  const aiSearchTotal = aiSearchResults.length;
+  const aiSearchPagedRepos = useMemo(() => {
+    const start = (page - 1) * aiSearchPageSize;
+    return aiSearchResults.slice(start, start + aiSearchPageSize);
+  }, [aiSearchPageSize, aiSearchResults, page]);
+
+  const displayedRepos = aiSearchMode ? aiSearchPagedRepos : repos;
+  const displayedTotal = aiSearchMode ? aiSearchTotal : total;
+  const displayedSort = aiSearchMode ? "relevance" : sort;
+
   return (
     <div className="workbench-shell">
       <WorkbenchTopbar
         userName={userName}
         userAvatarUrl={userAvatarUrl}
-        query={query}
-        onQueryChange={(value) => {
-          setQuery(value);
-          setPage(1);
-        }}
-        syncing={syncing}
+        queryDraft={queryDirty ? queryDraft : query}
+        onQueryDraftChange={updateQueryDraft}
+        onSearch={submitSearch}
+        canSearch={Boolean((queryDirty ? queryDraft : query).trim())}
         aiSearching={aiSearching}
-        aiStatusMessage={aiStatusMessage}
-        onSync={syncNow}
         onAiSearch={aiSearch}
       />
 
-      {error ? <div className="workbench-banner workbench-banner--error">{error}</div> : null}
+      {error ? (
+        <div className="workbench-banner workbench-banner--error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="workbench-banner__close"
+            aria-label="Dismiss error"
+            onClick={() => setError(null)}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
       {syncMessage ? (
-        <div className="workbench-banner workbench-banner--info">{syncMessage}</div>
+        <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
+          <span>{syncMessage}</span>
+          <button
+            type="button"
+            className="workbench-banner__close"
+            aria-label="Dismiss message"
+            onClick={() => setSyncMessage(null)}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       ) : null}
 
       <div className="workbench-body">
         <WorkbenchSidebar
           favoritesOnly={favoritesOnly}
+          aiSearchActive={aiSearchMode}
           onFavoritesClick={() => {
+            setAiSearchMode(false);
             setFavoritesOnly(true);
             setRecentMode(false);
             setPage(1);
           }}
           onAllStarsClick={() => {
+            setAiSearchMode(false);
             setFavoritesOnly(false);
             setRecentMode(false);
             setSort(DEFAULT_SEARCH_SORT);
             setPage(1);
           }}
           onRecentClick={() => {
+            setAiSearchMode(false);
             setFavoritesOnly(false);
             setRecentMode(true);
             setSort("recent");
             setPage(1);
           }}
+          onAiSearchClick={() => {
+            setAiSearchMode(true);
+            setFavoritesOnly(false);
+            setRecentMode(false);
+            setPage(1);
+          }}
           recentActive={recentMode}
-          total={total}
+          total={allStarsTotal}
           favoriteCount={favoriteCount}
           lastSyncText={lastSyncText}
           syncStatusText={
-            lastSync ? `${lastSync.counts.fetched} repos · ${lastSync.status}` : `${total} repos tracked`
+            lastSync ? `${lastSync.counts.fetched} repos · ${lastSync.status}` : `${allStarsTotal} repos tracked`
           }
         />
 
         <RepoTablePane
-          repos={repos}
-          total={total}
+          repos={displayedRepos}
+          total={displayedTotal}
+          mode={aiSearchMode ? "ai_search" : "default"}
           page={page}
-          pageSize={pageSize}
+          pageSize={aiSearchMode ? aiSearchPageSize : pageSize}
           selectedId={selectedId}
           onSelect={setSelectedId}
           syncNow={syncNow}
           syncing={syncing}
           language={language}
-          owner={owner}
-          tagFilter={tagFilter}
           favoritesOnly={favoritesOnly}
-          sort={sort}
+          sort={displayedSort}
           onLanguageChange={(value) => {
+            if (aiSearchMode) return;
             setLanguage(value);
             setPage(1);
           }}
-          onOwnerChange={(value) => {
-            setOwner(value);
-            setPage(1);
-          }}
-          onTagFilterChange={(value) => {
-            setTagFilter(value);
-            setPage(1);
-          }}
           onFavoritesToggle={() => {
+            if (aiSearchMode) return;
             setFavoritesOnly((value) => !value);
             setPage(1);
           }}
-          onClearFilters={clearFilters}
-          onResetSort={resetSort}
+          onClearFilters={() => {
+            if (aiSearchMode) return;
+            clearFiltersAndDraft();
+          }}
+          onResetSort={() => {
+            if (aiSearchMode) return;
+            resetSort();
+          }}
           onSortChange={(value) => {
+            if (aiSearchMode) return;
             setSort(value);
             setRecentMode(false);
             setPage(1);
           }}
           onPageChange={(nextPage) => setPage(nextPage)}
+          onFavoriteToggleRepo={async (repo) => {
+            if (favoriteUpdatingId) return;
+            setFavoriteUpdatingId(repo.id);
+            await updateRepo(repo.id, { isFavorite: !repo.isFavorite });
+            setFavoriteUpdatingId(null);
+          }}
+          favoriteUpdatingId={favoriteUpdatingId}
         />
 
         <RepoDetailPanel
           repo={selectedRepo}
           noteDraft={noteDraft}
           newTag={newTag}
-          favoriteUpdating={favoriteUpdating}
+          favoriteUpdating={Boolean(selectedRepo && favoriteUpdatingId === selectedRepo.id)}
           tagSubmitting={tagSubmitting}
           tagDeleting={tagDeleting}
           onClose={() => setSelectedId(null)}
           onFavoriteToggle={async () => {
-            if (!selectedRepo || favoriteUpdating) return;
-            setFavoriteUpdating(true);
-            await updateSelected({ isFavorite: !selectedRepo.isFavorite });
-            setFavoriteUpdating(false);
+            if (!selectedRepo || favoriteUpdatingId) return;
+            setFavoriteUpdatingId(selectedRepo.id);
+            await updateRepo(selectedRepo.id, { isFavorite: !selectedRepo.isFavorite });
+            setFavoriteUpdatingId(null);
           }}
           onNoteChange={(value) => {
             setNoteDraft(value);

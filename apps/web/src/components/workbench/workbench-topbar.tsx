@@ -1,28 +1,27 @@
 "use client";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { useState } from "react";
-import { Bell, Search, Settings2, Sparkles, Star } from "lucide-react";
+import { LoaderCircle, Search, Sparkles } from "lucide-react";
 import { SignOutButton } from "../sign-out-button";
 
 type WorkbenchTopbarProps = {
-  query: string;
-  onQueryChange: (value: string) => void;
-  syncing: boolean;
+  queryDraft: string;
+  onQueryDraftChange: (value: string) => void;
+  onSearch: () => void;
+  canSearch: boolean;
   aiSearching: boolean;
-  aiStatusMessage: string | null;
-  onSync: () => void;
   onAiSearch: () => void;
   userName: string;
   userAvatarUrl?: string | null;
 };
 
 export function WorkbenchTopbar({
-  query,
-  onQueryChange,
-  syncing,
+  queryDraft,
+  onQueryDraftChange,
+  onSearch,
+  canSearch,
   aiSearching,
-  aiStatusMessage,
-  onSync,
   onAiSearch,
   userName,
   userAvatarUrl,
@@ -34,11 +33,10 @@ export function WorkbenchTopbar({
     <header data-testid="workbench-topbar" className="workbench-topbar">
       <div className="workbench-brand">
         <span className="workbench-brand__mark" aria-hidden="true">
-          <Star className="h-4 w-4 fill-current" />
+          <BrandLogo size={40} className="workbench-brand__logo" priority />
         </span>
         <div className="workbench-brand__copy">
-          <span className="workbench-brand__title">Stars Finder</span>
-          <span className="workbench-brand__subtle">Workbench</span>
+          <span className="workbench-brand__title">Starlens</span>
         </div>
       </div>
 
@@ -47,55 +45,40 @@ export function WorkbenchTopbar({
         <input
           aria-label="Search your starred repositories"
           role="searchbox"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
+          value={queryDraft}
+          onChange={(event) => onQueryDraftChange(event.target.value)}
           placeholder="Search your starred repositories..."
           className="w-full bg-transparent outline-none"
         />
-        <span className="workbench-topbar__shortcut">⌘ K</span>
       </label>
 
       <div className="workbench-topbar__actions">
         <button
           type="button"
-          onClick={onSync}
-          disabled={syncing}
+          onClick={onSearch}
+          disabled={!canSearch}
           className="workbench-button workbench-button--ghost"
-          aria-label={syncing ? "Syncing" : "Sync now"}
+          aria-label="Search repositories"
         >
-          {syncing ? "Syncing" : "Sync now"}
+          <Search className="h-4 w-4" />
+          Search
         </button>
         <button
           type="button"
           onClick={onAiSearch}
-          disabled={aiSearching}
-          className="workbench-button workbench-button--primary"
+          disabled={aiSearching || !canSearch}
+          aria-busy={aiSearching}
+          className={aiSearching
+            ? "workbench-button workbench-button--primary workbench-button--loading"
+            : "workbench-button workbench-button--primary"}
           aria-label={aiSearching ? "AI searching" : "AI Search"}
         >
-          <Sparkles className="h-4 w-4" />
+          {aiSearching ? (
+            <LoaderCircle className="h-4 w-4 workbench-button__spinner" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
           {aiSearching ? "Searching..." : "AI Search"}
-        </button>
-        {aiStatusMessage ? (
-          <span className="workbench-topbar__ai-status" role="status" aria-live="polite">
-            {aiStatusMessage}
-          </span>
-        ) : null}
-        <button type="button" className="workbench-button workbench-button--ghost">
-          Filters
-        </button>
-        <button
-          type="button"
-          className="workbench-icon-button"
-          aria-label="Settings"
-        >
-          <Settings2 className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          className="workbench-icon-button"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4 w-4" />
         </button>
         <SignOutButton className="workbench-button workbench-button--ghost" />
         <div className="workbench-user-pill" aria-label={userName}>

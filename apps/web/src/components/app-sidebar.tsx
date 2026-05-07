@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/brand-logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,7 +10,6 @@ import {
   Layers3,
   Search,
   Settings2,
-  Sparkles,
   Star,
   Tag,
 } from "lucide-react";
@@ -31,12 +31,9 @@ export function AppSidebar() {
     <aside className="hidden w-72 shrink-0 border-r border-[color:var(--line)] bg-[rgba(255,255,255,0.72)] xl:flex xl:flex-col">
       <div className="border-b border-[color:var(--line)] px-6 py-6">
         <Link href="/" className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--line)] bg-[color:var(--panel-strong)] text-[color:var(--accent)]">
-            <Sparkles className="h-4 w-4" />
-          </span>
+          <BrandLogo size={40} className="rounded-xl" />
           <div>
             <p className="text-base font-semibold tracking-tight">Starlens</p>
-            <p className="text-sm text-[color:var(--muted)]">Static milestone shell</p>
           </div>
         </Link>
       </div>
