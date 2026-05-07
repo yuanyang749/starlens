@@ -33,6 +33,12 @@ function normalizeUrlFavorite(value: string | null) {
   return value?.trim().toLowerCase() === "true";
 }
 
+function normalizeUrlPage(value: string | null) {
+  const parsed = Number(value?.trim());
+  const page = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
+  return Math.max(page, 1);
+}
+
 function buildFilterParams(filters: {
   query: string;
   favoritesOnly: boolean;
@@ -40,6 +46,7 @@ function buildFilterParams(filters: {
   language: string;
   owner: string;
   tagFilter: string;
+  page: number;
 }) {
   const params = new URLSearchParams();
   const query = filters.query.trim();
@@ -53,6 +60,7 @@ function buildFilterParams(filters: {
   if (tag) params.set("tag", tag);
   if (filters.favoritesOnly) params.set("favorite", "true");
   if (filters.sort !== DEFAULT_SEARCH_SORT) params.set("sort", filters.sort);
+  if (filters.page > 1) params.set("page", String(filters.page));
 
   return params;
 }
@@ -65,6 +73,7 @@ function readFiltersFromParams(params: Pick<URLSearchParams, "get">) {
     language: normalizeUrlValue(params.get("language")),
     owner: normalizeUrlValue(params.get("owner")),
     tagFilter: normalizeUrlValue(params.get("tag"), { lowercase: true }),
+    page: normalizeUrlPage(params.get("page")),
   };
 }
 
@@ -85,6 +94,7 @@ export function useWorkbenchQueryState() {
   const [language, setLanguage] = useState(initialFilters.language);
   const [owner, setOwner] = useState(initialFilters.owner);
   const [tagFilter, setTagFilter] = useState(initialFilters.tagFilter);
+  const [page, setPage] = useState(initialFilters.page);
 
   const filterParams = useMemo(
     () =>
@@ -95,16 +105,18 @@ export function useWorkbenchQueryState() {
         language,
         owner,
         tagFilter,
+        page,
       }),
-    [favoritesOnly, language, owner, query, sort, tagFilter],
+    [favoritesOnly, language, owner, page, query, sort, tagFilter],
   );
 
   const searchParams = useMemo(() => {
     const params = new URLSearchParams(filterParams);
+    params.set("page", String(page));
     params.set("pageSize", String(DEFAULT_SEARCH_PAGE_SIZE));
     params.set("sort", sort);
     return params;
-  }, [filterParams, sort]);
+  }, [filterParams, page, sort]);
 
   useEffect(() => {
     const nextQueryString = urlSearchParams.toString();
@@ -121,6 +133,7 @@ export function useWorkbenchQueryState() {
     setLanguage(nextFilters.language);
     setOwner(nextFilters.owner);
     setTagFilter(nextFilters.tagFilter);
+    setPage(nextFilters.page);
   }, [urlSearchParams]);
 
   useEffect(() => {
@@ -162,10 +175,12 @@ export function useWorkbenchQueryState() {
     setLanguage("");
     setOwner("");
     setTagFilter("");
+    setPage(1);
   }
 
   function resetSort() {
     setSort(DEFAULT_SEARCH_SORT);
+    setPage(1);
   }
 
   return {
@@ -181,6 +196,8 @@ export function useWorkbenchQueryState() {
     setOwner,
     tagFilter,
     setTagFilter,
+    page,
+    setPage,
     clearFilters,
     resetSort,
     searchParams,

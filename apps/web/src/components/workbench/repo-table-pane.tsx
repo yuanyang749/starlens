@@ -7,6 +7,8 @@ import { RepoTableRow } from "./repo-table-row";
 type RepoTablePaneProps = {
   repos: RepoSummary[];
   total: number;
+  page: number;
+  pageSize: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
   syncNow: () => void;
@@ -23,11 +25,35 @@ type RepoTablePaneProps = {
   onClearFilters: () => void;
   onResetSort: () => void;
   onSortChange: (value: SearchSort) => void;
+  onPageChange: (page: number) => void;
 };
+
+function buildPaginationItems(currentPage: number, totalPages: number) {
+  if (totalPages <= 1) return [1];
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  const pages = new Set<number>([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
+  const sorted = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
+  const items: Array<number | "ellipsis"> = [];
+
+  for (const page of sorted) {
+    const last = items[items.length - 1];
+    if (typeof last === "number" && page - last > 1) {
+      items.push("ellipsis");
+    }
+    items.push(page);
+  }
+
+  return items;
+}
 
 export function RepoTablePane({
   repos,
   total,
+  page,
+  pageSize,
   selectedId,
   onSelect,
   syncNow,
@@ -44,7 +70,14 @@ export function RepoTablePane({
   onClearFilters,
   onResetSort,
   onSortChange,
+  onPageChange,
 }: RepoTablePaneProps) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const pageItems = buildPaginationItems(safePage, totalPages);
+  const pageStart = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const pageEnd = total === 0 ? 0 : Math.min(safePage * pageSize, total);
+
   return (
     <section data-testid="repo-table-pane" className="repo-table-pane">
       <div className="repo-table-pane__toolbar">
@@ -140,13 +173,38 @@ export function RepoTablePane({
       </div>
 
       <div className="repo-table-pane__footer">
-        <p>{repos.length === 0 ? "0" : `1-${repos.length}`} of {total} repositories</p>
+        <p>{repos.length === 0 ? "0" : `${pageStart}-${pageEnd}`} of {total} repositories</p>
         <div className="repo-table-pagination">
-          <button type="button" className="repo-page-chip is-active">1</button>
-          <button type="button" className="repo-page-chip">2</button>
-          <button type="button" className="repo-page-chip">3</button>
-          <span className="repo-page-chip repo-page-chip--ghost">…</span>
-          <button type="button" className="repo-page-chip">96</button>
+          <button
+            type="button"
+            className={safePage <= 1 ? "repo-page-chip repo-page-chip--ghost" : "repo-page-chip"}
+            onClick={() => onPageChange(safePage - 1)}
+            disabled={safePage <= 1}
+          >
+            Prev
+          </button>
+          {pageItems.map((item, index) =>
+            item === "ellipsis" ? (
+              <span key={`ellipsis-${index}`} className="repo-page-chip repo-page-chip--ghost">…</span>
+            ) : (
+              <button
+                key={item}
+                type="button"
+                onClick={() => onPageChange(item)}
+                className={item === safePage ? "repo-page-chip is-active" : "repo-page-chip"}
+              >
+                {item}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            className={safePage >= totalPages ? "repo-page-chip repo-page-chip--ghost" : "repo-page-chip"}
+            onClick={() => onPageChange(safePage + 1)}
+            disabled={safePage >= totalPages}
+          >
+            Next
+          </button>
         </div>
       </div>
     </section>

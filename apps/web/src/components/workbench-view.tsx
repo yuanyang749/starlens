@@ -5,7 +5,6 @@ import {
   DEFAULT_SEARCH_SORT,
   type PaginatedResult,
   type RepoSummary,
-  type SearchSort,
 } from "@starlens/core";
 import { RepoDetailPanel } from "./workbench/repo-detail-panel";
 import { RepoTablePane } from "./workbench/repo-table-pane";
@@ -94,6 +93,8 @@ export function WorkbenchView({
     setOwner,
     tagFilter,
     setTagFilter,
+    page,
+    setPage,
     clearFilters,
     resetSort,
     searchParams,
@@ -109,8 +110,10 @@ export function WorkbenchView({
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [aiStatusMessage, setAiStatusMessage] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<SyncResult | null>(null);
+  const [pageSize, setPageSize] = useState(20);
   const [syncing, setSyncing] = useState(false);
   const [aiSearching, setAiSearching] = useState(false);
+  const [recentMode, setRecentMode] = useState(false);
   const [favoriteUpdating, setFavoriteUpdating] = useState(false);
   const [tagSubmitting, setTagSubmitting] = useState(false);
   const [tagDeleting, setTagDeleting] = useState<string | null>(null);
@@ -126,6 +129,7 @@ export function WorkbenchView({
       .then((data) => {
         setRepos(data.items);
         setTotal(data.total);
+        setPageSize(data.pageSize);
         setError(null);
         setSelectedId((current) =>
           data.items.some((repo) => repo.id === current)
@@ -424,7 +428,10 @@ export function WorkbenchView({
         userName={userName}
         userAvatarUrl={userAvatarUrl}
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={(value) => {
+          setQuery(value);
+          setPage(1);
+        }}
         syncing={syncing}
         aiSearching={aiSearching}
         aiStatusMessage={aiStatusMessage}
@@ -440,16 +447,24 @@ export function WorkbenchView({
       <div className="workbench-body">
         <WorkbenchSidebar
           favoritesOnly={favoritesOnly}
-          onFavoritesClick={() => setFavoritesOnly(true)}
+          onFavoritesClick={() => {
+            setFavoritesOnly(true);
+            setRecentMode(false);
+            setPage(1);
+          }}
           onAllStarsClick={() => {
             setFavoritesOnly(false);
+            setRecentMode(false);
             setSort(DEFAULT_SEARCH_SORT);
+            setPage(1);
           }}
           onRecentClick={() => {
             setFavoritesOnly(false);
+            setRecentMode(true);
             setSort("recent");
+            setPage(1);
           }}
-          recentActive={sort === "recent"}
+          recentActive={recentMode}
           total={total}
           favoriteCount={favoriteCount}
           lastSyncText={lastSyncText}
@@ -461,6 +476,8 @@ export function WorkbenchView({
         <RepoTablePane
           repos={repos}
           total={total}
+          page={page}
+          pageSize={pageSize}
           selectedId={selectedId}
           onSelect={setSelectedId}
           syncNow={syncNow}
@@ -470,13 +487,30 @@ export function WorkbenchView({
           tagFilter={tagFilter}
           favoritesOnly={favoritesOnly}
           sort={sort}
-          onLanguageChange={setLanguage}
-          onOwnerChange={setOwner}
-          onTagFilterChange={setTagFilter}
-          onFavoritesToggle={() => setFavoritesOnly((value) => !value)}
+          onLanguageChange={(value) => {
+            setLanguage(value);
+            setPage(1);
+          }}
+          onOwnerChange={(value) => {
+            setOwner(value);
+            setPage(1);
+          }}
+          onTagFilterChange={(value) => {
+            setTagFilter(value);
+            setPage(1);
+          }}
+          onFavoritesToggle={() => {
+            setFavoritesOnly((value) => !value);
+            setPage(1);
+          }}
           onClearFilters={clearFilters}
           onResetSort={resetSort}
-          onSortChange={setSort as (value: SearchSort) => void}
+          onSortChange={(value) => {
+            setSort(value);
+            setRecentMode(false);
+            setPage(1);
+          }}
+          onPageChange={(nextPage) => setPage(nextPage)}
         />
 
         <RepoDetailPanel

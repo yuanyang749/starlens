@@ -53,7 +53,7 @@ describe("search API contract", () => {
     await expect(json(response)).resolves.toMatchObject({ ok: true });
   });
 
-  it("clamps pagination and falls back to updated sort for invalid input", async () => {
+  it("clamps pagination and falls back to recent sort for invalid input", async () => {
     const { GET } = await import("@/app/api/search/route");
     const request = new Request(
       "https://starlens.test/api/search?q=%20%20&language=&owner=&tag=&favorite=maybe&sort=random&page=-7&pageSize=1000",
@@ -69,7 +69,7 @@ describe("search API contract", () => {
       owner: undefined,
       tag: undefined,
       favorite: undefined,
-      sort: "updated",
+      sort: "recent",
     } satisfies SearchReposInput);
   });
 
