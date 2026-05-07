@@ -14,6 +14,7 @@ import {
   Tags,
   Workflow,
 } from "lucide-react";
+import { GitHubSignInButton } from "./github-sign-in-button";
 
 const featureGroups = [
   {
@@ -46,6 +47,12 @@ const workflowNotes = [
   "Agent-ready tokens so Hermes or OpenClaw can reuse the same capability set.",
 ];
 
+const primaryWorkspaceLinkClassName =
+  "flex h-10 items-center gap-2 rounded-full bg-[color:var(--accent)] px-4 text-sm font-medium text-white shadow-[0_12px_28px_rgba(37,99,235,0.24)] transition hover:bg-[#1f56cf]";
+
+const primaryLoginLinkClassName =
+  "flex h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] px-6 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.24)] transition hover:bg-[#1f56cf]";
+
 function WorkspaceLink({
   children,
   className,
@@ -55,27 +62,14 @@ function WorkspaceLink({
   className: string;
   githubAuthEnabled: boolean;
 }) {
-  if (!githubAuthEnabled) {
-    return (
-      <button
-        type="button"
-        disabled
-        title="GitHub OAuth is not configured in this local environment."
-        className={`${className} cursor-not-allowed opacity-55`}
-      >
-        {children}
-      </button>
-    );
-  }
-
   return (
-    <Link
-      href="/api/auth/signin/github?callbackUrl=/app"
-      prefetch={false}
+    <GitHubSignInButton
       className={className}
+      githubAuthEnabled={githubAuthEnabled}
+      callbackUrl="/app"
     >
       {children}
-    </Link>
+    </GitHubSignInButton>
   );
 }
 
@@ -108,7 +102,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             </a>
             <WorkspaceLink
               githubAuthEnabled={githubAuthEnabled}
-              className="flex h-10 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white transition hover:bg-[color:var(--accent)]"
+              className={primaryWorkspaceLinkClassName}
             >
               Enter workspace
               <ArrowRight className="h-4 w-4" />
@@ -137,7 +131,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             <div className="flex flex-col gap-4 sm:flex-row">
               <WorkspaceLink
                 githubAuthEnabled={githubAuthEnabled}
-                className="flex h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--foreground)] px-6 text-sm font-medium text-white transition hover:bg-[color:var(--accent)]"
+                className={primaryLoginLinkClassName}
               >
                 Use GitHub login
                 <ArrowRight className="h-4 w-4" />
