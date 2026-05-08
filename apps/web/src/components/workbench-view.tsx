@@ -90,6 +90,8 @@ export function WorkbenchView({
     setSort,
     language,
     setLanguage,
+    tagFilter,
+    setTagFilter,
     page,
     setPage,
     clearFilters,
@@ -593,11 +595,17 @@ export function WorkbenchView({
           syncNow={syncNow}
           syncing={syncing}
           language={language}
+          tagFilter={tagFilter}
           favoritesOnly={favoritesOnly}
           sort={displayedSort}
           onLanguageChange={(value) => {
             if (aiSearchMode) return;
             setLanguage(value);
+            setPage(1);
+          }}
+          onTagFilterChange={(value) => {
+            if (aiSearchMode) return;
+            setTagFilter(value);
             setPage(1);
           }}
           onFavoritesToggle={() => {

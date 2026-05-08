@@ -45,7 +45,6 @@ export function RepoTableRow({
       onKeyDown={handleKeyDown}
       className={selected ? "repo-table-row is-selected" : "repo-table-row"}
     >
-      <span className="repo-table-row__select" aria-hidden="true" />
       <div className="repo-table-row__repo">
         <div className="repo-table-row__title">
           <FolderGit2 className="h-4 w-4" />

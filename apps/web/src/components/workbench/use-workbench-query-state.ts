@@ -44,14 +44,17 @@ function buildFilterParams(filters: {
   favoritesOnly: boolean;
   sort: SearchSort;
   language: string;
+  tagFilter: string;
   page: number;
 }) {
   const params = new URLSearchParams();
   const query = filters.query.trim();
   const language = filters.language.trim();
+  const tag = filters.tagFilter.trim().toLowerCase();
 
   if (query) params.set("q", query);
   if (language) params.set("language", language);
+  if (tag) params.set("tag", tag);
   if (filters.favoritesOnly) params.set("favorite", "true");
   if (filters.sort !== DEFAULT_SEARCH_SORT) params.set("sort", filters.sort);
   if (filters.page > 1) params.set("page", String(filters.page));
@@ -65,6 +68,7 @@ function readFiltersFromParams(params: Pick<URLSearchParams, "get">) {
     favoritesOnly: normalizeUrlFavorite(params.get("favorite")),
     sort: normalizeUrlSort(params.get("sort")),
     language: normalizeUrlValue(params.get("language")),
+    tagFilter: normalizeUrlValue(params.get("tag"), { lowercase: true }),
     page: normalizeUrlPage(params.get("page")),
   };
 }
@@ -84,6 +88,7 @@ export function useWorkbenchQueryState() {
   const [favoritesOnly, setFavoritesOnly] = useState(initialFilters.favoritesOnly);
   const [sort, setSort] = useState<SearchSort>(initialFilters.sort);
   const [language, setLanguage] = useState(initialFilters.language);
+  const [tagFilter, setTagFilter] = useState(initialFilters.tagFilter);
   const [page, setPage] = useState(initialFilters.page);
 
   const filterParams = useMemo(
@@ -93,9 +98,10 @@ export function useWorkbenchQueryState() {
         favoritesOnly,
         sort,
         language,
+        tagFilter,
         page,
       }),
-    [favoritesOnly, language, page, query, sort],
+    [favoritesOnly, language, page, query, sort, tagFilter],
   );
 
   const searchParams = useMemo(() => {
@@ -119,6 +125,7 @@ export function useWorkbenchQueryState() {
     setFavoritesOnly(nextFilters.favoritesOnly);
     setSort(nextFilters.sort);
     setLanguage(nextFilters.language);
+    setTagFilter(nextFilters.tagFilter);
     setPage(nextFilters.page);
   }, [urlSearchParams]);
 
@@ -159,6 +166,7 @@ export function useWorkbenchQueryState() {
     setQuery("");
     setFavoritesOnly(false);
     setLanguage("");
+    setTagFilter("");
     setPage(1);
   }
 
@@ -176,6 +184,8 @@ export function useWorkbenchQueryState() {
     setSort,
     language,
     setLanguage,
+    tagFilter,
+    setTagFilter,
     page,
     setPage,
     clearFilters,

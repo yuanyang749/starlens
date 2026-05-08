@@ -154,12 +154,24 @@ export function RepoDetailPanel({
           ))}
         </div>
         <div className="repo-tag-editor">
-          <input
-            value={newTag}
-            onChange={(event) => onNewTagChange(event.target.value)}
-            placeholder="New tag"
-            className="workbench-input"
-          />
+          <label className="workbench-input-shell">
+            <input
+              value={newTag}
+              onChange={(event) => onNewTagChange(event.target.value)}
+              placeholder="New tag"
+              className="workbench-input"
+            />
+            {newTag ? (
+              <button
+                type="button"
+                className="workbench-input-clear"
+                aria-label="Clear new tag"
+                onClick={() => onNewTagChange("")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </label>
           <button
             type="button"
             onClick={() => void onAddTag()}

@@ -51,6 +51,7 @@
 }
 
 .workbench-topbar__search {
+  position: relative;
   display: inline-flex;
   min-width: 0;
   align-items: center;
@@ -65,6 +66,7 @@
 
 .workbench-topbar__search input {
   min-width: 0;
+  padding-right: 34px;
   color: var(--foreground);
 }
 
@@ -218,7 +220,7 @@
 
 .repo-table-pane__header {
   display: grid;
-  grid-template-columns: 30px minmax(250px, 1.8fr) 90px 120px 110px minmax(160px, 1fr) 104px;
+  grid-template-columns: minmax(250px, 1.8fr) 90px 120px 110px minmax(160px, 1fr) 104px;
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
@@ -237,7 +239,7 @@
 .repo-table-row {
   display: grid;
   width: 100%;
-  grid-template-columns: 30px minmax(250px, 1.8fr) 90px 120px 110px minmax(160px, 1fr) 104px;
+  grid-template-columns: minmax(250px, 1.8fr) 90px 120px 110px minmax(160px, 1fr) 104px;
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
@@ -253,15 +255,6 @@
 
 .repo-table-row.is-selected {
   background: linear-gradient(180deg, #eff5ff, #e8f1ff);
-}
-
-.repo-table-row__select {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  border: 1px solid #c7d2e1;
-  border-radius: 6px;
-  background: #fff;
 }
 
 .repo-table-row__repo,
@@ -519,6 +512,72 @@
   padding: 0 12px;
   color: var(--foreground);
   outline: none;
+}
+
+.workbench-select-trigger {
+  min-height: 42px;
+  min-width: 180px;
+  border-radius: 14px;
+  border-color: var(--line);
+  background: var(--surface-3);
+  padding-inline: 12px;
+  color: var(--foreground);
+}
+
+.workbench-select-trigger[data-placeholder] {
+  color: #94a3b8;
+}
+
+.workbench-select-trigger[data-state="open"],
+.workbench-select-trigger:hover,
+.workbench-select-trigger:focus-visible {
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.workbench-select-content {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(10px);
+  padding: 6px;
+}
+
+.workbench-input-shell {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.workbench-input-shell .workbench-input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.workbench-input-clear {
+  position: absolute;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.workbench-input-clear:hover {
+  background: rgba(148, 163, 184, 0.14);
+  color: #475569;
+}
+
+.workbench-input-clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .repo-note-textarea {

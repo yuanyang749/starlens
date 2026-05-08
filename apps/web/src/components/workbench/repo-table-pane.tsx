@@ -2,6 +2,13 @@
 
 import type { RepoSummary, SearchSort } from "@starlens/core";
 import { RefreshCw, Star, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RepoTableRow } from "./repo-table-row";
 
 type RepoTablePaneProps = {
@@ -15,9 +22,11 @@ type RepoTablePaneProps = {
   syncNow: () => void;
   syncing: boolean;
   language: string;
+  tagFilter: string;
   favoritesOnly: boolean;
   sort: SearchSort;
   onLanguageChange: (value: string) => void;
+  onTagFilterChange: (value: string) => void;
   onFavoritesToggle: () => void;
   onClearFilters: () => void;
   onResetSort: () => void;
@@ -59,9 +68,11 @@ export function RepoTablePane({
   syncNow,
   syncing,
   language,
+  tagFilter,
   favoritesOnly,
   sort,
   onLanguageChange,
+  onTagFilterChange,
   onFavoritesToggle,
   onClearFilters,
   onResetSort,
@@ -80,25 +91,61 @@ export function RepoTablePane({
   return (
     <section data-testid="repo-table-pane" className="repo-table-pane">
       <div className="repo-table-pane__filters">
-        <input
-          value={language}
-          onChange={(event) => onLanguageChange(event.target.value)}
-          placeholder="Language"
-          className="workbench-input"
-          disabled={isAiSearchMode}
-        />
-        <select
+        <label className="workbench-input-shell">
+          <input
+            value={language}
+            onChange={(event) => onLanguageChange(event.target.value)}
+            placeholder="Language"
+            className="workbench-input"
+            disabled={isAiSearchMode}
+          />
+          {language ? (
+            <button
+              type="button"
+              className="workbench-input-clear"
+              aria-label="Clear language"
+              onClick={() => onLanguageChange("")}
+              disabled={isAiSearchMode}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </label>
+        <label className="workbench-input-shell">
+          <input
+            value={tagFilter}
+            onChange={(event) => onTagFilterChange(event.target.value)}
+            placeholder="Tag"
+            className="workbench-input"
+            disabled={isAiSearchMode}
+          />
+          {tagFilter ? (
+            <button
+              type="button"
+              className="workbench-input-clear"
+              aria-label="Clear tag"
+              onClick={() => onTagFilterChange("")}
+              disabled={isAiSearchMode}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </label>
+        <Select
           value={sort}
-          onChange={(event) => onSortChange(event.target.value as SearchSort)}
-          className="workbench-input"
-          aria-label="Sort repositories"
+          onValueChange={(value) => onSortChange(value as SearchSort)}
           disabled={isAiSearchMode}
         >
-          <option value="updated">Updated</option>
-          <option value="recent">Recent</option>
-          <option value="stars">Stars</option>
-          <option value="relevance">Relevance</option>
-        </select>
+          <SelectTrigger className="workbench-select-trigger" aria-label="Sort repositories">
+            <SelectValue placeholder="Sort repositories" />
+          </SelectTrigger>
+          <SelectContent className="workbench-select-content" position="popper">
+            <SelectItem value="updated">Updated</SelectItem>
+            <SelectItem value="recent">Recent</SelectItem>
+            <SelectItem value="stars">Stars</SelectItem>
+            <SelectItem value="relevance">Relevance</SelectItem>
+          </SelectContent>
+        </Select>
         <button
           type="button"
           onClick={onFavoritesToggle}
@@ -139,7 +186,6 @@ export function RepoTablePane({
       </div>
 
       <div className="repo-table-pane__header">
-        <span />
         <span>Repository</span>
         <span>Stars</span>
         <span>Language</span>

@@ -3,7 +3,7 @@
 import { BrandLogo } from "@/components/brand-logo";
 import Image from "next/image";
 import { useState } from "react";
-import { LoaderCircle, Search, Sparkles } from "lucide-react";
+import { LoaderCircle, Search, Sparkles, X } from "lucide-react";
 import { SignOutButton } from "../sign-out-button";
 
 type WorkbenchTopbarProps = {
@@ -51,6 +51,16 @@ export function WorkbenchTopbar({
           placeholder="Search your starred repositories..."
           className="w-full bg-transparent outline-none"
         />
+        {queryDraft ? (
+          <button
+            type="button"
+            className="workbench-input-clear"
+            aria-label="Clear search"
+            onClick={() => onQueryDraftChange("")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
       </label>
 
       <div className="workbench-topbar__actions">
