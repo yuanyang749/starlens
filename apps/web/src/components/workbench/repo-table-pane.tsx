@@ -1,7 +1,7 @@
 "use client";
 
 import type { RepoSummary, SearchSort } from "@starlens/core";
-import { RefreshCw, Star, X } from "lucide-react";
+import { ArrowDownUp, RefreshCw, Star, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -9,6 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { RepoTableRow } from "./repo-table-row";
 
 type RepoTablePaneProps = {
@@ -91,98 +96,122 @@ export function RepoTablePane({
   return (
     <section data-testid="repo-table-pane" className="repo-table-pane">
       <div className="repo-table-pane__filters">
-        <label className="workbench-input-shell">
-          <input
-            value={language}
-            onChange={(event) => onLanguageChange(event.target.value)}
-            placeholder="Language"
-            className="workbench-input"
-            disabled={isAiSearchMode}
-          />
-          {language ? (
-            <button
-              type="button"
-              className="workbench-input-clear"
-              aria-label="Clear language"
-              onClick={() => onLanguageChange("")}
+        <div className="repo-table-pane__filters-main">
+          <label className="workbench-input-shell repo-table-pane__filter-field">
+            <input
+              value={language}
+              onChange={(event) => onLanguageChange(event.target.value)}
+              placeholder="Language"
+              className="workbench-input"
               disabled={isAiSearchMode}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
-        </label>
-        <label className="workbench-input-shell">
-          <input
-            value={tagFilter}
-            onChange={(event) => onTagFilterChange(event.target.value)}
-            placeholder="Tag"
-            className="workbench-input"
-            disabled={isAiSearchMode}
-          />
-          {tagFilter ? (
-            <button
-              type="button"
-              className="workbench-input-clear"
-              aria-label="Clear tag"
-              onClick={() => onTagFilterChange("")}
+            />
+            {language ? (
+              <button
+                type="button"
+                className="workbench-input-clear"
+                aria-label="Clear language"
+                onClick={() => onLanguageChange("")}
+                disabled={isAiSearchMode}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </label>
+          <label className="workbench-input-shell repo-table-pane__filter-field">
+            <input
+              value={tagFilter}
+              onChange={(event) => onTagFilterChange(event.target.value)}
+              placeholder="Tag"
+              className="workbench-input"
               disabled={isAiSearchMode}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
-        </label>
-        <Select
-          value={sort}
-          onValueChange={(value) => onSortChange(value as SearchSort)}
-          disabled={isAiSearchMode}
-        >
-          <SelectTrigger className="workbench-select-trigger" aria-label="Sort repositories">
-            <SelectValue placeholder="Sort repositories" />
-          </SelectTrigger>
-          <SelectContent className="workbench-select-content" position="popper">
-            <SelectItem value="updated">Updated</SelectItem>
-            <SelectItem value="recent">Recent</SelectItem>
-            <SelectItem value="stars">Stars</SelectItem>
-            <SelectItem value="relevance">Relevance</SelectItem>
-          </SelectContent>
-        </Select>
-        <button
-          type="button"
-          onClick={onFavoritesToggle}
-          className={favoritesOnly ? "workbench-button workbench-button--active" : "workbench-button workbench-button--ghost"}
-          disabled={isAiSearchMode}
-        >
-          <Star className="h-4 w-4" />
-          Favorites
-        </button>
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="workbench-button workbench-button--ghost"
-          disabled={isAiSearchMode}
-        >
-          <X className="h-4 w-4" />
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={onResetSort}
-          className="workbench-button workbench-button--ghost"
-          disabled={isAiSearchMode}
-        >
-          Reset sort
-        </button>
-        <span className="repo-table-pane__filters-spacer" />
-        <button
-          type="button"
-          onClick={syncNow}
-          disabled={syncing}
-          className="workbench-button workbench-button--ghost"
-          aria-label={syncing ? "Syncing" : "Sync now"}
-        >
-          <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
-          {syncing ? "Syncing" : "Sync now"}
-        </button>
+            />
+            {tagFilter ? (
+              <button
+                type="button"
+                className="workbench-input-clear"
+                aria-label="Clear tag"
+                onClick={() => onTagFilterChange("")}
+                disabled={isAiSearchMode}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </label>
+          <Select
+            value={sort}
+            onValueChange={(value) => onSortChange(value as SearchSort)}
+            disabled={isAiSearchMode}
+          >
+            <SelectTrigger className="workbench-select-trigger repo-table-pane__sort-trigger" aria-label="Sort repositories">
+              <SelectValue placeholder="Sort repositories" />
+            </SelectTrigger>
+            <SelectContent className="workbench-select-content" position="popper">
+              <SelectItem value="updated">Updated</SelectItem>
+              <SelectItem value="recent">Recent</SelectItem>
+              <SelectItem value="stars">Stars</SelectItem>
+              <SelectItem value="relevance">Relevance</SelectItem>
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={onFavoritesToggle}
+            className={favoritesOnly ? "workbench-button workbench-button--active" : "workbench-button workbench-button--ghost"}
+            disabled={isAiSearchMode}
+          >
+            <Star className="h-4 w-4" />
+            Favorites
+          </button>
+        </div>
+        <div className="repo-table-pane__filters-actions">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="workbench-icon-button workbench-icon-button--round"
+                aria-label="Clear filters"
+                disabled={isAiSearchMode}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>Clear filters</span>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onResetSort}
+                className="workbench-icon-button workbench-icon-button--round"
+                aria-label="Reset sort"
+                disabled={isAiSearchMode}
+              >
+                <ArrowDownUp className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>Reset sort</span>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={syncNow}
+                disabled={syncing}
+                className="workbench-icon-button workbench-icon-button--round"
+                aria-label={syncing ? "Syncing" : "Sync now"}
+              >
+                <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>{syncing ? "Syncing" : "Sync now"}</span>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       <div className="repo-table-pane__header">

@@ -7,12 +7,15 @@ import {
   type RepoSummary,
 } from "@starlens/core";
 import { X } from "lucide-react";
+import { AISettingsView } from "./ai-settings-view";
 import { RepoDetailPanel } from "./workbench/repo-detail-panel";
 import { RepoTablePane } from "./workbench/repo-table-pane";
 import { useWorkbenchQueryState } from "./workbench/use-workbench-query-state";
 import { WorkbenchSidebar } from "./workbench/workbench-sidebar";
 import { formatDateTime } from "./workbench/workbench-formatters";
 import { WorkbenchTopbar } from "./workbench/workbench-topbar";
+import { SettingsOverview } from "./settings-overview";
+import { TokensSettingsView } from "./tokens-settings-view";
 
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = { ok: false; error: { code: string; message: string } };
@@ -117,6 +120,7 @@ export function WorkbenchView({
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
+  const [contentMode, setContentMode] = useState<"repos" | "settings" | "settings-ai" | "settings-tokens">("repos");
   const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
   const [tagDeleting, setTagDeleting] = useState<string | null>(null);
@@ -378,6 +382,7 @@ export function WorkbenchView({
       );
 
       setAiSearchResults(aiRepos);
+      setContentMode("repos");
       setAiSearchMode(true);
       setFavoritesOnly(false);
       setRecentMode(false);
@@ -415,6 +420,7 @@ export function WorkbenchView({
 
     setError(null);
     setSyncMessage(null);
+    setContentMode("repos");
     setAiSearchMode(false);
     setRecentMode(false);
 
@@ -504,6 +510,23 @@ export function WorkbenchView({
   const displayedRepos = aiSearchMode ? aiSearchPagedRepos : repos;
   const displayedTotal = aiSearchMode ? aiSearchTotal : total;
   const displayedSort = aiSearchMode ? "relevance" : sort;
+  const showingSettingsPanel = contentMode !== "repos";
+
+  let settingsPanelContent: React.ReactNode = null;
+
+  if (contentMode === "settings") {
+    settingsPanelContent = (
+      <SettingsOverview
+        onOpenWorkspace={() => setContentMode("repos")}
+        onOpenAiProviders={() => setContentMode("settings-ai")}
+        onOpenTokens={() => setContentMode("settings-tokens")}
+      />
+    );
+  } else if (contentMode === "settings-ai") {
+    settingsPanelContent = <AISettingsView />;
+  } else if (contentMode === "settings-tokens") {
+    settingsPanelContent = <TokensSettingsView />;
+  }
 
   return (
     <div className="workbench-shell">
@@ -545,17 +568,20 @@ export function WorkbenchView({
         </div>
       ) : null}
 
-      <div className="workbench-body">
+      <div className={showingSettingsPanel ? "workbench-body workbench-body--settings" : "workbench-body"}>
         <WorkbenchSidebar
+          contentMode={contentMode}
           favoritesOnly={favoritesOnly}
           aiSearchActive={aiSearchMode}
           onFavoritesClick={() => {
+            setContentMode("repos");
             setAiSearchMode(false);
             setFavoritesOnly(true);
             setRecentMode(false);
             setPage(1);
           }}
           onAllStarsClick={() => {
+            setContentMode("repos");
             setAiSearchMode(false);
             setFavoritesOnly(false);
             setRecentMode(false);
@@ -563,6 +589,7 @@ export function WorkbenchView({
             setPage(1);
           }}
           onRecentClick={() => {
+            setContentMode("repos");
             setAiSearchMode(false);
             setFavoritesOnly(false);
             setRecentMode(true);
@@ -570,11 +597,14 @@ export function WorkbenchView({
             setPage(1);
           }}
           onAiSearchClick={() => {
+            setContentMode("repos");
             setAiSearchMode(true);
             setFavoritesOnly(false);
             setRecentMode(false);
             setPage(1);
           }}
+          onOpenSettings={() => setContentMode("settings")}
+          onOpenTokens={() => setContentMode("settings-tokens")}
           recentActive={recentMode}
           total={allStarsTotal}
           favoriteCount={favoriteCount}
@@ -584,82 +614,90 @@ export function WorkbenchView({
           }
         />
 
-        <RepoTablePane
-          repos={displayedRepos}
-          total={displayedTotal}
-          mode={aiSearchMode ? "ai_search" : "default"}
-          page={page}
-          pageSize={aiSearchMode ? aiSearchPageSize : pageSize}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          syncNow={syncNow}
-          syncing={syncing}
-          language={language}
-          tagFilter={tagFilter}
-          favoritesOnly={favoritesOnly}
-          sort={displayedSort}
-          onLanguageChange={(value) => {
-            if (aiSearchMode) return;
-            setLanguage(value);
-            setPage(1);
-          }}
-          onTagFilterChange={(value) => {
-            if (aiSearchMode) return;
-            setTagFilter(value);
-            setPage(1);
-          }}
-          onFavoritesToggle={() => {
-            if (aiSearchMode) return;
-            setFavoritesOnly((value) => !value);
-            setPage(1);
-          }}
-          onClearFilters={() => {
-            if (aiSearchMode) return;
-            clearFiltersAndDraft();
-          }}
-          onResetSort={() => {
-            if (aiSearchMode) return;
-            resetSort();
-          }}
-          onSortChange={(value) => {
-            if (aiSearchMode) return;
-            setSort(value);
-            setRecentMode(false);
-            setPage(1);
-          }}
-          onPageChange={(nextPage) => setPage(nextPage)}
-          onFavoriteToggleRepo={async (repo) => {
-            if (favoriteUpdatingId) return;
-            setFavoriteUpdatingId(repo.id);
-            await updateRepo(repo.id, { isFavorite: !repo.isFavorite });
-            setFavoriteUpdatingId(null);
-          }}
-          favoriteUpdatingId={favoriteUpdatingId}
-        />
+        {showingSettingsPanel ? (
+          <section data-testid="workbench-settings-pane" className="workbench-settings-pane">
+            {settingsPanelContent}
+          </section>
+        ) : (
+          <>
+            <RepoTablePane
+              repos={displayedRepos}
+              total={displayedTotal}
+              mode={aiSearchMode ? "ai_search" : "default"}
+              page={page}
+              pageSize={aiSearchMode ? aiSearchPageSize : pageSize}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              syncNow={syncNow}
+              syncing={syncing}
+              language={language}
+              tagFilter={tagFilter}
+              favoritesOnly={favoritesOnly}
+              sort={displayedSort}
+              onLanguageChange={(value) => {
+                if (aiSearchMode) return;
+                setLanguage(value);
+                setPage(1);
+              }}
+              onTagFilterChange={(value) => {
+                if (aiSearchMode) return;
+                setTagFilter(value);
+                setPage(1);
+              }}
+              onFavoritesToggle={() => {
+                if (aiSearchMode) return;
+                setFavoritesOnly((value) => !value);
+                setPage(1);
+              }}
+              onClearFilters={() => {
+                if (aiSearchMode) return;
+                clearFiltersAndDraft();
+              }}
+              onResetSort={() => {
+                if (aiSearchMode) return;
+                resetSort();
+              }}
+              onSortChange={(value) => {
+                if (aiSearchMode) return;
+                setSort(value);
+                setRecentMode(false);
+                setPage(1);
+              }}
+              onPageChange={(nextPage) => setPage(nextPage)}
+              onFavoriteToggleRepo={async (repo) => {
+                if (favoriteUpdatingId) return;
+                setFavoriteUpdatingId(repo.id);
+                await updateRepo(repo.id, { isFavorite: !repo.isFavorite });
+                setFavoriteUpdatingId(null);
+              }}
+              favoriteUpdatingId={favoriteUpdatingId}
+            />
 
-        <RepoDetailPanel
-          repo={selectedRepo}
-          noteDraft={noteDraft}
-          newTag={newTag}
-          favoriteUpdating={Boolean(selectedRepo && favoriteUpdatingId === selectedRepo.id)}
-          tagSubmitting={tagSubmitting}
-          tagDeleting={tagDeleting}
-          onClose={() => setSelectedId(null)}
-          onFavoriteToggle={async () => {
-            if (!selectedRepo || favoriteUpdatingId) return;
-            setFavoriteUpdatingId(selectedRepo.id);
-            await updateRepo(selectedRepo.id, { isFavorite: !selectedRepo.isFavorite });
-            setFavoriteUpdatingId(null);
-          }}
-          onNoteChange={(value) => {
-            setNoteDraft(value);
-            scheduleNoteSave(value);
-          }}
-          onSaveNote={() => scheduleNoteSave(noteDraft)}
-          onNewTagChange={setNewTag}
-          onAddTag={addTag}
-          onDeleteTag={deleteTag}
-        />
+            <RepoDetailPanel
+              repo={selectedRepo}
+              noteDraft={noteDraft}
+              newTag={newTag}
+              favoriteUpdating={Boolean(selectedRepo && favoriteUpdatingId === selectedRepo.id)}
+              tagSubmitting={tagSubmitting}
+              tagDeleting={tagDeleting}
+              onClose={() => setSelectedId(null)}
+              onFavoriteToggle={async () => {
+                if (!selectedRepo || favoriteUpdatingId) return;
+                setFavoriteUpdatingId(selectedRepo.id);
+                await updateRepo(selectedRepo.id, { isFavorite: !selectedRepo.isFavorite });
+                setFavoriteUpdatingId(null);
+              }}
+              onNoteChange={(value) => {
+                setNoteDraft(value);
+                scheduleNoteSave(value);
+              }}
+              onSaveNote={() => scheduleNoteSave(noteDraft)}
+              onNewTagChange={setNewTag}
+              onAddTag={addTag}
+              onDeleteTag={deleteTag}
+            />
+          </>
+        )}
       </div>
     </div>
   );

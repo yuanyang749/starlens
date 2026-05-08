@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AISettingsView } from "@/components/ai-settings-view";
+import { SettingsOverview } from "@/components/settings-overview";
 import { TokensSettingsView } from "@/components/tokens-settings-view";
 
 function mount(node: React.ReactNode) {
@@ -16,6 +17,24 @@ function mount(node: React.ReactNode) {
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+});
+
+describe("settings overview layout", () => {
+  it("renders the intro block above an adaptive cards grid", () => {
+    const { el } = mount(<SettingsOverview />);
+
+    const overview = el.querySelector('[data-testid="settings-overview"]');
+    const intro = el.querySelector('[data-testid="settings-overview-intro"]');
+    const cardsGrid = el.querySelector('[data-testid="settings-overview-cards"]');
+    const cards = Array.from(el.querySelectorAll('[data-testid="settings-overview-card"]'));
+
+    expect(overview).toBeTruthy();
+    expect(intro).toBeTruthy();
+    expect(cardsGrid).toBeTruthy();
+    expect(cards.length).toBe(3);
+    expect(overview?.firstElementChild).toBe(intro);
+    expect(overview?.lastElementChild).toBe(cardsGrid);
+  });
 });
 
 describe("tokens settings interactions", () => {

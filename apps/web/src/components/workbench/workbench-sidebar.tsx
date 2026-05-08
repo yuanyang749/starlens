@@ -1,15 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { Clock3, KeyRound, Search, Settings2, Sparkles, Star, Tag } from "lucide-react";
 
 type WorkbenchSidebarProps = {
+  contentMode: "repos" | "settings" | "settings-ai" | "settings-tokens";
   favoritesOnly: boolean;
   aiSearchActive: boolean;
   onFavoritesClick: () => void;
   onAllStarsClick: () => void;
   onRecentClick: () => void;
   onAiSearchClick: () => void;
+  onOpenSettings: () => void;
+  onOpenTokens: () => void;
   recentActive: boolean;
   total: number;
   favoriteCount: number;
@@ -18,18 +20,23 @@ type WorkbenchSidebarProps = {
 };
 
 export function WorkbenchSidebar({
+  contentMode,
   favoritesOnly,
   aiSearchActive,
   onFavoritesClick,
   onAllStarsClick,
   onRecentClick,
   onAiSearchClick,
+  onOpenSettings,
+  onOpenTokens,
   recentActive,
   total,
   favoriteCount,
   lastSyncText,
   syncStatusText,
 }: WorkbenchSidebarProps) {
+  const reposActive = contentMode === "repos";
+
   return (
     <aside data-testid="workbench-sidebar" className="workbench-sidebar">
       <div className="workbench-sidebar__groups">
@@ -38,7 +45,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onAllStarsClick}
-            className={!favoritesOnly && !recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={reposActive && !favoritesOnly && !recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Search className="h-4 w-4" />
@@ -49,7 +56,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onFavoritesClick}
-            className={favoritesOnly && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={reposActive && favoritesOnly && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Star className="h-4 w-4" />
@@ -60,7 +67,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onRecentClick}
-            className={recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={reposActive && recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Clock3 className="h-4 w-4" />
@@ -86,7 +93,7 @@ export function WorkbenchSidebar({
           <button
             type="button"
             onClick={onAiSearchClick}
-            className={aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={reposActive && aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Sparkles className="h-4 w-4" />
@@ -97,22 +104,30 @@ export function WorkbenchSidebar({
 
         <section className="workbench-nav-section" aria-label="Tools">
           <p className="workbench-nav-section__title">TOOLS</p>
-          <Link href="/app/settings/tokens" className="workbench-nav-item">
+          <button
+            type="button"
+            onClick={onOpenTokens}
+            className={contentMode === "settings-tokens" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+          >
             <span className="workbench-nav-item__leading">
               <KeyRound className="h-4 w-4" />
               Tokens
             </span>
-          </Link>
+          </button>
         </section>
 
         <section className="workbench-nav-section" aria-label="System">
           <p className="workbench-nav-section__title">SYSTEM</p>
-          <Link href="/app/settings" className="workbench-nav-item">
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className={contentMode === "settings" || contentMode === "settings-ai" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+          >
             <span className="workbench-nav-item__leading">
               <Settings2 className="h-4 w-4" />
               Settings
             </span>
-          </Link>
+          </button>
         </section>
       </div>
 

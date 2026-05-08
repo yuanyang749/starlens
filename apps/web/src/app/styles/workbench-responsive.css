@@ -3,6 +3,10 @@
     grid-template-columns: 240px minmax(0, 1fr) 360px;
   }
 
+  .workbench-body--settings {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
   .workbench-topbar {
     grid-template-columns: 220px minmax(280px, 1fr) auto;
   }
@@ -50,6 +54,29 @@
 
   .workbench-user-pill__label {
     display: none;
+  }
+
+  .workbench-settings-pane {
+    padding: 14px;
+  }
+
+  .repo-table-pane__filters {
+    align-items: stretch;
+  }
+
+  .repo-table-pane__filters-main {
+    width: 100%;
+  }
+
+  .repo-table-pane__filter-field,
+  .repo-table-pane__sort-trigger {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .repo-table-pane__filters-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .repo-table-pane__filters,

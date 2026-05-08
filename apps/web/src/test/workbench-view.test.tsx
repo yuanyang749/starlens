@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { act } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PaginatedResult, RepoSummary } from "@starlens/core";
 import { mockRepoDetails } from "@starlens/core";
@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkbenchView } from "@/components/workbench-view";
 
 const replaceMock = vi.fn();
+const mountedRoots: Root[] = [];
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock }),
@@ -20,6 +21,7 @@ function mount(node: React.ReactNode) {
   document.body.appendChild(el);
   const root = createRoot(el);
   act(() => root.render(<TooltipProvider>{node}</TooltipProvider>));
+  mountedRoots.push(root);
   return { el, root };
 }
 
@@ -87,6 +89,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  while (mountedRoots.length > 0) {
+    const root = mountedRoots.pop();
+    if (root) {
+      act(() => root.unmount());
+    }
+  }
   document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
@@ -199,7 +207,7 @@ describe("workbench view", () => {
     await flushWorkbench();
   });
 
-  it("shows custom tags and places sync action inside repo filters", async () => {
+  it("shows custom tags and renders repo filter actions as icon buttons", async () => {
     const { el } = mount(<WorkbenchView userName="Tester" />);
     await flushWorkbench();
 
@@ -207,17 +215,60 @@ describe("workbench view", () => {
     const listFilterInput = repoPane?.querySelector('input[aria-label="Filter repositories"]');
     const rowTags = Array.from(repoPane?.querySelectorAll(".repo-table-row .repo-chip") ?? []);
     const headerText = repoPane?.querySelector(".repo-table-pane__header")?.textContent ?? "";
-    const syncButton = repoPane?.querySelector('.repo-table-pane__filters button[aria-label="Sync now"]');
+    const actionGroup = repoPane?.querySelector(".repo-table-pane__filters-actions");
+    const clearButton = actionGroup?.querySelector('button[aria-label="Clear filters"]');
+    const resetSortButton = actionGroup?.querySelector('button[aria-label="Reset sort"]');
+    const syncButton = actionGroup?.querySelector('button[aria-label="Sync now"]');
     const topbarSyncButton = el.querySelector('[data-testid="workbench-topbar"] button[aria-label="Sync now"]');
 
     expect(repoPane).toBeTruthy();
     expect(listFilterInput).toBeNull();
+    expect(actionGroup).toBeTruthy();
+    expect(clearButton).toBeTruthy();
+    expect(resetSortButton).toBeTruthy();
     expect(syncButton).toBeTruthy();
+    expect(clearButton?.textContent?.trim()).toBe("");
+    expect(resetSortButton?.textContent?.trim()).toBe("");
+    expect(syncButton?.textContent?.trim()).toBe("");
+
+    await act(async () => {
+      (clearButton as HTMLButtonElement | null)?.focus();
+      clearButton?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(document.body.textContent).toContain("Clear filters");
     expect(topbarSyncButton).toBeNull();
     expect(headerText).toContain("Actions");
     expect(headerText).toContain("Tags");
     expect(rowTags.length).toBeGreaterThan(0);
     expect(rowTags.some((chip) => chip.textContent?.includes("frontend"))).toBe(true);
+  });
+
+  it("opens settings inside the current workbench body", async () => {
+    const { el } = mount(<WorkbenchView userName="Tester" />);
+    await flushWorkbench();
+
+    const settingsEntry = Array.from(el.querySelectorAll(".workbench-nav-item")).find((node) =>
+      node.textContent?.includes("Settings"),
+    ) as HTMLElement | undefined;
+
+    expect(settingsEntry).toBeTruthy();
+    expect(el.querySelector('[data-testid="repo-table-pane"]')).toBeTruthy();
+    expect(el.textContent).toContain("Selected repository");
+
+    await act(async () => {
+      settingsEntry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    await flushWorkbench();
+
+    expect(el.querySelector('[data-testid="workbench-sidebar"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="repo-table-pane"]')).toBeNull();
+    expect(el.querySelector('[data-testid="workbench-settings-pane"]')).toBeTruthy();
+    expect(el.textContent).toContain("Configuration domain");
+    expect(el.textContent).not.toContain("Selected repository");
   });
 
   it("does not request search while typing and only searches on manual submit", async () => {
