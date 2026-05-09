@@ -1,5 +1,5 @@
-import { TokensSettingsView } from "@/components/tokens-settings-view";
+import { redirect } from "next/navigation";
 
 export default function TokensSettingsPage() {
-  return <TokensSettingsView />;
+  redirect("/app/tokens");
 }

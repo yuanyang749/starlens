@@ -4,6 +4,7 @@ export const mockTokens: TokenRecord[] = [
   {
     id: "token-1",
     name: "CLI on MacBook",
+    note: "Local automation and shell usage",
     tokenPrefix: "stl_dev_1",
     lastUsedAt: "2026-05-05T09:42:00.000Z",
     expiresAt: null,
@@ -13,6 +14,7 @@ export const mockTokens: TokenRecord[] = [
   {
     id: "token-2",
     name: "Hermes Agent",
+    note: "Dedicated token for background agent jobs",
     tokenPrefix: "stl_ops_2",
     lastUsedAt: "2026-05-04T22:15:00.000Z",
     expiresAt: null,

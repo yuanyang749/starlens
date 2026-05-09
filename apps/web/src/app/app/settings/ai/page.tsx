@@ -1,5 +1,5 @@
-import { AISettingsView } from "@/components/ai-settings-view";
+import { redirect } from "next/navigation";
 
 export default function AISettingsPage() {
-  return <AISettingsView />;
+  redirect("/app/providers");
 }

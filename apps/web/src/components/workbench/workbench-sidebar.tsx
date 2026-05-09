@@ -1,16 +1,17 @@
 "use client";
 
-import { Clock3, KeyRound, Search, Settings2, Sparkles, Star, Tag } from "lucide-react";
+import { Bot, Clock3, KeyRound, Search, Settings2, Sparkles, Star, Tag } from "lucide-react";
 
 type WorkbenchSidebarProps = {
-  contentMode: "repos" | "settings" | "settings-ai" | "settings-tokens";
+  contentMode: "repos" | "general" | "providers" | "tokens";
   favoritesOnly: boolean;
   aiSearchActive: boolean;
   onFavoritesClick: () => void;
   onAllStarsClick: () => void;
   onRecentClick: () => void;
   onAiSearchClick: () => void;
-  onOpenSettings: () => void;
+  onOpenGeneral: () => void;
+  onOpenProviders: () => void;
   onOpenTokens: () => void;
   recentActive: boolean;
   total: number;
@@ -27,7 +28,8 @@ export function WorkbenchSidebar({
   onAllStarsClick,
   onRecentClick,
   onAiSearchClick,
-  onOpenSettings,
+  onOpenGeneral,
+  onOpenProviders,
   onOpenTokens,
   recentActive,
   total,
@@ -106,8 +108,18 @@ export function WorkbenchSidebar({
           <p className="workbench-nav-section__title">TOOLS</p>
           <button
             type="button"
+            onClick={onOpenProviders}
+            className={contentMode === "providers" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+          >
+            <span className="workbench-nav-item__leading">
+              <Bot className="h-4 w-4" />
+              Providers
+            </span>
+          </button>
+          <button
+            type="button"
             onClick={onOpenTokens}
-            className={contentMode === "settings-tokens" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            className={contentMode === "tokens" ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <KeyRound className="h-4 w-4" />
@@ -120,12 +132,12 @@ export function WorkbenchSidebar({
           <p className="workbench-nav-section__title">SYSTEM</p>
           <button
             type="button"
-            onClick={onOpenSettings}
-            className={contentMode === "settings" || contentMode === "settings-ai" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            onClick={onOpenGeneral}
+            className={contentMode === "general" ? "workbench-nav-item is-active" : "workbench-nav-item"}
           >
             <span className="workbench-nav-item__leading">
               <Settings2 className="h-4 w-4" />
-              Settings
+              General
             </span>
           </button>
         </section>

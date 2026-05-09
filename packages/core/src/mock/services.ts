@@ -160,7 +160,7 @@ export function listMockTokens(): TokenRecord[] {
   return mockTokens;
 }
 
-export function createMockToken(name: string) {
+export function createMockToken(name: string, note = "") {
   const createdAt = new Date().toISOString();
   const tokenPrefix = "stl_mock";
 
@@ -169,6 +169,7 @@ export function createMockToken(name: string) {
     tokenMeta: {
       id: "token-new",
       name,
+      note,
       tokenPrefix,
       lastUsedAt: null,
       expiresAt: null,

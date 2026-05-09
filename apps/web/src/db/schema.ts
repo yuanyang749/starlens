@@ -145,6 +145,7 @@ export const personalApiTokens = pgTable("personal_api_tokens", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  note: text("note").notNull().default(""),
   tokenHash: text("token_hash").notNull(),
   tokenPrefix: text("token_prefix").notNull(),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),

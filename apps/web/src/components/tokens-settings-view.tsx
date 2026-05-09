@@ -13,6 +13,7 @@ export function TokensSettingsView() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   const loadTokens = async (signal?: AbortSignal) => {
     try {
@@ -39,9 +40,10 @@ export function TokensSettingsView() {
       const token = await fetchApi<CreatedToken>("/api/tokens", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, note: noteDraft.trim() }),
       });
       setCreatedToken(token.token ?? null);
+      setNoteDraft("");
       await loadTokens();
       setToast("Token created successfully.");
     } catch (err) {
@@ -75,6 +77,18 @@ export function TokensSettingsView() {
           </button>
         </div>
 
+        <label className="mb-4 block">
+          <span className="mb-2 block text-sm font-medium text-[color:var(--foreground)]">
+            Remark
+          </span>
+          <input
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            placeholder="Remark for this token"
+            className="h-11 w-full rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
+          />
+        </label>
+
         {toast ? <p className="mb-3 text-sm text-emerald-500">{toast}</p> : null}
         {createdToken ? (
           <div className="mb-3 rounded-[18px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-3">
@@ -93,7 +107,7 @@ export function TokensSettingsView() {
         ) : tokens.length === 0 ? (
           <p className="rounded-[18px] border border-dashed border-[color:var(--line)] p-4 text-sm text-[color:var(--muted)]">No tokens yet.</p>
         ) : (
-          <div className="space-y-4">{tokens.map((token) => <article key={token.id} className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4"><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold tracking-tight">{token.name}</h2><p className="mt-1 font-mono text-sm text-[color:var(--muted)]">{token.tokenPrefix}...</p></div><button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline">Revoke</button></div></article>)}</div>
+          <div className="space-y-4">{tokens.map((token) => <article key={token.id} className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4"><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold tracking-tight">{token.name}</h2>{token.note ? <p className="mt-1 text-sm text-[color:var(--foreground)]">{token.note}</p> : null}<p className="mt-1 font-mono text-sm text-[color:var(--muted)]">{token.tokenPrefix}...</p></div><button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline">Revoke</button></div></article>)}</div>
         )}
       </section>
 

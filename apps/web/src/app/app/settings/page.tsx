@@ -1,5 +1,5 @@
-import { SettingsOverview } from "@/components/settings-overview";
+import { redirect } from "next/navigation";
 
 export default function SettingsPage() {
-  return <SettingsOverview />;
+  redirect("/app/general");
 }

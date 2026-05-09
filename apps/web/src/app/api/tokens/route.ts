@@ -17,10 +17,11 @@ export async function POST(request: Request) {
   if (!user) return unauthorized();
 
   const body = await request.json().catch(() => ({}));
+  const note = typeof body.note === "string" ? body.note.trim() : "";
 
   if (typeof body.name !== "string" || !body.name.trim()) {
     return fail("invalid_token_name", "Token name is required.");
   }
 
-  return ok(await createPersonalApiToken(user.id, body.name.trim()));
+  return ok(await createPersonalApiToken(user.id, body.name.trim(), note));
 }

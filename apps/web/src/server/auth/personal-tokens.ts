@@ -18,6 +18,7 @@ function toTokenRecord(token: typeof personalApiTokens.$inferSelect): TokenRecor
   return {
     id: token.id,
     name: token.name,
+    note: token.note,
     tokenPrefix: token.tokenPrefix,
     lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
     expiresAt: token.expiresAt?.toISOString() ?? null,
@@ -29,6 +30,7 @@ function toTokenRecord(token: typeof personalApiTokens.$inferSelect): TokenRecor
 export async function createPersonalApiToken(
   userId: string,
   name: string,
+  note: string,
 ): Promise<CreatedPersonalApiToken> {
   const db = getDb();
   const rawToken = `stl_${randomBytes(32).toString("base64url")}`;
@@ -38,6 +40,7 @@ export async function createPersonalApiToken(
     .values({
       userId,
       name,
+      note,
       tokenHash: hashToken(rawToken),
       tokenPrefix,
     })

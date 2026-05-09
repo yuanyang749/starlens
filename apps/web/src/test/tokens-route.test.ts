@@ -37,6 +37,7 @@ describe("token API routes", () => {
     createPersonalApiTokenMock.mockResolvedValue({
       id: "token-1",
       name: "CLI",
+      note: "CI runner",
       token: "stl_secret",
       tokenPrefix: "stl_secret",
       createdAt: "2026-05-06T00:00:00.000Z",
@@ -48,14 +49,14 @@ describe("token API routes", () => {
     const response = await POST(
       new Request("https://starlens.test/api/tokens", {
         method: "POST",
-        body: JSON.stringify({ name: "CLI" }),
+        body: JSON.stringify({ name: "CLI", note: "CI runner" }),
       }),
     );
 
-    expect(createPersonalApiTokenMock).toHaveBeenCalledWith("user-1", "CLI");
+    expect(createPersonalApiTokenMock).toHaveBeenCalledWith("user-1", "CLI", "CI runner");
     await expect(json(response)).resolves.toMatchObject({
       ok: true,
-      data: { token: "stl_secret", tokenPrefix: "stl_secret" },
+      data: { token: "stl_secret", tokenPrefix: "stl_secret", note: "CI runner" },
     });
   });
 

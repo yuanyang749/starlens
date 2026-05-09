@@ -19,9 +19,9 @@ const navItems = [
   { href: "/app", label: "Favorites", icon: Star },
   { href: "/app", label: "Recent", icon: Layers3 },
   { href: "/app", label: "By tag", icon: Tag },
-  { href: "/app/settings", label: "Settings", icon: Settings2 },
-  { href: "/app/settings/ai", label: "AI providers", icon: Bot },
-  { href: "/app/settings/tokens", label: "Tokens", icon: KeyRound },
+  { href: "/app/providers", label: "Providers", icon: Bot },
+  { href: "/app/tokens", label: "Tokens", icon: KeyRound },
+  { href: "/app/general", label: "General", icon: Settings2 },
 ];
 
 export function AppSidebar() {

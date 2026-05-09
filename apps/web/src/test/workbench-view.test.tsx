@@ -245,20 +245,21 @@ describe("workbench view", () => {
     expect(rowTags.some((chip) => chip.textContent?.includes("frontend"))).toBe(true);
   });
 
-  it("opens settings inside the current workbench body", async () => {
+  it("opens general settings inside the current workbench body", async () => {
     const { el } = mount(<WorkbenchView userName="Tester" />);
     await flushWorkbench();
 
-    const settingsEntry = Array.from(el.querySelectorAll(".workbench-nav-item")).find((node) =>
-      node.textContent?.includes("Settings"),
+    const generalEntry = Array.from(el.querySelectorAll(".workbench-nav-item")).find((node) =>
+      node.textContent?.includes("General"),
     ) as HTMLElement | undefined;
 
-    expect(settingsEntry).toBeTruthy();
+    expect(generalEntry).toBeTruthy();
+    expect(el.textContent).toContain("Providers");
     expect(el.querySelector('[data-testid="repo-table-pane"]')).toBeTruthy();
     expect(el.textContent).toContain("Selected repository");
 
     await act(async () => {
-      settingsEntry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      generalEntry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
     });
 
@@ -267,7 +268,8 @@ describe("workbench view", () => {
     expect(el.querySelector('[data-testid="workbench-sidebar"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="repo-table-pane"]')).toBeNull();
     expect(el.querySelector('[data-testid="workbench-settings-pane"]')).toBeTruthy();
-    expect(el.textContent).toContain("Configuration domain");
+    expect(el.textContent).toContain("Interface language");
+    expect(el.textContent).toContain("Build information");
     expect(el.textContent).not.toContain("Selected repository");
   });
 

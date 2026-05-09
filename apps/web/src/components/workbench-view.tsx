@@ -8,13 +8,13 @@ import {
 } from "@starlens/core";
 import { X } from "lucide-react";
 import { AISettingsView } from "./ai-settings-view";
+import { GeneralSettingsView } from "./general-settings-view";
 import { RepoDetailPanel } from "./workbench/repo-detail-panel";
 import { RepoTablePane } from "./workbench/repo-table-pane";
 import { useWorkbenchQueryState } from "./workbench/use-workbench-query-state";
 import { WorkbenchSidebar } from "./workbench/workbench-sidebar";
 import { formatDateTime } from "./workbench/workbench-formatters";
 import { WorkbenchTopbar } from "./workbench/workbench-topbar";
-import { SettingsOverview } from "./settings-overview";
 import { TokensSettingsView } from "./tokens-settings-view";
 
 type ApiSuccess<T> = { ok: true; data: T };
@@ -120,7 +120,7 @@ export function WorkbenchView({
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
-  const [contentMode, setContentMode] = useState<"repos" | "settings" | "settings-ai" | "settings-tokens">("repos");
+  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens">("repos");
   const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
   const [tagDeleting, setTagDeleting] = useState<string | null>(null);
@@ -514,17 +514,11 @@ export function WorkbenchView({
 
   let settingsPanelContent: React.ReactNode = null;
 
-  if (contentMode === "settings") {
-    settingsPanelContent = (
-      <SettingsOverview
-        onOpenWorkspace={() => setContentMode("repos")}
-        onOpenAiProviders={() => setContentMode("settings-ai")}
-        onOpenTokens={() => setContentMode("settings-tokens")}
-      />
-    );
-  } else if (contentMode === "settings-ai") {
+  if (contentMode === "general") {
+    settingsPanelContent = <GeneralSettingsView />;
+  } else if (contentMode === "providers") {
     settingsPanelContent = <AISettingsView />;
-  } else if (contentMode === "settings-tokens") {
+  } else if (contentMode === "tokens") {
     settingsPanelContent = <TokensSettingsView />;
   }
 
@@ -603,8 +597,9 @@ export function WorkbenchView({
             setRecentMode(false);
             setPage(1);
           }}
-          onOpenSettings={() => setContentMode("settings")}
-          onOpenTokens={() => setContentMode("settings-tokens")}
+          onOpenGeneral={() => setContentMode("general")}
+          onOpenProviders={() => setContentMode("providers")}
+          onOpenTokens={() => setContentMode("tokens")}
           recentActive={recentMode}
           total={allStarsTotal}
           favoriteCount={favoriteCount}

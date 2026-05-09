@@ -67,6 +67,7 @@ export type AiConfig = {
 export type TokenRecord = {
   id: string;
   name: string;
+  note: string;
   tokenPrefix: string;
   lastUsedAt: string | null;
   expiresAt: string | null;
