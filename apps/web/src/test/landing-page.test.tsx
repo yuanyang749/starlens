@@ -30,8 +30,7 @@ describe("landing page workspace links", () => {
     const { el } = mount(<LandingPage githubAuthEnabled />);
 
     const workspaceLinks = Array.from(el.querySelectorAll("a")).filter((link) =>
-      link.textContent?.includes("Workspace") ||
-      link.textContent?.includes("Enter workspace"),
+      link.textContent?.includes("Workspace"),
     );
 
     expect(workspaceLinks.length).toBeGreaterThan(0);
@@ -43,7 +42,7 @@ describe("landing page workspace links", () => {
   it("keeps explicit GitHub login on the OAuth flow", async () => {
     const { el } = mount(<LandingPage githubAuthEnabled />);
     const loginButton = Array.from(el.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Use GitHub login"),
+      button.textContent?.includes("使用 GitHub 登录"),
     );
 
     expect(loginButton).toBeTruthy();

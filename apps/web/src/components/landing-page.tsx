@@ -2,56 +2,125 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandLogo } from "./brand-logo";
+import { LandingInteractions } from "./landing-interactions";
 import {
   ArrowRight,
   Bot,
+  CheckCircle2,
+  Cloud,
+  Database,
+  FileText,
   Github,
-  LayoutPanelLeft,
+  GitMerge,
   Play,
   Search,
-  Server,
-  TerminalSquare,
+  ShieldCheck,
+  Sparkles,
+  Star,
   Tags,
-  Workflow,
+  TerminalSquare,
 } from "lucide-react";
 import { GitHubSignInButton } from "./github-sign-in-button";
 
-const featureGroups = [
+const navItems = [
+  { href: "#pain", label: "痛点" },
+  { href: "#features", label: "功能" },
+  { href: "#workflow", label: "工作方式" },
+  { href: "#providers", label: "AI 与协议" },
+  { href: "#deploy", label: "开源与自部署" },
+  { href: "#docs", label: "文档" },
+];
+
+// 中文注释：痛点内容直接承接用户真实使用场景，避免落地页只停留在功能罗列。
+const painCards = [
   {
-    title: "Search and filter with context",
-    body: "Jump back into old stars through repo names, owner, language, tags, notes, and a cleaner summary layer.",
+    title: "Star 太多，想用时想不起名字",
+    body: "你可能记得它是一个 React 表格、一个 Agent 框架、一个部署工具，但就是想不起仓库名、作者名或准确关键词。",
+    proof: "用自然语言、标签、README 摘要和个人备注，把模糊记忆重新映射到具体仓库。",
     icon: Search,
   },
   {
-    title: "Turn stars into working memory",
-    body: "Add notes, tags, and favorites so your saved repos become a usable personal knowledge base instead of a graveyard.",
-    icon: Tags,
+    title: "最近 Star 了什么，很快就断片",
+    body: "GitHub 原生收藏更像时间线和列表，过几天再回头，很难快速回忆最近收藏的项目为什么值得看。",
+    proof: "按最近 Star、语言、主题、Stars 和整理状态筛选，让新收藏及时进入你的工作流。",
+    icon: Star,
   },
   {
-    title: "Use AI without lock-in",
-    body: "Ask natural questions, rerank candidates, and summarize repos while keeping provider choice in your own hands.",
+    title: "Claude Code、Codex 和 Agent 查不到你的收藏",
+    body: "开发工具需要上下文时，GitHub Stars 仍然躺在浏览器里，Agent 无法直接把你收藏过的项目变成可调用知识。",
+    proof: "通过 CLI、API / MCP 和个人 token，让开发工具也能检索、引用、整理你的 Stars。",
     icon: Bot,
   },
 ];
 
-const providers = [
-  "Vercel AI Gateway",
-  "OpenAI-compatible endpoints",
-  "Anthropic native",
-  "Gemini native",
+const featureCards = [
+  {
+    title: "精准搜索与过滤",
+    body: "支持关键词、语言、Stars、更新时间的多维过滤，快速定位你需要的项目。",
+    chips: ["关键词搜索", "多维过滤", "智能排序"],
+    icon: Search,
+    mock: "filters",
+  },
+  {
+    title: "标签、备注、收藏",
+    body: "用标签体系、个人备注和收藏夹，构建属于你自己的项目知识库。",
+    chips: ["多级标签", "个人备注", "收藏管理"],
+    icon: Tags,
+    mock: "notes",
+  },
+  {
+    title: "AI 助手理解项目",
+    body: "AI 帮你提炼项目要点、对比候选、总结 README，让你更快判断是否值得深入。",
+    chips: ["项目摘要", "对比分析", "智能问答"],
+    icon: Bot,
+    mock: "ai",
+  },
 ];
 
-const workflowNotes = [
-  "Web workbench for scanning, comparing, and annotating repos.",
-  "CLI surface for quick search and sync from the terminal.",
-  "Agent-ready tokens so Hermes or OpenClaw can reuse the same capability set.",
+const providerCards = [
+  {
+    name: "Vercel AI Gateway",
+    body: "内置支持 Vercel AI Gateway，享受统一计费与免费额度。",
+    icon: "▲",
+    chips: ["多模型", "统一网关"],
+  },
+  {
+    name: "OpenAI 兼容",
+    body: "兼容 OpenAI API 协议，可接入各类 OpenAI 兼容服务。",
+    icon: "◎",
+    chips: ["兼容广泛", "易于接入"],
+  },
+  {
+    name: "Anthropic",
+    body: "支持 Anthropic 原生协议，使用 Claude 系列模型。",
+    icon: "AI",
+    chips: ["原生协议", "安全可靠"],
+  },
+  {
+    name: "Gemini",
+    body: "支持 Gemini 原生协议，使用 Google Gemini 模型。",
+    icon: "✦",
+    chips: ["原生协议", "多模态"],
+  },
 ];
 
-const primaryWorkspaceLinkClassName =
-  "flex h-10 items-center gap-2 rounded-full bg-[color:var(--accent)] px-4 text-sm font-medium text-white shadow-[0_12px_28px_rgba(37,99,235,0.24)] transition hover:bg-[#1f56cf]";
+const proofItems = [
+  { label: "找回忘记名字的仓库", icon: Search },
+  { label: "看见最近 Star 的线索", icon: CheckCircle2 },
+  { label: "给 Agent 与开发工具使用", icon: Sparkles },
+];
+
+const footerColumns = [
+  { title: "产品", links: ["功能", "定价（未来）", "更新日志"] },
+  { title: "资源", links: ["文档", "隐私政策", "使用条款"] },
+  { title: "社区", links: ["GitHub", "讨论区", "贡献指南"] },
+];
 
 const primaryLoginLinkClassName =
-  "flex h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] px-6 text-sm font-medium text-white shadow-[0_16px_32px_rgba(37,99,235,0.24)] transition hover:bg-[#1f56cf]";
+  "landing-button landing-button--primary h-14 px-6 text-sm font-semibold";
+
+const secondaryLinkClassName =
+  "landing-button landing-button--secondary h-14 px-6 text-sm font-semibold";
 
 function WorkspaceLink({
   children,
@@ -80,354 +149,414 @@ function WorkspaceLink({
   );
 }
 
+function MiniRepoList() {
+  const repos = [
+    ["microsoft / AutoGen", "AI Agent · Multi-Agent", "18.2k"],
+    ["vercel / next.js", "React · Framework", "121k"],
+    ["sindresorhus / ky", "HTTP · Fetch", "16.3k"],
+    ["docker / docker", "DevOps · Container", "75.1k"],
+    ["tanstack / query", "React · Data", "34.7k"],
+    ["leafac / leaf", "Project Management", "8.3k"],
+  ];
+
+  return (
+    <div className="landing-product-list">
+      {repos.map(([name, meta, stars], index) => (
+        <div className="landing-product-row" key={name}>
+          <span className="landing-radio" />
+          <div>
+            <strong>{name}</strong>
+            <p>{meta}</p>
+          </div>
+          <span>{stars} ★</span>
+          <i style={{ animationDelay: `${index * 180}ms` }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProductPreview() {
+  const thumbnails = ["搜索", "过滤", "详情", "打标签", "备注", "AI"];
+
+  return (
+    <div className="landing-preview landing-float-card">
+      <div className="landing-preview__shell">
+        <aside className="landing-preview__sidebar">
+          <div className="landing-preview__brand">
+            <BrandLogo size={20} className="rounded-md" />
+            <span>Starlens</span>
+          </div>
+          {["搜索", "项目", "标签", "收藏", "AI 助手", "设置"].map((item, index) => (
+            <span className={index === 0 ? "is-active" : ""} key={item}>
+              <Search className="h-3.5 w-3.5" />
+              {item}
+            </span>
+          ))}
+          <div className="landing-preview__legend">
+            <p>标签</p>
+            {["AI", "Tool", "Frontend", "Backend", "Library"].map((item, index) => (
+              <span key={item}>
+                <i style={{ background: ["#6366f1", "#ec4899", "#f97316", "#22c55e", "#0ea5e9"][index] }} />
+                {item}
+                <b>{[152, 90, 86, 61, 42][index]}</b>
+              </span>
+            ))}
+          </div>
+        </aside>
+        <section className="landing-preview__main">
+          <div className="landing-preview__topbar">
+            <div className="landing-searchbar">搜索你的 stars...</div>
+            <span />
+            <span />
+            <span className="landing-avatar" />
+          </div>
+          <div className="landing-preview__filters">
+            <span>语言: TypeScript</span>
+            <span>最小 Stars: 1000</span>
+            <span>排序: Stars</span>
+          </div>
+          <MiniRepoList />
+        </section>
+        <aside className="landing-preview__detail">
+          <div className="landing-detail-card">
+            <span>microsoft / AutoGen</span>
+            <b>18.2k</b>
+            <p>A programming framework for building AI agents and applications.</p>
+            <div>
+              <em>AI</em>
+              <em>Agent</em>
+              <em>Multi-Agent</em>
+            </div>
+          </div>
+          <div className="landing-readme-card">
+            <strong>README 摘要</strong>
+            <p>多智能体框架，适合构建复杂自动化流程与 Agent 协作。</p>
+            <button type="button">在 GitHub 中查看</button>
+          </div>
+        </aside>
+      </div>
+      <div className="landing-timeline">
+        <button type="button" aria-label="播放静音演示">
+          <Play className="h-6 w-6 fill-current" />
+        </button>
+        {thumbnails.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+        <p>静音演示：搜索 → 过滤 → 查看详情 → 打标签 → 写备注</p>
+        <time>00:00 / 00:12</time>
+      </div>
+    </div>
+  );
+}
+
+function FeatureMock({ type }: { type: string }) {
+  if (type === "filters") {
+    return (
+      <div className="landing-card-mock landing-card-mock--filters">
+        <div>stars...</div>
+        <span>语言: Rust</span>
+        <span>最小 Stars: 1000</span>
+        <span>排序: Stars</span>
+      </div>
+    );
+  }
+
+  if (type === "notes") {
+    return (
+      <div className="landing-card-mock landing-card-mock--notes">
+        <div>
+          <strong>延迟修复</strong>
+          <span>2次</span>
+        </div>
+        <div>
+          <strong>Airbnb / 组件库</strong>
+          <p>用于收藏组件、路由与状态管理。</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="landing-card-mock landing-card-mock--ai">
+      <div>
+        <Sparkles className="h-4 w-4" />
+        <span>为我总结这个项目是否适合 Agent 工作流。</span>
+      </div>
+      <p>提炼用途、风险、依赖和 README 关键点。</p>
+    </div>
+  );
+}
+
 export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
   return (
-    <div className="grain min-h-screen overflow-x-hidden">
-      <header className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[rgba(245,247,248,0.8)] backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
-          <Link href="/" className="flex items-center gap-3 text-sm font-semibold">
-            <BrandLogo size={36} className="rounded-lg" priority />
-            <span className="text-base tracking-tight">Starlens</span>
+    <div className="landing-page grain min-h-screen overflow-x-hidden">
+      <LandingInteractions />
+      <header className="landing-header">
+        <div className="landing-header__inner">
+          <Link href="/" className="landing-brand" aria-label="Starlens 首页">
+            <BrandLogo size={30} className="rounded-lg" priority />
+            <span>Starlens</span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-[color:var(--muted)] md:flex">
-            <a href="#features">Features</a>
-            <a href="#workflow">Workflow</a>
-            <a href="#providers">Providers</a>
-            <a href="#oss">Open source</a>
+          <nav className="landing-nav" aria-label="落地页导航">
+            {navItems.map((item) => (
+              <a href={item.href} key={item.href}>
+                {item.label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="landing-header__actions">
             <a
               href="https://github.com/yuanyang749/starlens"
               target="_blank"
               rel="noreferrer"
-              className="hidden h-10 items-center gap-2 rounded-full border border-[color:var(--line)] px-4 text-sm font-medium text-[color:var(--muted)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--foreground)] sm:flex"
+              className="landing-icon-link"
+              aria-label="查看 GitHub 仓库"
+            >
+              <Github className="h-5 w-5" />
+            </a>
+            <GitHubSignInButton
+              githubAuthEnabled={githubAuthEnabled}
+              className="landing-button landing-button--primary h-11 px-4 text-xs font-semibold"
             >
               <Github className="h-4 w-4" />
-              GitHub
-            </a>
-            <WorkspaceLink
-              githubAuthEnabled={githubAuthEnabled}
-              className={primaryWorkspaceLinkClassName}
-            >
-              Enter workspace
-              <ArrowRight className="h-4 w-4" />
-            </WorkspaceLink>
+              使用 GitHub 登录
+            </GitHubSignInButton>
           </div>
         </div>
       </header>
 
       <main>
-        <section className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-10 lg:py-18">
-          <div className="flex flex-col justify-center gap-8">
-            <div className="flex max-w-xl flex-col gap-6">
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Starlens
-              </p>
-              <h1 className="max-w-2xl text-5xl leading-[1.02] font-semibold tracking-tight text-[color:var(--foreground)] sm:text-6xl">
-                A calmer way to find the GitHub repos you already loved.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-[color:var(--muted)]">
-                Search old stars, add personal context, and turn scattered
-                bookmarks into a workbench that actually helps you remember why
-                something mattered.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-4 sm:flex-row">
+        <section id="hero" className="landing-hero landing-section">
+          <div className="landing-hero__copy">
+            <p className="landing-kicker">
+              <Star className="h-4 w-4 fill-current" />
+              你的 GitHub Stars 智能搜索与管理中心
+            </p>
+            <h1>
+              <span className="landing-hero-title-main">找回你收藏的每一个</span>
+              <span>好项目</span>
+            </h1>
+            <p className="landing-hero__lead">
+              你 Star 过很多仓库，但真正要用时往往只记得用途、不记得名字。Starlens 帮你按语义、时间和上下文找回项目，并让 Claude Code、Codex 和 Agent 也能直接检索你的收藏。
+            </p>
+            <div className="landing-hero__actions">
               <GitHubSignInButton
                 githubAuthEnabled={githubAuthEnabled}
                 className={primaryLoginLinkClassName}
               >
-                Use GitHub login
-                <ArrowRight className="h-4 w-4" />
+                <Github className="h-5 w-5" />
+                使用 GitHub 登录
               </GitHubSignInButton>
               <a
                 href="https://github.com/yuanyang749/starlens"
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-12 items-center justify-center gap-2 rounded-full border border-[color:var(--line)] px-6 text-sm font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)] hover:bg-white"
+                className={secondaryLinkClassName}
               >
-                <Github className="h-4 w-4" />
-                View repository
+                <GitMerge className="h-5 w-5" />
+                查看 GitHub 仓库
               </a>
             </div>
-
-            <div className="grid gap-4 text-sm text-[color:var(--muted)] sm:grid-cols-3">
-              <div className="app-panel rounded-2xl p-4">
-                <div className="mb-2 flex items-center gap-2 text-[color:var(--foreground)]">
-                  <Search className="h-4 w-4 text-[color:var(--accent)]" />
-                  Search
-                </div>
-                Repo names, owners, notes, tags, and summary context in one place.
-              </div>
-              <div className="app-panel rounded-2xl p-4">
-                <div className="mb-2 flex items-center gap-2 text-[color:var(--foreground)]">
-                  <Bot className="h-4 w-4 text-[color:var(--accent)]" />
-                  AI
-                </div>
-                Ask what a repo does, rerank candidates, or summarize quickly.
-              </div>
-              <div className="app-panel rounded-2xl p-4">
-                <div className="mb-2 flex items-center gap-2 text-[color:var(--foreground)]">
-                  <Workflow className="h-4 w-4 text-[color:var(--accent)]" />
-                  Reuse
-                </div>
-                One data model shared across web, CLI, and agent flows.
-              </div>
-            </div>
-          </div>
-
-          <div className="relative flex min-h-[34rem] items-end justify-end overflow-hidden rounded-[28px] border border-[color:var(--line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(236,242,245,0.92))] px-3 pt-10 shadow-[0_32px_80px_rgba(15,23,32,0.10)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(57,95,130,0.18),transparent_32%)]" />
-            <div className="absolute inset-x-3 top-4 flex items-center justify-between rounded-full border border-[color:var(--line)] bg-[rgba(255,255,255,0.78)] px-4 py-2 text-xs text-[color:var(--muted)] backdrop-blur">
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#9aa9b7]" />
-                Live workbench preview
-              </div>
-              <div className="flex items-center gap-2">
-                <Play className="h-3.5 w-3.5 text-[color:var(--accent)]" />
-                Motion proof
-              </div>
-            </div>
-            <div className="relative z-10 ml-auto flex w-full max-w-4xl flex-col gap-4">
-              <div className="overflow-hidden rounded-[22px] border border-[rgba(15,23,32,0.18)] bg-[rgba(255,255,255,0.92)] shadow-[0_24px_60px_rgba(15,23,32,0.14)]">
-                <div className="relative aspect-[21/10] w-full overflow-hidden bg-[#eef3f6]">
-                  <Image
-                    src="/design/starlens-workbench-concept-21x9.png"
-                    alt="Starlens workbench preview"
-                    fill
-                    sizes="(min-width: 1024px) 50vw, 100vw"
-                    className="object-cover object-left-top"
-                    priority
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-                <div className="app-panel rounded-[20px] p-4">
-                  <div className="mb-4 flex items-center justify-between text-sm">
-                    <span className="font-medium text-[color:var(--foreground)]">
-                      Search to organization loop
-                    </span>
-                    <span className="text-[color:var(--muted)]">11s silent clip</span>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {["Search", "Compare", "Annotate"].map((step, index) => (
-                      <div
-                        key={step}
-                        className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-3"
-                      >
-                        <div className="mb-3 flex items-center justify-between text-xs text-[color:var(--muted)]">
-                          <span>{step}</span>
-                          <span>0{index + 1}</span>
-                        </div>
-                        <div className="h-20 rounded-xl bg-[linear-gradient(180deg,#eef3f6,#dfe8ee)]" />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 h-1.5 rounded-full bg-[rgba(15,23,32,0.06)]">
-                    <div className="h-1.5 w-3/5 rounded-full bg-[color:var(--accent)]" />
-                  </div>
-                </div>
-                <div className="app-panel rounded-[20px] p-4 text-sm text-[color:var(--muted)]">
-                  <div className="mb-3 flex items-center gap-2 text-[color:var(--foreground)]">
-                    <LayoutPanelLeft className="h-4 w-4 text-[color:var(--accent)]" />
-                    Public proof, not marketing theater
-                  </div>
-                  <p className="leading-7">
-                    Show the real product, let motion confirm the workflow, and
-                    keep the page readable even when media is disabled.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="features"
-          className="border-y border-[color:var(--line)] bg-[rgba(255,255,255,0.54)]"
-        >
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-16 sm:px-8 lg:px-10">
-            <div className="max-w-3xl">
-              <p className="mb-3 text-sm font-medium uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                Core capabilities
-              </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--foreground)] sm:text-4xl">
-                Fewer guesses, more memory.
-              </h2>
-            </div>
-            <div className="grid gap-6 lg:grid-cols-3">
-              {featureGroups.map(({ title, body, icon: Icon }) => (
-                <article
-                  key={title}
-                  className="app-panel flex min-h-64 flex-col justify-between rounded-[22px] p-6"
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent)]">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="mt-10">
-                    <h3 className="text-xl font-semibold tracking-tight text-[color:var(--foreground)]">
-                      {title}
-                    </h3>
-                    <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                      {body}
-                    </p>
-                  </div>
-                </article>
+            <div className="landing-proof-row" aria-label="产品特性">
+              {proofItems.map(({ label, icon: Icon }) => (
+                <span key={label}>
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </span>
               ))}
             </div>
           </div>
+
+          <div className="landing-hero__visual" aria-label="Starlens 产品预览">
+            <ProductPreview />
+          </div>
         </section>
 
-        <section id="workflow" className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8 lg:px-10">
-          <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-            <div className="max-w-2xl">
-              <p className="mb-3 text-sm font-medium uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                Workflow
-              </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--foreground)] sm:text-4xl">
-                One capability set, three ways to reach it.
-              </h2>
-              <div className="mt-8 flex flex-col gap-4 text-sm leading-7 text-[color:var(--muted)]">
-                {workflowNotes.map((item) => (
-                  <div
-                    key={item}
-                    className="app-panel flex items-start gap-3 rounded-[18px] p-4"
-                  >
-                    <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-[color:var(--accent)]">
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                    <p>{item}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-              <article className="app-panel rounded-[24px] p-5">
-                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                  <TerminalSquare className="h-4 w-4 text-[color:var(--accent)]" />
-                  CLI quick path
+        <section id="pain" className="landing-section landing-pain landing-block">
+          <div className="landing-section-heading">
+            <p className="landing-pill">核心痛点</p>
+            <h2>GitHub Stars 收藏越多，找回越难</h2>
+            <p>Starlens 解决的不是“再做一个收藏夹”，而是把你已经 Star 过的项目重新变成可搜索、可理解、可被开发工具调用的上下文。</p>
+          </div>
+          <div className="landing-pain-grid">
+            {painCards.map(({ title, body, proof, icon: Icon }) => (
+              <article className="landing-pain-card landing-hover-card" key={title}>
+                <div className="landing-pain-card__icon">
+                  <Icon className="h-6 w-6" />
                 </div>
-                <div className="rounded-[20px] border border-[color:var(--line)] bg-[#101820] p-4 font-mono text-sm leading-7 text-[#d8e4ef]">
-                  <div>$ stars search &quot;react virtualization&quot;</div>
-                  <div className="text-[#8fa9c0]">bvaughn/react-window</div>
-                  <div className="text-[#8fa9c0]">tanstack/virtual</div>
-                  <div>$ stars ask &quot;which one is the lightest?&quot;</div>
+                <h3>{title}</h3>
+                <p>{body}</p>
+                <span>{proof}</span>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="features" className="landing-section landing-block">
+          <div className="landing-section-heading">
+            <p className="landing-pill">核心能力</p>
+            <h2>让你的 Stars 真正为你所用</h2>
+            <p>从检索、整理到理解，打造你的高效项目知识库。</p>
+          </div>
+          <div className="landing-feature-grid">
+            {featureCards.map(({ title, body, chips, icon: Icon, mock }) => (
+              <article className="landing-feature-card landing-hover-card" key={title}>
+                <FeatureMock type={mock} />
+                <div className="landing-feature-card__body">
+                  <Icon className="h-5 w-5" />
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                  <div>
+                    {chips.map((chip) => (
+                      <span key={chip}>{chip}</span>
+                    ))}
+                  </div>
                 </div>
               </article>
-              <article className="app-panel rounded-[24px] p-5">
-                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                  <Workflow className="h-4 w-4 text-[color:var(--accent)]" />
-                  Agent handoff
+            ))}
+          </div>
+        </section>
+
+        <section id="workflow" className="landing-section landing-block">
+          <div className="landing-section-heading">
+            <p className="landing-pill">工作方式</p>
+            <h2>一套能力，多种入口</h2>
+            <p>Web、CLI、Agent 共享同一数据与能力，适合人和自动化工作流。</p>
+          </div>
+          <div className="landing-workflow-grid">
+            <article className="landing-workflow-card landing-hover-card">
+              <h3>Web 工作台</h3>
+              <p>可视化搜索与整理，适合日常浏览与管理。</p>
+              <Image
+                src="/design/starlens-workbench-concept-21x9.png"
+                alt="Starlens Web 工作台截图"
+                width={840}
+                height={360}
+                sizes="(min-width: 1024px) 30vw, 100vw"
+              />
+            </article>
+            <article className="landing-terminal-card landing-hover-card">
+              <div className="landing-terminal-card__title">
+                <TerminalSquare className="h-5 w-5" />
+                CLI
+              </div>
+              <pre>{`$ stars search "ai agent" --limit 5
+Searching your stars...
+1. microsoft/autogen         18.2k ★
+2. langchain-ai/langchain    17.6k ★
+3. openai/openai-cookbook    15.2k ★
+4. crewAIInc/crewAI           9.9k ★
+5. huggingface/transformers  89.0k ★
+
+$ stars tag add microsoft/autogen AI
+$ stars note add microsoft/autogen "多代理框架"`}</pre>
+            </article>
+            <article className="landing-agent-card landing-hover-card">
+              <h3>Agent 集成</h3>
+              <p>通过 API / MCP，让 Claude Code、Codex 和你的 Agent 直接检索收藏项目。</p>
+              {["Claude Code / Codex", "Starlens API / MCP", "你的 Stars 数据与索引"].map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </article>
+          </div>
+        </section>
+
+        <section id="providers" className="landing-section landing-block">
+          <div className="landing-section-heading">
+            <p className="landing-pill">AI 与协议支持</p>
+            <h2>选择你信任的 AI 服务</h2>
+            <p>Starlens 不锁定模型或平台，你可以自由选择最适合的 AI 服务。</p>
+          </div>
+          <div className="landing-provider-grid">
+            {providerCards.map((provider) => (
+              <article className="landing-provider-card landing-hover-card" key={provider.name}>
+                <div>
+                  <span>{provider.icon}</span>
+                  <h3>{provider.name}</h3>
                 </div>
-                <div className="flex flex-col gap-3 text-sm text-[color:var(--muted)]">
-                  {["Create token", "Attach to agent", "Search and annotate", "Return grounded repo picks"].map((step) => (
-                    <div
-                      key={step}
-                      className="rounded-[18px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] px-4 py-3"
-                    >
-                      {step}
-                    </div>
+                <p>{provider.body}</p>
+                <div>
+                  {provider.chips.map((chip) => (
+                    <em key={chip}>{chip}</em>
                   ))}
                 </div>
               </article>
-            </div>
+            ))}
           </div>
+          <p className="landing-security-note">
+            <ShieldCheck className="h-5 w-5" />
+            你的 API Key 由你保管，Starlens 不会存储或泄露你的密钥。
+          </p>
         </section>
 
-        <section id="providers" className="border-y border-[color:var(--line)] bg-[rgba(255,255,255,0.54)]">
-          <div className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-10">
-            <div className="max-w-2xl">
-              <p className="mb-3 text-sm font-medium uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                Provider support
-              </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--foreground)] sm:text-4xl">
-                Keep the AI layer flexible without turning the product into an AI dashboard.
-              </h2>
-              <p className="mt-5 text-sm leading-7 text-[color:var(--muted)]">
-                Starlens uses AI to explain, rerank, and summarize repo candidates.
-                The search backbone still belongs to your data model, not a chat box.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {providers.map((provider) => (
-                <div
-                  key={provider}
-                  className="app-panel flex min-h-36 flex-col justify-between rounded-[20px] p-5"
-                >
-                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                    <Server className="h-4 w-4 text-[color:var(--accent)]" />
-                    {provider}
-                  </div>
-                  <p className="text-sm leading-7 text-[color:var(--muted)]">
-                    Configuration stays user-owned, with validation, model selection, and a calm settings surface.
-                  </p>
-                </div>
-              ))}
-            </div>
+        <section id="deploy" className="landing-section landing-deploy">
+          <div className="landing-section-heading">
+            <p className="landing-pill">开源与自部署</p>
+            <h2>开源、可自部署、数据可控</h2>
+            <p>Starlens 完全开源，你可以选择托管在 Vercel，也可以自部署在任何信任的环境中。</p>
           </div>
-        </section>
-
-        <section id="oss" className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8 lg:px-10">
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="max-w-2xl">
-              <p className="mb-3 text-sm font-medium uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                Open source and self-hosting
-              </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--foreground)] sm:text-4xl">
-                Private enough for your own workflow, open enough to grow in public.
-              </h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="app-panel rounded-[20px] p-5">
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                  <Server className="h-4 w-4 text-[color:var(--accent)]" />
-                  PostgreSQL first
-                </div>
-                <p className="text-sm leading-7 text-[color:var(--muted)]">
-                  Search documents, notes, tags, sync metadata, and provider configs live on a sane relational model.
-                </p>
-              </div>
-              <div className="app-panel rounded-[20px] p-5">
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                  <Github className="h-4 w-4 text-[color:var(--accent)]" />
-                  Private by default
-                </div>
-                <p className="text-sm leading-7 text-[color:var(--muted)]">
-                  Start from a personal repo and evolve toward a cleaner open-source story without redoing the structure.
-                </p>
-              </div>
-              <div className="app-panel rounded-[20px] p-5">
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
-                  <Workflow className="h-4 w-4 text-[color:var(--accent)]" />
-                  Vercel-ready
-                </div>
-                <p className="text-sm leading-7 text-[color:var(--muted)]">
-                  The initial milestone is built to run fast on a hosted preview while we keep the later data layer open.
-                </p>
-              </div>
-            </div>
+          <div className="landing-deploy-grid">
+            <article>
+              <Github className="h-9 w-9" />
+              <h3>完全开源</h3>
+              <p>代码完全开源，透明可审计，欢迎贡献与共建。</p>
+              <a href="https://github.com/yuanyang749/starlens" target="_blank" rel="noreferrer">
+                查看 GitHub 仓库 <ArrowRight className="h-4 w-4" />
+              </a>
+            </article>
+            <article>
+              <Database className="h-9 w-9" />
+              <h3>数据由你掌控</h3>
+              <p>使用你自己的 PostgreSQL，项目、标签、备注和配置都在你的环境中。</p>
+              <a href="#docs">
+                了解数据库模型 <ArrowRight className="h-4 w-4" />
+              </a>
+            </article>
+            <article>
+              <Cloud className="h-9 w-9" />
+              <h3>灵活部署</h3>
+              <p>支持 Vercel 一键部署，或 Docker 自托管部署。</p>
+              <a href="#docs">
+                查看部署文档 <ArrowRight className="h-4 w-4" />
+              </a>
+            </article>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-[color:var(--line)] bg-[rgba(255,255,255,0.72)]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-5 py-8 text-sm text-[color:var(--muted)] sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-          <p>Starlens is a workbench for repos you meant to remember.</p>
-          <div className="flex items-center gap-4">
-            <a href="https://github.com/yuanyang749/starlens" target="_blank" rel="noreferrer">
-              GitHub
-            </a>
-            {githubAuthEnabled ? (
-              <Link href="/app">
-                Workspace
-              </Link>
-            ) : (
-              <span title="GitHub OAuth is not configured in this local environment.">
-                Workspace
-              </span>
-            )}
+      <footer id="docs" className="landing-footer">
+        <div className="landing-footer__brand">
+          <div>
+            <BrandLogo size={30} className="rounded-lg" />
+            <strong>Starlens</strong>
           </div>
+          <p>从收藏到理解，让好项目真正为你所用。</p>
+          <span>© 2025 Starlens. All rights reserved.</span>
+        </div>
+        <div className="landing-footer__links">
+          {footerColumns.map((column) => (
+            <div key={column.title}>
+              <strong>{column.title}</strong>
+              {column.links.map((item) => (
+                <a href={item === "GitHub" ? "https://github.com/yuanyang749/starlens" : "#docs"} key={item}>
+                  {item}
+                </a>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="landing-footer__cta">
+          <FileText className="h-5 w-5" />
+          <strong>开始使用 Starlens</strong>
+          <p>使用 GitHub 登录，立即开始搜索你的 Stars。</p>
+          <WorkspaceLink
+            githubAuthEnabled={githubAuthEnabled}
+            className="landing-button landing-button--primary h-10 px-4 text-xs font-semibold"
+          >
+            <Github className="h-4 w-4" />
+            Workspace
+          </WorkspaceLink>
         </div>
       </footer>
     </div>
