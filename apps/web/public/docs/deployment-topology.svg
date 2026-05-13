@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700" width="960" height="700" role="img" aria-labelledby="deployTitle deployDesc">
+  <title id="deployTitle">Starlens deployment topology</title>
+  <desc id="deployDesc">Deployment diagram showing shared dependencies and three runtime targets: local development, Vercel, and self-hosted.</desc>
+  <style>
+    text {
+      font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Microsoft JhengHei", "SimHei", sans-serif;
+      fill: #111827;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 14px;
+      fill: #6b7280;
+    }
+    .group-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      fill: #6b7280;
+    }
+    .node-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .node-subtitle {
+      font-size: 12px;
+      fill: #6b7280;
+    }
+    .small {
+      font-size: 11px;
+      fill: #6b7280;
+    }
+    .legend {
+      font-size: 12px;
+      fill: #6b7280;
+    }
+  </style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a" />
+    </marker>
+  </defs>
+
+  <rect width="960" height="620" fill="#ffffff" />
+  <text x="40" y="48" class="title">Deployment Paths</text>
+  <text x="40" y="74" class="subtitle">Shared prerequisites with three supported runtime targets</text>
+
+  <rect x="40" y="106" width="880" height="132" rx="10" fill="#fafcff" stroke="#d1d5db" stroke-width="1.2" stroke-dasharray="6,4" />
+  <text x="56" y="126" class="group-label">SHARED PREREQUISITES</text>
+
+  <rect x="84" y="146" width="220" height="70" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <circle cx="110" cy="174" r="13" fill="#fef2f2" stroke="#fee2e2" stroke-width="1.2" />
+  <text x="110" y="179" text-anchor="middle" font-size="11">GH</text>
+  <text x="136" y="170" class="node-title">GitHub OAuth App</text>
+  <text x="136" y="184" class="node-subtitle">
+    <tspan x="136" dy="0">AUTH_GITHUB_ID and</tspan>
+    <tspan x="136" dy="13">AUTH_GITHUB_SECRET</tspan>
+  </text>
+
+  <rect x="370" y="146" width="220" height="70" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <ellipse cx="398" cy="164" rx="12" ry="5" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.2" />
+  <rect x="386" y="164" width="24" height="16" fill="#eff6ff" />
+  <line x1="386" y1="164" x2="386" y2="180" stroke="#bfdbfe" stroke-width="1.2" />
+  <line x1="410" y1="164" x2="410" y2="180" stroke="#bfdbfe" stroke-width="1.2" />
+  <ellipse cx="398" cy="180" rx="12" ry="5" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1.2" />
+  <text x="424" y="170" class="node-title">PostgreSQL</text>
+  <text x="424" y="184" class="node-subtitle">
+    <tspan x="424" dy="0">DATABASE_URL and</tspan>
+    <tspan x="424" dy="13">schema migrations</tspan>
+  </text>
+
+  <rect x="656" y="146" width="220" height="70" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <rect x="680" y="160" width="18" height="18" rx="4" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.2" />
+  <text x="689" y="173" text-anchor="middle" font-size="11">K</text>
+  <text x="708" y="170" class="node-title">App Secrets</text>
+  <text x="708" y="184" class="node-subtitle">
+    <tspan x="708" dy="0">NEXTAUTH_SECRET and</tspan>
+    <tspan x="708" dy="13">provider credentials</tspan>
+  </text>
+
+  <rect x="40" y="266" width="880" height="270" rx="10" fill="#fafcff" stroke="#d1d5db" stroke-width="1.2" stroke-dasharray="6,4" />
+  <text x="56" y="286" class="group-label">RUNTIME TARGETS</text>
+
+  <rect x="76" y="316" width="248" height="176" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+  <text x="98" y="344" class="node-title">Local Development</text>
+  <text x="98" y="363" class="node-subtitle">
+    <tspan x="98" dy="0">Fast iteration with local .env</tspan>
+    <tspan x="98" dy="13">and migration commands</tspan>
+  </text>
+  <text x="98" y="398" class="small">1. corepack pnpm install</text>
+  <text x="98" y="418" class="small">2. corepack pnpm db:migrate:local</text>
+  <text x="98" y="438" class="small">3. corepack pnpm dev</text>
+  <rect x="98" y="452" width="152" height="18" rx="9" fill="#ffffff" stroke="#d1d5db" stroke-width="1" />
+  <text x="174" y="465" text-anchor="middle" class="small">localhost:3000</text>
+
+  <rect x="356" y="316" width="248" height="176" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+  <text x="378" y="344" class="node-title">Vercel Deployment</text>
+  <text x="378" y="363" class="node-subtitle">
+    <tspan x="378" dy="0">Managed web runtime with</tspan>
+    <tspan x="378" dy="13">project environment variables</tspan>
+  </text>
+  <text x="378" y="398" class="small">1. Connect repository</text>
+  <text x="378" y="418" class="small">2. Add DATABASE_URL and auth secrets</text>
+  <text x="378" y="438" class="small">3. Build and publish on each push</text>
+  <rect x="378" y="452" width="170" height="18" rx="9" fill="#ffffff" stroke="#d1d5db" stroke-width="1" />
+  <text x="463" y="465" text-anchor="middle" class="small">NEXTAUTH_URL points to prod domain</text>
+
+  <rect x="636" y="316" width="248" height="176" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+  <text x="658" y="344" class="node-title">Self-hosted Runtime</text>
+  <text x="658" y="363" class="node-subtitle">
+    <tspan x="658" dy="0">Node.js service behind your own</tspan>
+    <tspan x="658" dy="13">reverse proxy and HTTPS</tspan>
+  </text>
+  <text x="658" y="398" class="small">1. corepack pnpm install --frozen-lockfile</text>
+  <text x="658" y="418" class="small">2. corepack pnpm build</text>
+  <text x="658" y="438" class="small">3. pnpm --filter @starlens/web start</text>
+  <rect x="658" y="452" width="176" height="18" rx="9" fill="#ffffff" stroke="#d1d5db" stroke-width="1" />
+  <text x="746" y="465" text-anchor="middle" class="small">Server + reverse proxy + HTTPS</text>
+
+  <rect x="194" y="560" width="572" height="54" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" />
+  <text x="480" y="584" text-anchor="middle" class="node-title">All paths share the same app codebase,</text>
+  <text x="480" y="603" text-anchor="middle" class="node-title">schema, and provider model</text>
+
+  <path d="M 194 216 L 194 316" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 480 216 L 480 316" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <path d="M 766 216 L 766 316" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+
+  <path d="M 200 492 L 332 560" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <path d="M 480 492 L 480 560" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <path d="M 760 492 L 628 560" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+
+  <text x="56" y="648" class="legend">Legend</text>
+  <line x1="56" y1="668" x2="90" y2="668" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <text x="98" y="672" class="legend">Identity and app secret dependency</text>
+  <line x1="56" y1="690" x2="90" y2="690" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <text x="98" y="694" class="legend">Database, schema and shared application contract</text>
+</svg>

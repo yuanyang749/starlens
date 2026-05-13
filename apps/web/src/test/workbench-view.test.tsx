@@ -267,7 +267,12 @@ describe("workbench view", () => {
             ok: true,
             data: {
               answer: "Matched repo-1",
-              candidates: [{ id: "repo-1", fullName: mockRepoDetails[0]?.fullName ?? "repo-1" }],
+              candidates: [{
+                id: "repo-1",
+                fullName: mockRepoDetails[0]?.fullName ?? "repo-1",
+                reason: 'Matched your question directly: "repo-1".',
+                source: "question_search",
+              }],
               providerConfigId: null,
             },
           }),
@@ -277,6 +282,8 @@ describe("workbench view", () => {
     });
 
     await flushWorkbench();
+    expect(el.textContent).toContain("AI Search: Matched repo-1");
+    expect(el.textContent).toContain("Matched your question directly: \"repo-1\".");
   });
 
   it("shows custom tags and renders repo filter actions as icon buttons", async () => {

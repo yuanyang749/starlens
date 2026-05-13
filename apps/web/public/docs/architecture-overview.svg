@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700" width="960" height="700" role="img" aria-labelledby="archTitle archDesc">
+  <title id="archTitle">Starlens architecture overview</title>
+  <desc id="archDesc">Layered architecture diagram showing clients, web app, service modules, external providers, and PostgreSQL storage.</desc>
+  <style>
+    text {
+      font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Microsoft JhengHei", "SimHei", sans-serif;
+      fill: #111827;
+    }
+    .layer-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      fill: #6b7280;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 14px;
+      fill: #6b7280;
+    }
+    .node-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .node-subtitle {
+      font-size: 12px;
+      fill: #6b7280;
+    }
+    .legend {
+      font-size: 12px;
+      fill: #6b7280;
+    }
+    .small {
+      font-size: 11px;
+      fill: #6b7280;
+    }
+  </style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#dc2626" />
+    </marker>
+  </defs>
+
+  <rect width="960" height="640" fill="#ffffff" />
+  <text x="40" y="48" class="title">Starlens Technical Architecture</text>
+  <text x="40" y="74" class="subtitle">GitHub Stars workbench with search, AI ask, sync, and personal token access</text>
+
+  <rect x="40" y="104" width="880" height="104" rx="10" fill="#fafcff" stroke="#d1d5db" stroke-width="1.2" stroke-dasharray="6,4" />
+  <text x="56" y="124" class="layer-label">ACCESS LAYER</text>
+
+  <rect x="76" y="136" width="188" height="54" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <circle cx="100" cy="157" r="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.2" />
+  <text x="100" y="161" text-anchor="middle" font-size="11">U</text>
+  <text x="126" y="154" class="node-title">Web User</text>
+  <text x="126" y="168" class="node-subtitle">
+    <tspan x="126" dy="0">Browser and</tspan>
+    <tspan x="126" dy="13">workbench UI</tspan>
+  </text>
+
+  <rect x="306" y="136" width="188" height="54" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <rect x="328" y="146" width="24" height="20" rx="4" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.2" />
+  <text x="340" y="160" text-anchor="middle" font-size="11">CLI</text>
+  <text x="360" y="154" class="node-title">CLI / Agent</text>
+  <text x="360" y="168" class="node-subtitle">
+    <tspan x="360" dy="0">Bearer token and</tspan>
+    <tspan x="360" dy="13">API usage</tspan>
+  </text>
+
+  <rect x="536" y="136" width="160" height="54" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <circle cx="558" cy="157" r="12" fill="#fef2f2" stroke="#fee2e2" stroke-width="1.2" />
+  <text x="558" y="161" text-anchor="middle" font-size="11">GH</text>
+  <text x="582" y="154" class="node-title">GitHub OAuth / API</text>
+  <text x="582" y="168" class="node-subtitle">
+    <tspan x="582" dy="0">Identity and</tspan>
+    <tspan x="582" dy="13">stars source</tspan>
+  </text>
+
+  <rect x="728" y="136" width="156" height="54" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <circle cx="750" cy="157" r="12" fill="#faf5ff" stroke="#ede9fe" stroke-width="1.2" />
+  <text x="750" y="161" text-anchor="middle" font-size="11">AI</text>
+  <text x="773" y="154" class="node-title">AI Providers</text>
+  <text x="773" y="168" class="node-subtitle">
+    <tspan x="773" dy="0">Gateway or</tspan>
+    <tspan x="773" dy="13">native APIs</tspan>
+  </text>
+
+  <rect x="40" y="220" width="880" height="146" rx="10" fill="#fafcff" stroke="#d1d5db" stroke-width="1.2" stroke-dasharray="6,4" />
+  <text x="56" y="240" class="layer-label">APPLICATION LAYER</text>
+
+  <rect x="88" y="258" width="250" height="80" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+  <text x="108" y="284" class="node-title">Next.js Web App</text>
+  <text x="108" y="304" class="node-subtitle">
+    <tspan x="108" dy="0">Landing page, docs, app shell,</tspan>
+    <tspan x="108" dy="13">workbench and settings UI</tspan>
+  </text>
+
+  <rect x="372" y="258" width="250" height="80" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+  <text x="392" y="284" class="node-title">Route Handlers</text>
+  <text x="392" y="304" class="node-subtitle">
+    <tspan x="392" dy="0">Search, ask, sync, tokens,</tspan>
+    <tspan x="392" dy="13">AI configs and auth entrypoints</tspan>
+  </text>
+
+  <rect x="656" y="258" width="224" height="80" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
+  <text x="676" y="284" class="node-title">Session and Auth</text>
+  <text x="676" y="304" class="node-subtitle">
+    <tspan x="676" dy="0">GitHub sign-in, personal API token</tspan>
+    <tspan x="676" dy="13">validation and user context</tspan>
+  </text>
+
+  <rect x="40" y="382" width="880" height="162" rx="10" fill="#fafcff" stroke="#d1d5db" stroke-width="1.2" stroke-dasharray="6,4" />
+  <text x="56" y="402" class="layer-label">SERVICE MODULES</text>
+
+  <rect x="78" y="420" width="182" height="90" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <text x="98" y="446" class="node-title">GitHub Sync</text>
+  <text x="98" y="464" class="node-subtitle">
+    <tspan x="98" dy="0">Normalize stars, refresh metadata,</tspan>
+    <tspan x="98" dy="13">update repo snapshots</tspan>
+  </text>
+  <text x="98" y="490" class="small">
+    <tspan x="98" dy="0">README excerpt and</tspan>
+    <tspan x="98" dy="12">repo summary pipeline</tspan>
+  </text>
+
+  <rect x="286" y="420" width="182" height="90" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <text x="306" y="446" class="node-title">Search Index</text>
+  <text x="306" y="464" class="node-subtitle">
+    <tspan x="306" dy="0">Build search document from</tspan>
+    <tspan x="306" dy="13">metadata, tags and notes</tspan>
+  </text>
+  <text x="306" y="490" class="small">Keyword and ranked recall</text>
+
+  <rect x="494" y="420" width="182" height="90" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <text x="514" y="446" class="node-title">AI Ask and Rerank</text>
+  <text x="514" y="464" class="node-subtitle">
+    <tspan x="514" dy="0">Recall candidates, rerank,</tspan>
+    <tspan x="514" dy="13">summarize and explain results</tspan>
+  </text>
+  <text x="514" y="490" class="small">
+    <tspan x="514" dy="0">Provider-specific</tspan>
+    <tspan x="514" dy="12">model execution</tspan>
+  </text>
+
+  <rect x="702" y="420" width="180" height="90" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.4" />
+  <text x="722" y="446" class="node-title">Token and Config</text>
+  <text x="722" y="464" class="node-subtitle">
+    <tspan x="722" dy="0">Store AI provider configs and</tspan>
+    <tspan x="722" dy="13">personal access tokens</tspan>
+  </text>
+  <text x="722" y="490" class="small">
+    <tspan x="722" dy="0">CLI and external tool</tspan>
+    <tspan x="722" dy="12">access control</tspan>
+  </text>
+
+  <rect x="208" y="558" width="544" height="76" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" />
+  <text x="230" y="584" class="node-title">PostgreSQL</text>
+  <text x="230" y="604" class="node-subtitle">
+    <tspan x="230" dy="0">Users, starred repos, notes, tags, AI configs,</tspan>
+    <tspan x="230" dy="13">search text and personal API tokens</tspan>
+  </text>
+
+  <path d="M 170 190 L 170 258" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 400 190 L 400 258" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 616 190 C 616 224 520 224 520 258" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#arrow-red)" />
+  <path d="M 806 190 C 806 226 600 226 600 420" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#arrow-red)" />
+
+  <path d="M 338 290 L 372 290" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 622 290 L 656 290" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+
+  <path d="M 170 338 L 170 420" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 497 338 L 377 420" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 497 338 L 585 420" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <path d="M 768 338 L 792 420" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+
+  <path d="M 169 510 L 310 558" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <path d="M 377 510 L 430 558" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <path d="M 585 510 L 548 558" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <path d="M 792 510 L 664 558" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+
+  <text x="59" y="654" class="legend">Legend</text>
+  <line x1="58" y1="674" x2="92" y2="674" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)" />
+  <text x="100" y="678" class="legend">App request and internal API flow</text>
+  <line x1="58" y1="692" x2="92" y2="692" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)" />
+  <text x="100" y="696" class="legend">Persistence and indexed data flow</text>
+</svg>

@@ -45,7 +45,12 @@ type SyncResult = {
 
 type AiAskResult = {
   answer: string;
-  candidates: Array<{ id: string; fullName: string }>;
+  candidates: Array<{
+    id: string;
+    fullName: string;
+    reason?: string;
+    source?: string;
+  }>;
   providerConfigId: string | null;
 };
 
@@ -113,6 +118,9 @@ export function WorkbenchView({
   const [queryDirty, setQueryDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [aiSearchInsights, setAiSearchInsights] = useState<
+    Array<{ id: string; fullName: string; reason: string; source: string | null }>
+  >([]);
   const [lastSync, setLastSync] = useState<SyncResult | null>(null);
   const [noteSaveFeedback, setNoteSaveFeedback] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState(20);
@@ -324,6 +332,7 @@ export function WorkbenchView({
   async function syncNow() {
     setSyncing(true);
     setSyncMessage(null);
+    setAiSearchInsights([]);
     setError(null);
 
     try {
@@ -400,6 +409,7 @@ export function WorkbenchView({
     setAiSearching(true);
     setError(null);
     setSyncMessage(null);
+    setAiSearchInsights([]);
 
     try {
       const result = await apiJson<AiAskResult>("/api/ai/ask", {
@@ -432,6 +442,20 @@ export function WorkbenchView({
           ? `AI Search: ${result.answer}`
           : "AI Search: 未找到匹配仓库，请尝试更具体关键词。",
       );
+      setAiSearchInsights(
+        result.candidates
+          .filter(
+            (item): item is { id: string; fullName: string; reason: string; source?: string } =>
+              typeof item.reason === "string" && item.reason.trim().length > 0,
+          )
+          .slice(0, 3)
+          .map((item) => ({
+            id: item.id,
+            fullName: item.fullName,
+            reason: item.reason,
+            source: item.source ?? null,
+          })),
+      );
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -452,6 +476,7 @@ export function WorkbenchView({
 
     setError(null);
     setSyncMessage(null);
+    setAiSearchInsights([]);
     setContentMode("repos");
     setAiSearchMode(false);
     setRecentMode(false);
@@ -584,12 +609,27 @@ export function WorkbenchView({
       ) : null}
       {syncMessage ? (
         <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
-          <span>{syncMessage}</span>
+          <div className="workbench-banner__content">
+            <span>{syncMessage}</span>
+            {aiSearchInsights.length > 0 ? (
+              <div className="workbench-banner__details">
+                {aiSearchInsights.map((item) => (
+                  <div key={item.id} className="workbench-banner__detail">
+                    <strong>{item.fullName}</strong>
+                    <span>{item.reason}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <button
             type="button"
             className="workbench-banner__close"
             aria-label="Dismiss message"
-            onClick={() => setSyncMessage(null)}
+            onClick={() => {
+              setSyncMessage(null);
+              setAiSearchInsights([]);
+            }}
           >
             <X className="h-4 w-4" />
           </button>

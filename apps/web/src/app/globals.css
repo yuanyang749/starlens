@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/landing.css";
+@import "./styles/docs.css";
 @import "./styles/workbench.css";
 @import "./styles/workbench-responsive.css";
 @import "tw-animate-css";

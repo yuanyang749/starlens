@@ -21,6 +21,15 @@ export function LandingInteractions() {
       const scrollable = document.documentElement.scrollHeight - window.innerHeight;
       const progress = scrollable > 0 ? window.scrollY / scrollable : 0;
       document.documentElement.style.setProperty("--landing-scroll-progress", String(progress));
+      // 中文注释：滚动到页面底部时，优先高亮最后一个锚点，避免仍停留在中间分区。
+      const isNearBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      if (isNearBottom) {
+        const lastItem = trackerItems[trackerItems.length - 1];
+        if (lastItem) {
+          setActiveSection(lastItem.id);
+        }
+        return;
+      }
 
       const current = trackerItems
         .map((item) => {

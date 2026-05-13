@@ -28,7 +28,7 @@ const navItems = [
   { href: "#workflow", label: "工作方式" },
   { href: "#providers", label: "AI 与协议" },
   { href: "#deploy", label: "开源与自部署" },
-  { href: "#docs", label: "文档" },
+  { href: "/docs", label: "文档" },
 ];
 
 // 中文注释：痛点内容直接承接用户真实使用场景，避免落地页只停留在功能罗列。
@@ -115,6 +115,18 @@ const footerColumns = [
   { title: "资源", links: ["文档", "隐私政策", "使用条款"] },
   { title: "社区", links: ["GitHub", "讨论区", "贡献指南"] },
 ];
+
+function footerLinkHref(item: string) {
+  if (item === "GitHub") {
+    return "https://github.com/yuanyang749/starlens";
+  }
+
+  if (item === "文档") {
+    return "/docs";
+  }
+
+  return "#docs";
+}
 
 const primaryLoginLinkClassName =
   "landing-button landing-button--primary h-14 px-6 text-sm font-semibold";
@@ -290,7 +302,7 @@ function FeatureMock({ type }: { type: string }) {
 
 export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
   return (
-    <div className="landing-page grain min-h-screen overflow-x-hidden">
+    <div className="landing-page min-h-screen overflow-x-hidden">
       <LandingInteractions />
       <header className="landing-header">
         <div className="landing-header__inner">
@@ -509,7 +521,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
               <Database className="h-9 w-9" />
               <h3>数据由你掌控</h3>
               <p>使用你自己的 PostgreSQL，项目、标签、备注和配置都在你的环境中。</p>
-              <a href="#docs">
+              <a href="/docs/architecture">
                 了解数据库模型 <ArrowRight className="h-4 w-4" />
               </a>
             </article>
@@ -517,7 +529,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
               <Cloud className="h-9 w-9" />
               <h3>灵活部署</h3>
               <p>支持 Vercel 一键部署，或 Docker 自托管部署。</p>
-              <a href="#docs">
+              <a href="/docs/deployment">
                 查看部署文档 <ArrowRight className="h-4 w-4" />
               </a>
             </article>
@@ -539,7 +551,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             <div key={column.title}>
               <strong>{column.title}</strong>
               {column.links.map((item) => (
-                <a href={item === "GitHub" ? "https://github.com/yuanyang749/starlens" : "#docs"} key={item}>
+                <a href={footerLinkHref(item)} key={item}>
                   {item}
                 </a>
               ))}
@@ -549,7 +561,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
         <div className="landing-footer__cta">
           <FileText className="h-5 w-5" />
           <strong>开始使用 Starlens</strong>
-          <p>使用 GitHub 登录，立即开始搜索你的 Stars。</p>
+          <p>使用 GitHub 登录，搜索你的 Stars。</p>
           <WorkspaceLink
             githubAuthEnabled={githubAuthEnabled}
             className="landing-button landing-button--primary h-10 px-4 text-xs font-semibold"

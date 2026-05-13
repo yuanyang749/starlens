@@ -14,9 +14,8 @@ html {
   background:
     linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
     linear-gradient(180deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    radial-gradient(circle at 68% 8%, rgba(148, 163, 184, 0.16), transparent 28%),
-    linear-gradient(180deg, #fbfcfe 0%, #f7f9fc 48%, #ffffff 100%);
-  background-size: 24px 24px, 24px 24px, auto, auto;
+    linear-gradient(180deg, #fcfdff 0%, #f9fbfe 52%, #ffffff 100%);
+  background-size: 24px 24px, 24px 24px, auto;
 }
 
 .landing-page::before {
@@ -90,7 +89,7 @@ html {
 }
 
 .landing-nav a:hover,
-.landing-footer a:hover,
+.landing-footer a:hover:not(.landing-button),
 .landing-deploy-grid a:hover {
   color: #020617;
 }
@@ -486,6 +485,8 @@ html {
 .landing-pain-card {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 310px;
   border-radius: 8px;
   padding: 28px;
@@ -545,7 +546,7 @@ html {
 
 .landing-pain-card span {
   display: block;
-  margin-top: 22px;
+  margin-top: auto;
   border-top: 1px solid #e3eaf2;
   padding-top: 18px;
   color: #334155;
@@ -693,6 +694,7 @@ html {
 }
 
 .landing-feature-card {
+  position: relative;
   overflow: hidden;
   min-height: 320px;
   border-radius: 8px;
@@ -850,6 +852,8 @@ html {
 .landing-workflow-card,
 .landing-terminal-card,
 .landing-agent-card {
+  position: relative;
+  overflow: hidden;
   min-width: 0;
   border-radius: 8px;
   padding: 28px;
@@ -923,6 +927,8 @@ html {
 }
 
 .landing-provider-card {
+  position: relative;
+  overflow: hidden;
   min-height: 190px;
   border-radius: 8px;
   padding: 26px;
@@ -990,6 +996,7 @@ html {
 .landing-footer {
   display: grid;
   grid-template-columns: 1.05fr 1.4fr 0.95fr;
+  align-items: start;
   gap: 60px;
   border-top: 1px solid #e2e8f0;
   padding: 34px 64px;
@@ -1036,13 +1043,38 @@ html {
 }
 
 .landing-footer__cta {
+  align-self: start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon title title"
+    "icon desc action";
+  column-gap: 14px;
+  row-gap: 8px;
   border-radius: 8px;
-  padding: 20px;
+  padding: 18px 20px;
+}
+
+.landing-footer__cta > svg {
+  grid-area: icon;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.landing-footer__cta > strong {
+  grid-area: title;
 }
 
 .landing-footer__cta p {
-  margin: 8px 0 14px;
+  grid-area: desc;
+  margin: 0;
   font-size: 13px;
+  line-height: 1.65;
+}
+
+.landing-footer__cta .landing-button {
+  grid-area: action;
+  align-self: end;
 }
 
 .landing-scroll-tracker {
@@ -1242,9 +1274,64 @@ html {
 
   .landing-feature-grid,
   .landing-pain-grid,
-  .landing-provider-grid,
-  .landing-footer__links {
+  .landing-provider-grid {
     grid-template-columns: 1fr;
+  }
+
+  .landing-footer__links {
+    grid-template-columns: repeat(3, minmax(92px, 1fr));
+    gap: 16px;
+  }
+
+  .landing-footer__links div {
+    gap: 8px;
+  }
+
+  .landing-footer__links strong,
+  .landing-footer__links a {
+    font-size: 13px;
+  }
+
+  /* 移动端 CTA 改为紧凑栅格，减少无效留白 */
+  .landing-footer__cta {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "icon title action"
+      "icon desc action";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 14px 12px;
+  }
+
+  .landing-footer__cta > svg {
+    grid-area: icon;
+    align-self: start;
+    margin-top: 2px;
+  }
+
+  .landing-footer__cta > strong {
+    grid-area: title;
+  }
+
+  .landing-footer__cta > p {
+    grid-area: desc;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .landing-footer__cta .landing-button {
+    grid-area: action;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .landing-footer__cta .landing-button svg {
+    display: none;
   }
 
   .landing-scroll-tracker {

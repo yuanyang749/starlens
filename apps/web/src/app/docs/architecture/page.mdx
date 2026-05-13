@@ -1,0 +1,43 @@
+export const metadata = {
+  title: "技术架构 | Starlens 文档",
+  description: "Starlens 的核心模块和数据流说明。",
+};
+
+# 技术架构
+
+Starlens 采用 Next.js App Router 构建 Web 应用，并通过 PostgreSQL 保存用户、仓库、标签、备注、AI 配置和个人访问令牌等数据。
+
+<figure className="docs-figure">
+  <div className="docs-figure__viewport">
+    <img src="/docs/architecture-overview.svg" alt="Starlens 技术架构图，展示访问层、应用层、服务模块和 PostgreSQL 存储之间的关系。" />
+  </div>
+  <figcaption>架构图比表格更适合先建立整体心智模型，再回到模块职责和数据流细节。</figcaption>
+</figure>
+
+## 核心模块
+
+| 模块 | 责任 |
+| --- | --- |
+| Web 应用 | 提供首页、登录、工作台、设置和文档页面 |
+| GitHub 登录 | 使用 GitHub OAuth 识别用户身份 |
+| GitHub 同步 | 拉取用户 Stars，写入本地数据库 |
+| 仓库工作台 | 展示仓库列表、筛选条件、详情、标签和备注 |
+| 搜索服务 | 基于仓库元数据、README 摘要、标签和备注构建检索文本 |
+| AI 服务 | 支持摘要、重排、自然语言问答和模型配置 |
+| API Token | 让 CLI 或外部工具以 Bearer token 调用 Starlens API |
+
+## 数据流
+
+1. 用户使用 GitHub 登录 Starlens。
+2. 同步任务读取用户授权范围内的 Stars。
+3. 服务端将仓库元数据、README 摘要、标签和备注写入 PostgreSQL。
+4. 搜索接口根据关键词、语言、Stars、更新时间等条件返回候选仓库。
+5. AI 问答接口先检索候选仓库，再按配置生成回答或解释候选结果。
+
+## 数据存储
+
+Starlens 默认使用 PostgreSQL。核心数据包括用户身份、GitHub 仓库快照、个人标签、备注、收藏状态、AI Provider 配置和个人 API Token。
+
+## 扩展方式
+
+Starlens 的扩展重点在三个方向：增加新的 AI Provider、开放更多 API 给 CLI 或 Agent、增强仓库内容索引。文档页保持静态 MDX，避免把用户文档和业务逻辑耦合在一起。

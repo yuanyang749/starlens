@@ -1,0 +1,68 @@
+export const metadata = {
+  title: "部署方式 | Starlens 文档",
+  description: "Starlens 的本地开发、Vercel 部署和自托管部署说明。",
+};
+
+# 部署方式
+
+Starlens 可以在本地开发环境运行，也可以部署到 Vercel 或自托管环境。部署前需要准备 PostgreSQL 数据库和 GitHub OAuth 应用。
+
+<figure className="docs-figure">
+  <div className="docs-figure__viewport">
+    <img src="/docs/deployment-topology.svg" alt="Starlens 部署方式图，展示本地开发、Vercel 部署和自托管运行时与共享依赖之间的关系。" />
+  </div>
+  <figcaption>这张图强调三种部署路径复用同一套代码、数据库模式和认证配置，只是运行环境不同。</figcaption>
+</figure>
+
+## 本地开发
+
+1. 准备 Node.js、pnpm 和 PostgreSQL。
+2. 在仓库根目录创建 `.env`，写入数据库连接串和 GitHub OAuth 配置。
+3. 安装依赖后执行数据库迁移。
+4. 启动 Web 应用并访问本地地址。
+
+常用命令：
+
+```bash
+corepack pnpm install
+corepack pnpm db:migrate:local
+corepack pnpm dev
+```
+
+## Vercel 部署
+
+Vercel 部署适合希望快速上线 Web 应用的场景。你需要在 Vercel 项目环境变量中配置数据库连接串、NextAuth 密钥和 GitHub OAuth 凭据。
+
+推荐变量：
+
+| 变量 | 用途 |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL 连接串 |
+| `NEXTAUTH_SECRET` | NextAuth 会话密钥 |
+| `NEXTAUTH_URL` | 线上站点地址 |
+| `AUTH_GITHUB_ID` | GitHub OAuth Client ID |
+| `AUTH_GITHUB_SECRET` | GitHub OAuth Client Secret |
+
+## 自托管部署
+
+自托管适合希望完全控制运行环境和数据库的场景。你可以把 Web 应用部署到自己的服务器，并连接自管 PostgreSQL。
+
+基础流程：
+
+1. 在服务器准备 Node.js、pnpm 和数据库连接。
+2. 配置生产环境变量。
+3. 构建应用。
+4. 运行 Next.js 服务，并通过反向代理暴露 HTTPS 域名。
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm build
+corepack pnpm --filter @starlens/web start
+```
+
+## 部署检查
+
+- GitHub OAuth 回调地址需要和线上域名一致。
+- 数据库迁移需要在首次上线前执行。
+- 如果启用 AI 功能，需要在设置页配置对应 Provider。
+- 如果要给 CLI 使用，需要在 Tokens 页面创建个人 API Token。
