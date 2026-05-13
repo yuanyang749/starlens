@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandLogo } from "./brand-logo";
+import ClickSpark from "./click-spark";
 import { LandingInteractions } from "./landing-interactions";
 import {
   ArrowRight,
@@ -302,9 +303,17 @@ function FeatureMock({ type }: { type: string }) {
 
 export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
   return (
-    <div className="landing-page min-h-screen overflow-x-hidden">
-      <LandingInteractions />
-      <header className="landing-header">
+    <ClickSpark
+      sparkColor="#000"
+      sparkSize={10}
+      sparkRadius={16}
+      sparkCount={8}
+      duration={400}
+      extraScale={1}
+    >
+      <div className="landing-page min-h-screen overflow-x-hidden">
+        <LandingInteractions />
+        <header className="landing-header">
         <div className="landing-header__inner">
           <Link href="/" className="landing-brand" aria-label="Starlens 首页">
             <BrandLogo size={30} className="rounded-lg" priority />
@@ -570,7 +579,8 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             Workspace
           </WorkspaceLink>
         </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
+    </ClickSpark>
   );
 }
