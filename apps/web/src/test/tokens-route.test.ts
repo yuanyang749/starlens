@@ -40,6 +40,7 @@ describe("token API routes", () => {
       note: "CI runner",
       token: "stl_secret",
       tokenPrefix: "stl_secret",
+      tokenSuffix: "secret",
       createdAt: "2026-05-06T00:00:00.000Z",
       lastUsedAt: null,
       expiresAt: null,
@@ -56,7 +57,7 @@ describe("token API routes", () => {
     expect(createPersonalApiTokenMock).toHaveBeenCalledWith("user-1", "CLI", "CI runner");
     await expect(json(response)).resolves.toMatchObject({
       ok: true,
-      data: { token: "stl_secret", tokenPrefix: "stl_secret", note: "CI runner" },
+      data: { token: "stl_secret", tokenPrefix: "stl_secret", tokenSuffix: "secret", note: "CI runner" },
     });
   });
 
@@ -64,7 +65,7 @@ describe("token API routes", () => {
     const { GET } = await import("@/app/api/tokens/route");
     listPersonalApiTokensMock.mockResolvedValue([]);
 
-    await GET(new Request("https://starlens.test/api/tokens"));
+    await GET();
 
     expect(listPersonalApiTokensMock).toHaveBeenCalledWith("user-1");
   });

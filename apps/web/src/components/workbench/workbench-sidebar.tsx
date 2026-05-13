@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Clock3, KeyRound, Search, Settings2, Sparkles, Star, Tag } from "lucide-react";
+import { Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Star } from "lucide-react";
 
 type WorkbenchSidebarProps = {
   contentMode: "repos" | "general" | "providers" | "tokens";
@@ -9,7 +9,6 @@ type WorkbenchSidebarProps = {
   onFavoritesClick: () => void;
   onAllStarsClick: () => void;
   onRecentClick: () => void;
-  onAiSearchClick: () => void;
   onOpenGeneral: () => void;
   onOpenProviders: () => void;
   onOpenTokens: () => void;
@@ -18,6 +17,8 @@ type WorkbenchSidebarProps = {
   favoriteCount: number;
   lastSyncText: string;
   syncStatusText: string;
+  collapsed: boolean;
+  onCollapsedChange: (value: boolean) => void;
 };
 
 export function WorkbenchSidebar({
@@ -27,7 +28,6 @@ export function WorkbenchSidebar({
   onFavoritesClick,
   onAllStarsClick,
   onRecentClick,
-  onAiSearchClick,
   onOpenGeneral,
   onOpenProviders,
   onOpenTokens,
@@ -36,11 +36,23 @@ export function WorkbenchSidebar({
   favoriteCount,
   lastSyncText,
   syncStatusText,
+  collapsed,
+  onCollapsedChange,
 }: WorkbenchSidebarProps) {
   const reposActive = contentMode === "repos";
 
   return (
-    <aside data-testid="workbench-sidebar" className="workbench-sidebar">
+    <aside data-testid="workbench-sidebar" className={collapsed ? "workbench-sidebar is-collapsed" : "workbench-sidebar"}>
+      <button
+        type="button"
+        className="workbench-sidebar__toggle"
+        onClick={() => onCollapsedChange(!collapsed)}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+        <span className="workbench-sidebar__toggle-text">Collapse</span>
+      </button>
       <div className="workbench-sidebar__groups">
         <section className="workbench-nav-section" aria-label="Workbench">
           <p className="workbench-nav-section__title">WORKBENCH</p>
@@ -48,10 +60,11 @@ export function WorkbenchSidebar({
             type="button"
             onClick={onAllStarsClick}
             className={reposActive && !favoritesOnly && !recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="All Stars"
           >
             <span className="workbench-nav-item__leading">
               <Search className="h-4 w-4" />
-              All Stars
+              <span className="workbench-nav-item__label">All Stars</span>
             </span>
             <span>{total}</span>
           </button>
@@ -59,10 +72,11 @@ export function WorkbenchSidebar({
             type="button"
             onClick={onFavoritesClick}
             className={reposActive && favoritesOnly && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="Favorites"
           >
             <span className="workbench-nav-item__leading">
               <Star className="h-4 w-4" />
-              Favorites
+              <span className="workbench-nav-item__label">Favorites</span>
             </span>
             <span>{favoriteCount}</span>
           </button>
@@ -70,36 +84,11 @@ export function WorkbenchSidebar({
             type="button"
             onClick={onRecentClick}
             className={reposActive && recentActive && !aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="Recent"
           >
             <span className="workbench-nav-item__leading">
               <Clock3 className="h-4 w-4" />
-              Recent
-            </span>
-          </button>
-        </section>
-
-        <section className="workbench-nav-section" aria-label="Discover">
-          <p className="workbench-nav-section__title">DISCOVER</p>
-          <div className="workbench-nav-item is-passive">
-            <span className="workbench-nav-item__leading">
-              <Tag className="h-4 w-4" />
-              Languages
-            </span>
-          </div>
-          <div className="workbench-nav-item is-passive">
-            <span className="workbench-nav-item__leading">
-              <Tag className="h-4 w-4" />
-              Tags
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onAiSearchClick}
-            className={reposActive && aiSearchActive ? "workbench-nav-item is-active" : "workbench-nav-item"}
-          >
-            <span className="workbench-nav-item__leading">
-              <Sparkles className="h-4 w-4" />
-              AI Search
+              <span className="workbench-nav-item__label">Recent</span>
             </span>
           </button>
         </section>
@@ -110,20 +99,22 @@ export function WorkbenchSidebar({
             type="button"
             onClick={onOpenProviders}
             className={contentMode === "providers" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="Providers"
           >
             <span className="workbench-nav-item__leading">
               <Bot className="h-4 w-4" />
-              Providers
+              <span className="workbench-nav-item__label">Providers</span>
             </span>
           </button>
           <button
             type="button"
             onClick={onOpenTokens}
             className={contentMode === "tokens" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="Tokens"
           >
             <span className="workbench-nav-item__leading">
               <KeyRound className="h-4 w-4" />
-              Tokens
+              <span className="workbench-nav-item__label">Tokens</span>
             </span>
           </button>
         </section>
@@ -134,10 +125,11 @@ export function WorkbenchSidebar({
             type="button"
             onClick={onOpenGeneral}
             className={contentMode === "general" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="General"
           >
             <span className="workbench-nav-item__leading">
               <Settings2 className="h-4 w-4" />
-              General
+              <span className="workbench-nav-item__label">General</span>
             </span>
           </button>
         </section>

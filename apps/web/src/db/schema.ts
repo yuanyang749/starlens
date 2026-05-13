@@ -148,6 +148,7 @@ export const personalApiTokens = pgTable("personal_api_tokens", {
   note: text("note").notNull().default(""),
   tokenHash: text("token_hash").notNull(),
   tokenPrefix: text("token_prefix").notNull(),
+  tokenSuffix: text("token_suffix").notNull().default(""),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),

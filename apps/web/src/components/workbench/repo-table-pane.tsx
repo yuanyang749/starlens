@@ -1,7 +1,7 @@
 "use client";
 
 import type { RepoSummary, SearchSort } from "@starlens/core";
-import { ArrowDownUp, RefreshCw, Star, X } from "lucide-react";
+import { ArrowDownUp, Star, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -101,6 +101,7 @@ export function RepoTablePane({
             <input
               value={language}
               onChange={(event) => onLanguageChange(event.target.value)}
+              aria-label="Filter by language"
               placeholder="Language"
               className="workbench-input"
               disabled={isAiSearchMode}
@@ -121,6 +122,7 @@ export function RepoTablePane({
             <input
               value={tagFilter}
               onChange={(event) => onTagFilterChange(event.target.value)}
+              aria-label="Filter by tag"
               placeholder="Tag"
               className="workbench-input"
               disabled={isAiSearchMode}
@@ -193,22 +195,6 @@ export function RepoTablePane({
             </TooltipTrigger>
             <TooltipContent>
               <span>Reset sort</span>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={syncNow}
-                disabled={syncing}
-                className="workbench-icon-button workbench-icon-button--round"
-                aria-label={syncing ? "Syncing" : "Sync now"}
-              >
-                <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span>{syncing ? "Syncing" : "Sync now"}</span>
             </TooltipContent>
           </Tooltip>
         </div>

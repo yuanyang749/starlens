@@ -62,14 +62,21 @@ function WorkspaceLink({
   className: string;
   githubAuthEnabled: boolean;
 }) {
+  if (!githubAuthEnabled) {
+    return (
+      <span
+        title="GitHub OAuth is not configured in this local environment."
+        className={`${className} cursor-not-allowed opacity-55`}
+      >
+        {children}
+      </span>
+    );
+  }
+
   return (
-    <GitHubSignInButton
-      className={className}
-      githubAuthEnabled={githubAuthEnabled}
-      callbackUrl="/app"
-    >
+    <Link href="/app" className={className}>
       {children}
-    </GitHubSignInButton>
+    </Link>
   );
 }
 
@@ -127,13 +134,13 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row">
-              <WorkspaceLink
+              <GitHubSignInButton
                 githubAuthEnabled={githubAuthEnabled}
                 className={primaryLoginLinkClassName}
               >
                 Use GitHub login
                 <ArrowRight className="h-4 w-4" />
-              </WorkspaceLink>
+              </GitHubSignInButton>
               <a
                 href="https://github.com/yuanyang749/starlens"
                 target="_blank"
@@ -412,7 +419,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
               GitHub
             </a>
             {githubAuthEnabled ? (
-              <Link href="/api/auth/signin/github?callbackUrl=/app" prefetch={false}>
+              <Link href="/app">
                 Workspace
               </Link>
             ) : (

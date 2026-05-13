@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import type { AiConfig, ProviderType } from "@starlens/core";
 import { Bot, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ApiClientError, fetchApi } from "@/lib/api-client";
 
 const providerOptions: Array<{ label: string; value: ProviderType }> = [
@@ -187,19 +194,24 @@ export function AISettingsView() {
             placeholder="Display name"
             className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
           />
-          <select
+          <Select
             value={form.providerType}
-            onChange={(event) =>
-              updateForm({ providerType: event.target.value as ProviderType })
-            }
-            className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
+            onValueChange={(value) => updateForm({ providerType: value as ProviderType })}
           >
-            {providerOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-label="Provider type"
+              className="ai-provider-select-trigger"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="ai-provider-select-content" position="popper">
+              {providerOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <input
             value={form.model}
             onChange={(event) => updateForm({ model: event.target.value })}

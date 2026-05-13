@@ -29,6 +29,13 @@
       "when": 1778150400000,
       "tag": "0003_bright_sparrow",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778563200000,
+      "tag": "0004_token_suffix",
+      "breakpoints": true
     }
   ]
 }

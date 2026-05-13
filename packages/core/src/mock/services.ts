@@ -163,6 +163,7 @@ export function listMockTokens(): TokenRecord[] {
 export function createMockToken(name: string, note = "") {
   const createdAt = new Date().toISOString();
   const tokenPrefix = "stl_mock";
+  const tokenSuffix = "d_once";
 
   return {
     token: `${tokenPrefix}_generated_once`,
@@ -171,6 +172,7 @@ export function createMockToken(name: string, note = "") {
       name,
       note,
       tokenPrefix,
+      tokenSuffix,
       lastUsedAt: null,
       expiresAt: null,
       revokedAt: null,

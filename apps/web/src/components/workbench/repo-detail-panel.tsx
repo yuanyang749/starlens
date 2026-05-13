@@ -47,7 +47,7 @@ type RepoDetailPanelProps = {
   favoriteUpdating: boolean;
   tagSubmitting: boolean;
   tagDeleting: string | null;
-  onClose: () => void;
+  noteSaveFeedback: string | null;
   onFavoriteToggle: () => Promise<void>;
   onNoteChange: (value: string) => void;
   onSaveNote: () => void;
@@ -63,7 +63,7 @@ export function RepoDetailPanel({
   favoriteUpdating,
   tagSubmitting,
   tagDeleting,
-  onClose,
+  noteSaveFeedback,
   onFavoriteToggle,
   onNoteChange,
   onSaveNote,
@@ -98,9 +98,6 @@ export function RepoDetailPanel({
           <p className="repo-detail-panel__eyebrow">Selected repository</p>
           <h2 className="repo-detail-panel__title">{repo.fullName}</h2>
         </div>
-        <button type="button" onClick={onClose} className="workbench-icon-button" aria-label="Close details">
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
       {githubUrl ? (
@@ -128,10 +125,17 @@ export function RepoDetailPanel({
       <section className="repo-detail-section">
         <div className="repo-detail-section__header">
           <h3 className="repo-detail-section__title">My note</h3>
-          <button type="button" onClick={onSaveNote} className="workbench-button workbench-button--ghost">
-            <Check className="h-4 w-4" />
-            Save
-          </button>
+          <div className="repo-detail-section__actions">
+            {noteSaveFeedback ? (
+              <span className="repo-detail-save-status" role="status" aria-live="polite">
+                {noteSaveFeedback}
+              </span>
+            ) : null}
+            <button type="button" onClick={onSaveNote} className="workbench-button workbench-button--ghost">
+              <Check className="h-4 w-4" />
+              Save
+            </button>
+          </div>
         </div>
         <textarea
           aria-label="My note"

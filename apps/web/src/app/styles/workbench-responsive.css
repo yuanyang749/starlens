@@ -3,8 +3,16 @@
     grid-template-columns: 240px minmax(0, 1fr) 360px;
   }
 
+  .workbench-body.is-sidebar-collapsed {
+    grid-template-columns: 72px minmax(0, 1fr) 360px;
+  }
+
   .workbench-body--settings {
     grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .workbench-body--settings.is-sidebar-collapsed {
+    grid-template-columns: 72px minmax(0, 1fr);
   }
 
   .workbench-topbar {
@@ -26,8 +34,17 @@
     grid-template-columns: 1fr;
   }
 
+  .workbench-body.is-sidebar-collapsed,
+  .workbench-body--settings.is-sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .workbench-sidebar {
     order: 2;
+  }
+
+  .workbench-sidebar.is-collapsed {
+    max-height: 82px;
   }
 
   .repo-table-pane {

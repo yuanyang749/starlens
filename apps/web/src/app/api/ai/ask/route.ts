@@ -14,6 +14,26 @@ type Candidate = {
   starredAtGithub: string;
 };
 
+type CandidateSource =
+  | "question_search"
+  | "heuristic_search"
+  | "expanded_search"
+  | "heuristic_pool"
+  | "ai_pool_pick";
+
+type QueryKind = "question" | "heuristic" | "expanded";
+
+type QuerySpec = {
+  query: string;
+  kind: QueryKind;
+};
+
+type RecalledCandidate = Candidate & {
+  reason: string;
+  score: number;
+  source: CandidateSource;
+};
+
 type OpenAiCompatibleResponse = {
   choices?: Array<{
     message?: {
@@ -88,6 +108,44 @@ function buildHeuristicTerms(question: string) {
   return Array.from(new Set(terms));
 }
 
+function uniqueQuerySpecs(specs: QuerySpec[]) {
+  const seen = new Set<string>();
+  const unique: QuerySpec[] = [];
+
+  for (const spec of specs) {
+    const normalized = spec.query.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    unique.push({ ...spec, query: spec.query.trim() });
+  }
+
+  return unique;
+}
+
+function sourceForQueryKind(kind: QueryKind): CandidateSource {
+  if (kind === "question") return "question_search";
+  if (kind === "heuristic") return "heuristic_search";
+  return "expanded_search";
+}
+
+function reasonForQuerySpec(spec: QuerySpec) {
+  if (spec.kind === "question") {
+    return `Matched your question directly: "${spec.query}".`;
+  }
+
+  if (spec.kind === "heuristic") {
+    return `Matched heuristic term: "${spec.query}".`;
+  }
+
+  return `Matched expanded term: "${spec.query}".`;
+}
+
+function baseScoreForQueryKind(kind: QueryKind) {
+  if (kind === "question") return 1000;
+  if (kind === "heuristic") return 700;
+  return 400;
+}
+
 function splitSearchTerms(terms: string[]) {
   return terms
     .flatMap((term) => term.toLowerCase().split(/\s+/g))
@@ -115,6 +173,21 @@ function heuristicPickFromPool(question: string, pool: Candidate[]) {
   });
 
   return picked.slice(0, 6);
+}
+
+function mergeCandidate(
+  merged: Map<string, RecalledCandidate>,
+  candidate: Candidate,
+  metadata: Pick<RecalledCandidate, "reason" | "score" | "source">,
+) {
+  const existing = merged.get(candidate.id);
+  if (
+    !existing
+    || metadata.score > existing.score
+    || (metadata.score === existing.score && candidate.stargazersCount > existing.stargazersCount)
+  ) {
+    merged.set(candidate.id, { ...candidate, ...metadata });
+  }
 }
 
 async function expandQuestionTermsWithMinimax(question: string) {
@@ -225,39 +298,36 @@ function toCandidate(item: SearchRepoItem): Candidate {
 }
 
 async function recallCandidates(userId: string, question: string) {
-  const queryList = [
-    question,
-    ...buildHeuristicTerms(question),
-    ...(await expandQuestionTermsWithMinimax(question)),
-  ];
-  const uniqueQueries = Array.from(
-    new Set(
-      queryList
-        .map((query) => query.trim())
-        .filter(Boolean),
-    ),
-  ).slice(0, 8);
+  const querySpecs = uniqueQuerySpecs([
+    { query: question, kind: "question" },
+    ...buildHeuristicTerms(question).map((query) => ({ query, kind: "heuristic" as const })),
+    ...(await expandQuestionTermsWithMinimax(question)).map((query) => ({ query, kind: "expanded" as const })),
+  ]).slice(0, 8);
 
-  const merged = new Map<string, Candidate>();
+  const merged = new Map<string, RecalledCandidate>();
 
-  for (const query of uniqueQueries) {
+  for (const spec of querySpecs) {
     const result = await searchRepos(userId, {
-      q: query,
+      q: spec.query,
       sort: "relevance",
       page: 1,
       pageSize: 8,
     });
 
-    for (const item of result.items) {
-      if (!merged.has(item.id)) {
-        merged.set(item.id, toCandidate(item));
-      }
+    for (const [index, item] of result.items.entries()) {
+      mergeCandidate(merged, toCandidate(item), {
+        source: sourceForQueryKind(spec.kind),
+        reason: reasonForQuerySpec(spec),
+        score: baseScoreForQueryKind(spec.kind) - index * 10,
+      });
     }
 
     if (merged.size >= 10) break;
   }
 
-  let candidates = Array.from(merged.values()).slice(0, 8);
+  let candidates = Array.from(merged.values())
+    .sort((left, right) => right.score - left.score || right.stargazersCount - left.stargazersCount)
+    .slice(0, 8);
 
   if (candidates.length === 0) {
     const broadPoolResult = await searchRepos(userId, {
@@ -267,15 +337,25 @@ async function recallCandidates(userId: string, question: string) {
     });
     const broadPool = broadPoolResult.items.map(toCandidate);
 
-    candidates = heuristicPickFromPool(question, broadPool);
+    candidates = heuristicPickFromPool(question, broadPool).map((candidate, index) => ({
+      ...candidate,
+      source: "heuristic_pool" as const,
+      reason: "Matched heuristic terms against recent repository metadata.",
+      score: 250 - index * 10,
+    }));
     if (candidates.length === 0) {
-      candidates = await pickCandidatesWithMinimax(question, broadPool);
+      candidates = (await pickCandidatesWithMinimax(question, broadPool)).map((candidate, index) => ({
+        ...candidate,
+        source: "ai_pool_pick" as const,
+        reason: "Selected by AI fallback from recent repository candidates.",
+        score: 150 - index * 10,
+      }));
     }
   }
 
   return {
     candidates,
-    queries: uniqueQueries,
+    queries: querySpecs.map((spec) => spec.query),
   };
 }
 
@@ -355,6 +435,8 @@ export async function POST(request: Request) {
     candidates: candidates.map((item) => ({
       id: item.id,
       fullName: item.fullName,
+      reason: item.reason,
+      source: item.source,
     })),
     providerConfigId: resolveOpenAiEnv() ? "env:minimax-openai-compatible" : null,
   });

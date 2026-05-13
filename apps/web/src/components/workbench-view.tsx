@@ -114,6 +114,7 @@ export function WorkbenchView({
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<SyncResult | null>(null);
+  const [noteSaveFeedback, setNoteSaveFeedback] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState(20);
   const [syncing, setSyncing] = useState(false);
   const [aiSearching, setAiSearching] = useState(false);
@@ -121,10 +122,12 @@ export function WorkbenchView({
   const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
   const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens">("repos");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
   const [tagDeleting, setTagDeleting] = useState<string | null>(null);
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingNoteRef = useRef<string | null>(null);
 
   const refreshList = useCallback(() => {
@@ -282,9 +285,38 @@ export function WorkbenchView({
     [selectedRepo, updateRepo],
   );
 
+  const showNoteSaveFeedback = useCallback((message: string) => {
+    setNoteSaveFeedback(message);
+
+    if (noteFeedbackTimeoutRef.current) {
+      clearTimeout(noteFeedbackTimeoutRef.current);
+    }
+
+    noteFeedbackTimeoutRef.current = setTimeout(() => {
+      setNoteSaveFeedback(null);
+      noteFeedbackTimeoutRef.current = null;
+    }, 1800);
+  }, []);
+
+  const saveNoteNow = useCallback(async () => {
+    if (!selectedRepo) return;
+
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+      noteDebounceRef.current = null;
+    }
+    pendingNoteRef.current = null;
+
+    const saved = await updateRepo(selectedRepo.id, { note: noteDraft });
+    if (saved) {
+      showNoteSaveFeedback("Saved");
+    }
+  }, [noteDraft, selectedRepo, showNoteSaveFeedback, updateRepo]);
+
   useEffect(
     () => () => {
       if (noteDebounceRef.current) clearTimeout(noteDebounceRef.current);
+      if (noteFeedbackTimeoutRef.current) clearTimeout(noteFeedbackTimeoutRef.current);
     },
     [],
   );
@@ -533,6 +565,8 @@ export function WorkbenchView({
         canSearch={Boolean((queryDirty ? queryDraft : query).trim())}
         aiSearching={aiSearching}
         onAiSearch={aiSearch}
+        syncing={syncing}
+        onSyncNow={syncNow}
       />
 
       {error ? (
@@ -562,7 +596,13 @@ export function WorkbenchView({
         </div>
       ) : null}
 
-      <div className={showingSettingsPanel ? "workbench-body workbench-body--settings" : "workbench-body"}>
+      <div
+        className={[
+          "workbench-body",
+          showingSettingsPanel ? "workbench-body--settings" : "",
+          sidebarCollapsed ? "is-sidebar-collapsed" : "",
+        ].filter(Boolean).join(" ")}
+      >
         <WorkbenchSidebar
           contentMode={contentMode}
           favoritesOnly={favoritesOnly}
@@ -590,13 +630,6 @@ export function WorkbenchView({
             setSort("recent");
             setPage(1);
           }}
-          onAiSearchClick={() => {
-            setContentMode("repos");
-            setAiSearchMode(true);
-            setFavoritesOnly(false);
-            setRecentMode(false);
-            setPage(1);
-          }}
           onOpenGeneral={() => setContentMode("general")}
           onOpenProviders={() => setContentMode("providers")}
           onOpenTokens={() => setContentMode("tokens")}
@@ -607,6 +640,8 @@ export function WorkbenchView({
           syncStatusText={
             lastSync ? `${lastSync.counts.fetched} repos · ${lastSync.status}` : `${allStarsTotal} repos tracked`
           }
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
         />
 
         {showingSettingsPanel ? (
@@ -675,7 +710,7 @@ export function WorkbenchView({
               favoriteUpdating={Boolean(selectedRepo && favoriteUpdatingId === selectedRepo.id)}
               tagSubmitting={tagSubmitting}
               tagDeleting={tagDeleting}
-              onClose={() => setSelectedId(null)}
+              noteSaveFeedback={noteSaveFeedback}
               onFavoriteToggle={async () => {
                 if (!selectedRepo || favoriteUpdatingId) return;
                 setFavoriteUpdatingId(selectedRepo.id);
@@ -684,9 +719,10 @@ export function WorkbenchView({
               }}
               onNoteChange={(value) => {
                 setNoteDraft(value);
+                setNoteSaveFeedback(null);
                 scheduleNoteSave(value);
               }}
-              onSaveNote={() => scheduleNoteSave(noteDraft)}
+              onSaveNote={() => void saveNoteNow()}
               onNewTagChange={setNewTag}
               onAddTag={addTag}
               onDeleteTag={deleteTag}

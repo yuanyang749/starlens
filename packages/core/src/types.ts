@@ -69,6 +69,7 @@ export type TokenRecord = {
   name: string;
   note: string;
   tokenPrefix: string;
+  tokenSuffix: string;
   lastUsedAt: string | null;
   expiresAt: string | null;
   revokedAt: string | null;

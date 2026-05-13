@@ -2,11 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const cliPath = resolve(import.meta.dirname, "..", "index.mjs");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const cliPath = resolve(__dirname, "..", "index.mjs");
 
 function runCli(args, env = {}) {
   return new Promise((resolveRun) => {
@@ -64,6 +66,20 @@ test("login --token stores the bearer token at the configured token path", async
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("help documents the 30 second default API timeout", async () => {
+  const result = await runCli(["--help"]);
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /default: 30000/);
+});
+
+test("version prints the CLI package version", async () => {
+  const result = await runCli(["version"]);
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout.trim(), "0.1.0");
 });
 
 test("search calls /api/search with a Bearer token and emits json results", async () => {
@@ -135,6 +151,180 @@ test("sync posts to /api/sync with a Bearer token and renders a table", async ()
       assert.match(result.stdout, /Status/);
       assert.match(result.stdout, /started/);
       assert.match(result.stdout, /Fetched/);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("show fetches a repo by id and renders json", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_show_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "GET");
+      assert.equal(request.url, "/api/repos/repo-1");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          id: "repo-1",
+          fullName: "owner/repo",
+          htmlUrl: "https://github.com/owner/repo",
+          language: "TypeScript",
+          stargazersCount: 42,
+          isFavorite: false,
+          tags: ["tooling"],
+          repoSummary: "A useful repo",
+          note: "Check later",
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli([
+        "show",
+        "repo-1",
+        "--api-base-url",
+        apiBaseUrl,
+        "--token-path",
+        tokenPath,
+        "--format",
+        "json",
+      ]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(requests[0].authorization, "Bearer stl_show_token");
+      assert.equal(JSON.parse(result.stdout).fullName, "owner/repo");
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("open can resolve owner/repo through search and print the repository url", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_open_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      response.setHeader("Content-Type", "application/json");
+      if (request.url === "/api/repos/owner%2Frepo") {
+        response.statusCode = 404;
+        response.end(JSON.stringify({ ok: false, error: { code: "repo_not_found", message: "Repository was not found." } }));
+        return;
+      }
+
+      assert.match(request.url, /^\/api\/search\?/);
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          items: [{ id: "repo-1", fullName: "owner/repo", htmlUrl: "https://github.com/owner/repo" }],
+          page: 1,
+          pageSize: 10,
+          total: 1,
+          hasMore: false,
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli([
+        "open",
+        "owner/repo",
+        "--print",
+        "--api-base-url",
+        apiBaseUrl,
+        "--token-path",
+        tokenPath,
+      ]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(result.stdout.trim(), "https://github.com/owner/repo");
+      assert.equal(requests[0].authorization, "Bearer stl_open_token");
+      const url = new URL(requests[1].url, apiBaseUrl);
+      assert.equal(url.searchParams.get("q"), "owner/repo");
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("ask posts the question to /api/ai/ask and renders the answer", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_ask_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "POST");
+      assert.equal(request.url, "/api/ai/ask");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          answer: "owner/repo is the closest match.",
+          candidates: [{ id: "repo-1", fullName: "owner/repo" }],
+          providerConfigId: null,
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli([
+        "ask",
+        "find my agent repo",
+        "--api-base-url",
+        apiBaseUrl,
+        "--token-path",
+        tokenPath,
+      ]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(requests[0].authorization, "Bearer stl_ask_token");
+      assert.deepEqual(JSON.parse(requests[0].body), { question: "find my agent repo" });
+      assert.match(result.stdout, /owner\/repo is the closest match/);
+      assert.match(result.stdout, /Repository/);
+      assert.doesNotMatch(result.stdout, /Reason/);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("ask renders the reason column when explained candidates are returned", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_reason_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "POST");
+      assert.equal(request.url, "/api/ai/ask");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          answer: "owner/repo is the closest match.",
+          candidates: [{
+            id: "repo-1",
+            fullName: "owner/repo",
+            reason: 'Matched your question directly: "agent".',
+            source: "question_search",
+          }],
+          providerConfigId: null,
+        },
+      }));
+    }, async (apiBaseUrl) => {
+      const result = await runCli([
+        "ask",
+        "agent",
+        "--api-base-url",
+        apiBaseUrl,
+        "--token-path",
+        tokenPath,
+      ]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.match(result.stdout, /Repository\s+Reason/);
+      assert.match(result.stdout, /Matched your question directly/);
     });
   } finally {
     await rm(dir, { recursive: true, force: true });

@@ -3,7 +3,7 @@
 import { BrandLogo } from "@/components/brand-logo";
 import Image from "next/image";
 import { useState } from "react";
-import { LoaderCircle, Search, Sparkles, X } from "lucide-react";
+import { LoaderCircle, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { SignOutButton } from "../sign-out-button";
 
 type WorkbenchTopbarProps = {
@@ -13,6 +13,8 @@ type WorkbenchTopbarProps = {
   canSearch: boolean;
   aiSearching: boolean;
   onAiSearch: () => void;
+  syncing: boolean;
+  onSyncNow: () => void;
   userName: string;
   userAvatarUrl?: string | null;
 };
@@ -24,6 +26,8 @@ export function WorkbenchTopbar({
   canSearch,
   aiSearching,
   onAiSearch,
+  syncing,
+  onSyncNow,
   userName,
   userAvatarUrl,
 }: WorkbenchTopbarProps) {
@@ -90,6 +94,19 @@ export function WorkbenchTopbar({
             <Sparkles className="h-4 w-4" />
           )}
           {aiSearching ? "Searching..." : "AI Search"}
+        </button>
+        <button
+          type="button"
+          onClick={onSyncNow}
+          disabled={syncing}
+          aria-busy={syncing}
+          className={syncing
+            ? "workbench-button workbench-button--primary workbench-button--loading"
+            : "workbench-button workbench-button--primary"}
+          aria-label={syncing ? "Syncing" : "Sync now"}
+        >
+          <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
+          {syncing ? "Syncing..." : "Sync now"}
         </button>
         <SignOutButton className="workbench-button workbench-button--ghost" />
         <div className="workbench-user-pill" aria-label={userName}>

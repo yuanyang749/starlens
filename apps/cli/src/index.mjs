@@ -4,11 +4,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
+import { spawn } from "node:child_process";
 
 const DEFAULT_API_BASE_URL = "http://localhost:3000";
-const DEFAULT_TIMEOUT_MS = 10_000;
+// AI 问答链路可能比搜索更慢，但默认仍保持在 30 秒，避免 CLI 长时间无响应。
+const DEFAULT_TIMEOUT_MS = 30 * 1000;
 const DEFAULT_RETRIES = 1;
 const DEFAULT_PAGE_SIZE = 20;
+let cachedCliVersion;
 
 const helpText = [
   "Starlens CLI",
@@ -16,21 +19,26 @@ const helpText = [
   "Usage:",
   "  stars login --token <token> [--token-path <path>] [--format table|json]",
   "  stars sync [--api-base-url <url>] [--token-path <path>] [--timeout-ms <ms>] [--retries <n>] [--format table|json]",
-  "  stars search <query> [--api-base-url <url>] [--token-path <path>] [--page <n>] [--page-size <n>] [--sort relevance|recent|stars|updated] [--format table|json]",
+  "  stars search <query> [--api-base-url <url>] [--token-path <path>] [--page <n>] [--page-size <n>] [--sort relevance|recent|stars|updated] [--language <value>] [--owner <value>] [--tag <value>] [--favorite true|false] [--format table|json]",
+  "  stars show <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars open <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--print]",
+  "  stars ask <question> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars version",
   "",
   "Configuration:",
   "  --api-base-url, STARLENS_API_BASE_URL   API base URL (default: http://localhost:3000)",
   "  --token-path, STARLENS_TOKEN_PATH       Bearer token storage path (default: ~/.config/starlens/token)",
-  "  --timeout-ms, STARLENS_TIMEOUT_MS       API request timeout in milliseconds (default: 10000)",
+  "  --timeout-ms, STARLENS_TIMEOUT_MS       API request timeout in milliseconds (default: 30000)",
   "  --retries, STARLENS_RETRIES             Retry count for transient API failures (default: 1)",
   "  --format, STARLENS_FORMAT               Output format: table or json (default: table)",
 ].join("\n");
 
 class CliError extends Error {
-  constructor(message, exitCode = 1) {
+  constructor(message, exitCode = 1, details = {}) {
     super(message);
     this.name = "CliError";
     this.exitCode = exitCode;
+    Object.assign(this, details);
   }
 }
 
@@ -68,6 +76,23 @@ function readOption(args, name) {
   }
 
   return { value: values.at(-1), rest };
+}
+
+function readFlag(args, name) {
+  let found = false;
+  const rest = [];
+
+  for (const arg of args) {
+    if (arg === name) {
+      found = true;
+    } else if (arg.startsWith(`${name}=`)) {
+      throw new CliError(`${name} does not take a value.`);
+    } else {
+      rest.push(arg);
+    }
+  }
+
+  return { found, rest };
 }
 
 function parseGlobalOptions(args, env = process.env) {
@@ -119,6 +144,17 @@ async function saveToken(tokenPath, token) {
   await writeFile(tokenPath, `${token.trim()}\n`, { mode: 0o600 });
 }
 
+async function getCliVersion() {
+  if (cachedCliVersion) {
+    return cachedCliVersion;
+  }
+
+  const packageJsonPath = new URL("../package.json", import.meta.url);
+  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  cachedCliVersion = packageJson.version ?? "0.0.0";
+  return cachedCliVersion;
+}
+
 function parseApiPayload(payload) {
   if (!payload || typeof payload !== "object") {
     throw new CliError("API returned an invalid JSON response.");
@@ -153,7 +189,7 @@ async function fetchWithTimeout(url, init, timeoutMs) {
   }
 }
 
-async function apiRequest(path, { method = "GET", query, config }) {
+async function apiRequest(path, { method = "GET", query, body, config }) {
   const token = await readToken(config.tokenPath);
   const url = new URL(path, `${config.apiBaseUrl}/`);
   if (query) {
@@ -167,6 +203,7 @@ async function apiRequest(path, { method = "GET", query, config }) {
   let lastError;
   for (let attempt = 0; attempt <= config.retries; attempt += 1) {
     try {
+      const hasBody = body !== undefined || method === "POST" || method === "PATCH";
       const response = await fetchWithTimeout(
         url,
         {
@@ -174,22 +211,30 @@ async function apiRequest(path, { method = "GET", query, config }) {
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${token}`,
-            ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
+            ...(hasBody ? { "Content-Type": "application/json" } : {}),
           },
-          ...(method === "POST" ? { body: "{}" } : {}),
+          ...(hasBody ? { body: JSON.stringify(body ?? {}) } : {}),
         },
         config.timeoutMs,
       );
 
       const text = await response.text();
-      const payload = text ? JSON.parse(text) : undefined;
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : undefined;
+      } catch {
+        throw new CliError("API returned an invalid JSON response.");
+      }
 
       if (response.status === 401 || response.status === 403 || response.status === 429) {
-        throw new CliError(authErrorMessage(response.status, payload));
+        throw new CliError(authErrorMessage(response.status, payload), 1, { status: response.status });
       }
 
       if (!response.ok) {
-        throw new CliError(authErrorMessage(response.status, payload));
+        throw new CliError(authErrorMessage(response.status, payload), 1, {
+          status: response.status,
+          apiCode: payload?.error?.code,
+        });
       }
 
       return parseApiPayload(payload);
@@ -292,6 +337,47 @@ function renderSearch(data, format) {
   console.log(`\nPage ${data.page ?? 1} · ${data.total ?? 0} total · hasMore=${Boolean(data.hasMore)}`);
 }
 
+function renderRepo(repo, format) {
+  if (format === "json") return outputJson(repo);
+  printTable(
+    [
+      { field: "Repository", value: repo.fullName ?? "" },
+      { field: "Language", value: repo.language ?? "" },
+      { field: "Stars", value: repo.stargazersCount ?? 0 },
+      { field: "Favorite", value: repo.isFavorite ? "yes" : "no" },
+      { field: "Tags", value: (repo.tags ?? []).join(", ") },
+      { field: "Summary", value: repo.repoSummary || repo.description || "" },
+      { field: "Note", value: repo.note ?? "" },
+      { field: "URL", value: repo.htmlUrl ?? "" },
+    ],
+    [
+      { key: "field", label: "Field", maxWidth: 16 },
+      { key: "value", label: "Value", maxWidth: 96 },
+    ],
+  );
+}
+
+function renderAsk(data, format) {
+  if (format === "json") return outputJson(data);
+  console.log(data.answer ?? "No answer.");
+  const candidates = data.candidates ?? data.matches ?? [];
+  if (candidates.length > 0) {
+    console.log("");
+    const hasReason = candidates.some((item) => typeof item.reason === "string" && item.reason.trim() !== "");
+    const rows = candidates.map((item) => ({
+      repo: item.fullName ?? item.repoId ?? item.id ?? "",
+      reason: item.reason ?? "",
+    }));
+    const columns = hasReason
+      ? [
+          { key: "repo", label: "Repository", maxWidth: 48 },
+          { key: "reason", label: "Reason", maxWidth: 72 },
+        ]
+      : [{ key: "repo", label: "Repository", maxWidth: 48 }];
+    printTable(rows, columns);
+  }
+}
+
 function searchOptions(args) {
   let rest = [...args];
   const option = (name) => {
@@ -313,12 +399,62 @@ function searchOptions(args) {
   };
 }
 
+async function resolveRepo(repoOrId, config) {
+  try {
+    return await apiRequest(`/api/repos/${encodeURIComponent(repoOrId)}`, { config });
+  } catch (error) {
+    if (!(error instanceof CliError) || error.status !== 404) {
+      throw error;
+    }
+  }
+
+  const result = await apiRequest("/api/search", {
+    config,
+    query: { q: repoOrId, page: 1, pageSize: 10, sort: "relevance" },
+  });
+  const normalized = repoOrId.toLowerCase();
+  const exact = (result.items ?? []).find((repo) => repo.fullName?.toLowerCase() === normalized || repo.id === repoOrId);
+  const fallback = exact ?? (result.items?.length === 1 ? result.items[0] : null);
+
+  if (!fallback) {
+    throw new CliError(`Repository was not found: ${repoOrId}`);
+  }
+
+  return fallback;
+}
+
+function openUrl(url) {
+  const commands = {
+    darwin: ["open", [url]],
+    win32: ["cmd", ["/c", "start", "", url]],
+    linux: ["xdg-open", [url]],
+  };
+  const [command, args] = commands[process.platform] ?? commands.linux;
+
+  return new Promise((resolveOpen, rejectOpen) => {
+    const child = spawn(command, args, { stdio: "ignore" });
+    child.on("error", () => rejectOpen(new CliError(`Could not open URL automatically. Open it manually: ${url}`)));
+    child.on("close", (code) => {
+      if (code && code !== 0) {
+        rejectOpen(new CliError(`Could not open URL automatically. Open it manually: ${url}`));
+        return;
+      }
+      resolveOpen();
+    });
+  });
+}
+
 export async function main(argv = process.argv.slice(2), env = process.env) {
   const { args, config } = parseGlobalOptions(argv, env);
   const command = args[0];
 
   if (!command || command === "help" || command === "--help" || command === "-h") {
     console.log(helpText);
+    return;
+  }
+
+  if (command === "version" || command === "--version" || command === "-v") {
+    console.log(await getCliVersion());
     return;
   }
 
@@ -342,6 +478,33 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     const queryText = parsed.args.join(" ").trim();
     if (!queryText) throw new CliError("search requires a query.");
     renderSearch(await apiRequest("/api/search", { config, query: { ...parsed.query, q: queryText } }), config.format);
+    return;
+  }
+
+  if (command === "show") {
+    const repoOrId = args.slice(1).join(" ").trim();
+    if (!repoOrId) throw new CliError("show requires a repository id or owner/repo.");
+    renderRepo(await resolveRepo(repoOrId, config), config.format);
+    return;
+  }
+
+  if (command === "open") {
+    const { found: printOnly, rest } = readFlag(args.slice(1), "--print");
+    const repoOrId = rest.join(" ").trim();
+    if (!repoOrId) throw new CliError("open requires a repository id or owner/repo.");
+    const repo = await resolveRepo(repoOrId, config);
+    if (!repo.htmlUrl) throw new CliError(`Repository has no URL: ${repo.fullName ?? repoOrId}`);
+    console.log(repo.htmlUrl);
+    if (!printOnly) {
+      await openUrl(repo.htmlUrl);
+    }
+    return;
+  }
+
+  if (command === "ask") {
+    const question = args.slice(1).join(" ").trim();
+    if (!question) throw new CliError("ask requires a question.");
+    renderAsk(await apiRequest("/api/ai/ask", { method: "POST", config, body: { question } }), config.format);
     return;
   }
 
