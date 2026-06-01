@@ -12,11 +12,11 @@ const {
   revokePersonalApiTokenMock: vi.fn(),
 }));
 
-vi.mock("@/server/auth/session", () => ({
+vi.mock("@starlens/server/server/auth/session", () => ({
   getSessionUser: getSessionUserMock,
 }));
 
-vi.mock("@/server/auth/personal-tokens", () => ({
+vi.mock("@starlens/server/server/auth/personal-tokens", () => ({
   createPersonalApiToken: createPersonalApiTokenMock,
   listPersonalApiTokens: listPersonalApiTokensMock,
   revokePersonalApiToken: revokePersonalApiTokenMock,

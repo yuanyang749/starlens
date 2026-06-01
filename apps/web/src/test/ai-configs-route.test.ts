@@ -18,11 +18,11 @@ const {
   validateAiConfigMock: vi.fn(),
 }));
 
-vi.mock("@/server/auth/api-user", () => ({
+vi.mock("@starlens/server/server/auth/api-user", () => ({
   getApiUser: getApiUserMock,
 }));
 
-vi.mock("@/server/ai/configs", () => ({
+vi.mock("@starlens/server/server/ai/configs", () => ({
   createAiConfig: createAiConfigMock,
   deleteAiConfig: deleteAiConfigMock,
   getAiConfigModels: getAiConfigModelsMock,

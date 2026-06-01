@@ -1,0 +1,26 @@
+{
+  "name": "@starlens/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./db/*": "./src/db/*.ts",
+    "./lib/*": "./src/lib/*.ts",
+    "./routes/*": "./src/routes/*.ts",
+    "./server/*": "./src/server/*.ts"
+  },
+  "dependencies": {
+    "@starlens/core": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.2.4",
+    "next-auth": "^4.24.14",
+    "pg": "^8.20.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "typescript": "^5"
+  }
+}

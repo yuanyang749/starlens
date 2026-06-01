@@ -4,6 +4,8 @@ node_modules
 dist
 coverage
 .tmp-screens
+.codegraph/
+.cursor/
 .env
 .env.*
 !.env.example

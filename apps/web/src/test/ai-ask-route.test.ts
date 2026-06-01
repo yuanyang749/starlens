@@ -5,11 +5,11 @@ const { getApiUserMock, searchReposMock } = vi.hoisted(() => ({
   searchReposMock: vi.fn(),
 }));
 
-vi.mock("@/server/auth/api-user", () => ({
+vi.mock("@starlens/server/server/auth/api-user", () => ({
   getApiUser: getApiUserMock,
 }));
 
-vi.mock("@/server/repos/repository", () => ({
+vi.mock("@starlens/server/server/repos/repository", () => ({
   searchRepos: searchReposMock,
 }));
 

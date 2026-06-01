@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { MouseEvent, ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 
 type ClickSparkProps = {
   sparkColor?: string;
@@ -48,6 +48,7 @@ export default function ClickSpark({
   const sparksRef = useRef<Spark[]>([]);
   const frameRef = useRef<number | null>(null);
   const startAnimationRef = useRef<(() => void) | null>(null);
+  const reducedMotionRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -60,7 +61,7 @@ export default function ClickSpark({
       return;
     }
 
-    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    let resizeTimeout: number | null = null;
 
     const resizeCanvas = () => {
       const { width, height } = parent.getBoundingClientRect();
@@ -77,15 +78,62 @@ export default function ClickSpark({
       resizeTimeout = window.setTimeout(resizeCanvas, 100);
     };
 
+    resizeCanvas();
+
+    // 中文注释：测试环境或旧浏览器没有 ResizeObserver 时，退回到窗口 resize 同步尺寸。
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        if (resizeTimeout) {
+          window.clearTimeout(resizeTimeout);
+        }
+      };
+    }
+
     const observer = new ResizeObserver(handleResize);
     observer.observe(parent);
-    resizeCanvas();
 
     return () => {
       observer.disconnect();
       if (resizeTimeout) {
         window.clearTimeout(resizeTimeout);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!mediaQuery) {
+      return;
+    }
+
+    // 中文注释：用户开启减少动态效果时，立即停止并清空 canvas 动画。
+    const syncMotionPreference = () => {
+      reducedMotionRef.current = mediaQuery.matches;
+
+      if (!mediaQuery.matches) {
+        return;
+      }
+
+      sparksRef.current = [];
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext("2d");
+      if (canvas && context) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    syncMotionPreference();
+    mediaQuery.addEventListener("change", syncMotionPreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncMotionPreference);
     };
   }, []);
 
@@ -102,6 +150,13 @@ export default function ClickSpark({
 
     // 中文注释：仅在存在火花时驱动逐帧绘制，避免页面空闲时持续占用动画帧。
     const draw = (timestamp: number) => {
+      if (reducedMotionRef.current) {
+        sparksRef.current = [];
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        frameRef.current = null;
+        return;
+      }
+
       context.clearRect(0, 0, canvas.width, canvas.height);
 
       sparksRef.current = sparksRef.current.filter((spark) => {
@@ -139,7 +194,7 @@ export default function ClickSpark({
     };
 
     const startAnimation = () => {
-      if (frameRef.current === null) {
+      if (!reducedMotionRef.current && frameRef.current === null) {
         frameRef.current = window.requestAnimationFrame(draw);
       }
     };
@@ -155,7 +210,12 @@ export default function ClickSpark({
     };
   }, [duration, easing, extraScale, sparkColor, sparkRadius, sparkSize]);
 
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    // 中文注释：只响应真实主指针按下，避免键盘 click 在左上角误触发火花。
+    if (reducedMotionRef.current || !event.isPrimary || event.button !== 0) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
@@ -178,7 +238,7 @@ export default function ClickSpark({
   };
 
   return (
-    <div className="click-spark" onClick={handleClick}>
+    <div className="click-spark" onPointerDown={handlePointerDown}>
       <canvas ref={canvasRef} className="click-spark__canvas" aria-hidden="true" />
       <div className="click-spark__content">{children}</div>
     </div>

@@ -4,6 +4,7 @@
 @import "./styles/docs.css";
 @import "./styles/workbench.css";
 @import "./styles/workbench-responsive.css";
+@import "./styles/mobile-workbench.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

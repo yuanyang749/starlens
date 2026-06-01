@@ -2,12 +2,19 @@
   "name": "starlens",
   "private": true,
   "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=20.11.0"
+  },
   "scripts": {
     "dev": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web dev",
+    "dev:mobile": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/mobile dev",
     "dev:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web dev",
     "build": "corepack pnpm --filter @starlens/web build",
+    "build:mobile": "corepack pnpm --filter @starlens/mobile build",
     "lint": "corepack pnpm --filter @starlens/web lint",
+    "lint:mobile": "corepack pnpm --filter @starlens/mobile lint",
     "test": "corepack pnpm --filter @starlens/web test",
+    "test:mobile": "corepack pnpm --filter @starlens/mobile test",
     "db:generate": "corepack pnpm --filter @starlens/web db:generate",
     "db:migrate": "corepack pnpm --filter @starlens/web db:migrate",
     "db:migrate:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web db:migrate",

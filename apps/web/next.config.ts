@@ -15,7 +15,7 @@ const withMDX = createMDX({
 const nextConfig: NextConfig = {
   // 中文注释：允许文档页直接使用 MDX，保持用户文档可读、可维护。
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
-  transpilePackages: ["@starlens/core"],
+  transpilePackages: ["@starlens/core", "@starlens/mobile", "@starlens/server", "@starlens/workbench"],
   turbopack: {
     root: workspaceRoot,
   },
