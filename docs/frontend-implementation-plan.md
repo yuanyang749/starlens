@@ -10,7 +10,7 @@
 - 页面状态如何流转
 - 哪些 UI 模块优先实现
 
-它主要服务 `apps/web` 的前端开发。
+它主要服务 `apps/web` 和 `apps/mobile` 的前端开发。
 
 ## 2. 技术范围
 
@@ -22,6 +22,7 @@
 
 - 公开落地页
 - 登录后应用页
+- 手机端工作台
 
 ## 3. 路由实现建议
 
@@ -40,6 +41,10 @@
   - AI provider 配置页
 - `/app/settings/tokens`
   - token 管理页
+- `/mobile`
+  - 手机端工作台
+  - 移动设备访问 `/app` 时自动跳转到该入口
+  - 桌面设备误入时自动回到 `/app`
 
 ### 3.3 路由组织建议
 
@@ -48,6 +53,7 @@
 - 公开层使用一个公共 layout
 - 应用层使用单独的 authenticated layout
 - 设置页复用应用层布局，不单独脱离主应用风格
+- 手机端工作台使用独立移动壳，复用共享 API 与工作台状态逻辑
 
 ## 4. 页面拆分
 
@@ -115,6 +121,25 @@
 - `CreateTokenDialog`
 - `RevokeTokenDialog`
 
+### 4.6 `/mobile` 手机端工作台
+
+当前已实现为 `apps/mobile` 独立应用，并在 `apps/web` 中通过 `/mobile` 路由复用。
+
+核心模块：
+
+- `MobileWorkbench`
+  - 移动端工作台壳
+  - 顶部搜索、同步、过滤、列表、详情覆盖层、底部导航
+- `MobileSignIn`
+  - 移动端未登录承接页
+- `MobileWorkspaceRedirect`
+  - `/app` 到 `/mobile` 的移动端入口判断
+- `DesktopWorkspaceRedirect`
+  - `/mobile` 到 `/app` 的桌面端回退判断
+- `useMobileWorkbench`
+  - 位于 `packages/workbench`
+  - 负责移动端搜索、分页、详情、同步、AI 搜索、收藏、备注、标签和设置数据
+
 ## 5. 主工作台状态流
 
 ### 5.1 顶层状态
@@ -155,6 +180,8 @@
 - 搜索和过滤尽量反映到 URL query 中
 - 当前选中仓库可以先保存在本地状态，`v1` 不强制做独立详情深链接
 - 设置页内部视图由路由决定，不靠 tab 假路由
+- 移动端详情通过 `/mobile?repo=<id>` 打开覆盖层，关闭后回到 `/mobile`
+- 移动端分页优先使用滚动加载，减少小屏上的分页控件负担
 
 ## 6. 数据获取建议
 
@@ -197,6 +224,27 @@
 - `GET /api/tokens`
 - `POST /api/tokens`
 - `DELETE /api/tokens/:id`
+
+### 6.5 移动端数据获取
+
+移动端不维护独立后端接口，直接复用 Web API 合同：
+
+- `GET /api/search`
+- `GET /api/repos/:id`
+- `PATCH /api/repos/:id`
+- `POST /api/repos/:id/tags`
+- `DELETE /api/repos/:id/tags/:tag`
+- `POST /api/sync`
+- `POST /api/ai/ask`
+- `GET /api/ai/configs`
+- `POST /api/ai/configs`
+- `POST /api/ai/configs/:id/validate`
+- `DELETE /api/ai/configs/:id`
+- `GET /api/tokens`
+- `POST /api/tokens`
+- `DELETE /api/tokens/:id`
+
+这些接口由 `packages/server` 提供 route 处理器，`apps/web` 和 `apps/mobile` 只保留薄 route 转发层。
 
 ## 7. 页面级交互设计
 
@@ -242,6 +290,27 @@
 - `/app/settings` 概览页细化
 - AI 搜索交互增强
 - 详情深链接扩展
+- 移动端真实设备视觉验收
+- 移动端设置页表单体验细化
+
+### 当前实现状态
+
+当前分支已完成：
+
+- `/` 落地页中文重构与交互增强
+- `/app` 桌面工作台保留并接入移动端自动跳转
+- `/mobile` 手机端工作台入口
+- `apps/mobile` 独立 Next.js 应用
+- `packages/server` 共享服务包
+- `packages/workbench` 移动端工作台状态包
+- 移动端搜索、AI 搜索、同步、收藏、备注、标签、详情、AI Provider 和 Token 管理
+
+当前仍需验证：
+
+- `pnpm --filter @starlens/web build`
+- `pnpm --filter @starlens/mobile build`
+- `pnpm --filter @starlens/workbench test`
+- 手机 viewport 和真实设备上的视觉与交互验收
 
 ## 9. 组件与样式约束
 
