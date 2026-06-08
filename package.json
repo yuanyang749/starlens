@@ -15,6 +15,7 @@
     "lint:mobile": "corepack pnpm --filter @starlens/mobile lint",
     "test": "corepack pnpm --filter @starlens/web test",
     "test:mobile": "corepack pnpm --filter @starlens/mobile test",
+    "mcp:start": "corepack pnpm --filter @starlens/mcp start",
     "db:generate": "corepack pnpm --filter @starlens/web db:generate",
     "db:migrate": "corepack pnpm --filter @starlens/web db:migrate",
     "db:migrate:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web db:migrate",

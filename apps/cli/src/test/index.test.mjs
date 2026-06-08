@@ -10,11 +10,11 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliPath = resolve(__dirname, "..", "index.mjs");
 
-function runCli(args, env = {}) {
+function runCli(args, env = {}, input = "") {
   return new Promise((resolveRun) => {
     const child = spawn(process.execPath, [cliPath, ...args], {
       env: { ...process.env, ...env },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
     });
 
     let stdout = "";
@@ -25,6 +25,8 @@ function runCli(args, env = {}) {
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
+    if (input) child.stdin.end(input);
+    else child.stdin.end();
     child.on("close", (code) => resolveRun({ code, stdout, stderr }));
   });
 }
@@ -63,6 +65,44 @@ test("login --token stores the bearer token at the configured token path", async
     assert.equal(result.code, 0, result.stderr);
     assert.deepEqual(JSON.parse(result.stdout), { status: "logged_in", tokenPath });
     assert.equal(await readFile(tokenPath, "utf8"), "stl_test_token\n");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("login --token-stdin stores the bearer token without using argv", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+
+  try {
+    const result = await runCli(["login", "--token-stdin", "--token-path", tokenPath, "--format", "json"], {}, "stl_stdin_token\n");
+
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), { status: "logged_in", tokenPath });
+    assert.equal(await readFile(tokenPath, "utf8"), "stl_stdin_token\n");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("status reports token configuration and logout removes the stored token", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+
+  try {
+    await runCli(["login", "--token", "stl_status_token", "--token-path", tokenPath]);
+
+    const before = await runCli(["status", "--token-path", tokenPath, "--format", "json"]);
+    assert.equal(before.code, 0, before.stderr);
+    assert.equal(JSON.parse(before.stdout).tokenConfigured, true);
+
+    const logout = await runCli(["logout", "--token-path", tokenPath, "--format", "json"]);
+    assert.equal(logout.code, 0, logout.stderr);
+    assert.deepEqual(JSON.parse(logout.stdout), { status: "logged_out", tokenPath });
+
+    const after = await runCli(["status", "--token-path", tokenPath, "--format", "json"]);
+    assert.equal(after.code, 0, after.stderr);
+    assert.equal(JSON.parse(after.stdout).tokenConfigured, false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -325,6 +365,186 @@ test("ask renders the reason column when explained candidates are returned", asy
       assert.equal(result.code, 0, result.stderr);
       assert.match(result.stdout, /Repository\s+Reason/);
       assert.match(result.stdout, /Matched your question directly/);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("favorite updates repository curation through PATCH /api/repos/:id", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_favorite_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "PATCH");
+      assert.equal(request.url, "/api/repos/repo-1");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          id: "repo-1",
+          fullName: "owner/repo",
+          htmlUrl: "https://github.com/owner/repo",
+          isFavorite: true,
+          tags: [],
+          note: "",
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["favorite", "repo-1", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--format", "json"]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(requests[0].authorization, "Bearer stl_favorite_token");
+      assert.deepEqual(JSON.parse(requests[0].body), { isFavorite: true });
+      assert.equal(JSON.parse(result.stdout).isFavorite, true);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("unfavorite updates repository curation through PATCH /api/repos/:id", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_unfavorite_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "PATCH");
+      assert.equal(request.url, "/api/repos/repo-1");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          id: "repo-1",
+          fullName: "owner/repo",
+          htmlUrl: "https://github.com/owner/repo",
+          isFavorite: false,
+          tags: [],
+          note: "",
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["unfavorite", "repo-1", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--format", "json"]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(requests[0].authorization, "Bearer stl_unfavorite_token");
+      assert.deepEqual(JSON.parse(requests[0].body), { isFavorite: false });
+      assert.equal(JSON.parse(result.stdout).isFavorite, false);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("note --set updates the repository note", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_note_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "PATCH");
+      assert.equal(request.url, "/api/repos/repo-1");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          id: "repo-1",
+          fullName: "owner/repo",
+          htmlUrl: "https://github.com/owner/repo",
+          isFavorite: false,
+          tags: [],
+          note: "review for mobile",
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["note", "repo-1", "--set", "review for mobile", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--format", "json"]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.deepEqual(JSON.parse(requests[0].body), { note: "review for mobile" });
+      assert.equal(JSON.parse(result.stdout).note, "review for mobile");
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("note --clear clears the repository note", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_note_clear_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "PATCH");
+      assert.equal(request.url, "/api/repos/repo-1");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          id: "repo-1",
+          fullName: "owner/repo",
+          htmlUrl: "https://github.com/owner/repo",
+          isFavorite: false,
+          tags: [],
+          note: "",
+        },
+      }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["note", "repo-1", "--clear", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--format", "json"]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.deepEqual(JSON.parse(requests[0].body), { note: "" });
+      assert.equal(JSON.parse(result.stdout).note, "");
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("tag add posts a tag to /api/repos/:id/tags", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_tag_add_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "POST");
+      assert.equal(request.url, "/api/repos/repo-1/tags");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({ ok: true, data: { tags: ["mobile"] } }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["tag", "add", "repo-1", "mobile", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--format", "json"]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.deepEqual(JSON.parse(requests[0].body), { tag: "mobile" });
+      assert.deepEqual(JSON.parse(result.stdout), { tags: ["mobile"] });
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("tag remove deletes a tag from /api/repos/:id/tags/:tag", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_tag_remove_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      assert.equal(request.method, "DELETE");
+      assert.equal(request.url, "/api/repos/repo-1/tags/mobile");
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({ ok: true, data: { tags: [] } }));
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["tag", "remove", "repo-1", "mobile", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--format", "json"]);
+
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(requests[0].authorization, "Bearer stl_tag_remove_token");
+      assert.deepEqual(JSON.parse(result.stdout), { tags: [] });
     });
   } finally {
     await rm(dir, { recursive: true, force: true });

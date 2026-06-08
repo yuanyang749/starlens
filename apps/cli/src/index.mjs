@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
@@ -17,12 +17,19 @@ const helpText = [
   "Starlens CLI",
   "",
   "Usage:",
-  "  stars login --token <token> [--token-path <path>] [--format table|json]",
+  "  stars login (--token <token>|--token-stdin) [--token-path <path>] [--format table|json]",
+  "  stars logout [--token-path <path>] [--format table|json]",
+  "  stars status [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars sync [--api-base-url <url>] [--token-path <path>] [--timeout-ms <ms>] [--retries <n>] [--format table|json]",
   "  stars search <query> [--api-base-url <url>] [--token-path <path>] [--page <n>] [--page-size <n>] [--sort relevance|recent|stars|updated] [--language <value>] [--owner <value>] [--tag <value>] [--favorite true|false] [--format table|json]",
   "  stars show <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars open <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--print]",
   "  stars ask <question> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars favorite <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars unfavorite <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars note <repo-id|owner/repo> (--set <text>|--clear) [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars tag add <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars tag remove <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars version",
   "",
   "Configuration:",
@@ -139,9 +146,32 @@ async function readToken(tokenPath) {
   }
 }
 
+async function hasToken(tokenPath) {
+  try {
+    const token = (await readFile(tokenPath, "utf8")).trim();
+    return Boolean(token);
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
 async function saveToken(tokenPath, token) {
   await mkdir(dirname(tokenPath), { recursive: true });
   await writeFile(tokenPath, `${token.trim()}\n`, { mode: 0o600 });
+}
+
+async function deleteToken(tokenPath) {
+  await rm(tokenPath, { force: true });
+}
+
+async function readStdin() {
+  let input = "";
+  process.stdin.setEncoding("utf8");
+  for await (const chunk of process.stdin) {
+    input += chunk;
+  }
+  return input.trim();
 }
 
 async function getCliVersion() {
@@ -290,6 +320,27 @@ function renderLogin({ tokenPath }, format) {
   console.log(`Logged in. Token saved to ${tokenPath}`);
 }
 
+function renderLogout({ tokenPath }, format) {
+  const data = { status: "logged_out", tokenPath };
+  if (format === "json") return outputJson(data);
+  console.log(`Logged out. Token removed from ${tokenPath}`);
+}
+
+function renderStatus(data, format) {
+  if (format === "json") return outputJson(data);
+  printTable(
+    [
+      { field: "API base URL", value: data.apiBaseUrl },
+      { field: "Token path", value: data.tokenPath },
+      { field: "Token configured", value: data.tokenConfigured ? "yes" : "no" },
+    ],
+    [
+      { key: "field", label: "Field", maxWidth: 24 },
+      { key: "value", label: "Value", maxWidth: 96 },
+    ],
+  );
+}
+
 function renderSync(data, format) {
   if (format === "json") return outputJson(data);
   printTable(
@@ -378,6 +429,14 @@ function renderAsk(data, format) {
   }
 }
 
+function renderTags(data, format) {
+  if (format === "json") return outputJson(data);
+  printTable(
+    (data.tags ?? []).map((tag) => ({ tag })),
+    [{ key: "tag", label: "Tag", maxWidth: 48 }],
+  );
+}
+
 function searchOptions(args) {
   let rest = [...args];
   const option = (name) => {
@@ -423,6 +482,67 @@ async function resolveRepo(repoOrId, config) {
   return fallback;
 }
 
+async function patchRepoCuration(repoOrId, updates, config) {
+  try {
+    return await apiRequest(`/api/repos/${encodeURIComponent(repoOrId)}`, {
+      method: "PATCH",
+      body: updates,
+      config,
+    });
+  } catch (error) {
+    if (!(error instanceof CliError) || error.status !== 404) {
+      throw error;
+    }
+  }
+
+  const repo = await resolveRepo(repoOrId, config);
+  return apiRequest(`/api/repos/${encodeURIComponent(repo.id)}`, {
+    method: "PATCH",
+    body: updates,
+    config,
+  });
+}
+
+async function addTag(repoOrId, tag, config) {
+  try {
+    return await apiRequest(`/api/repos/${encodeURIComponent(repoOrId)}/tags`, {
+      method: "POST",
+      body: { tag },
+      config,
+    });
+  } catch (error) {
+    if (!(error instanceof CliError) || error.status !== 404) {
+      throw error;
+    }
+  }
+
+  const repo = await resolveRepo(repoOrId, config);
+  return apiRequest(`/api/repos/${encodeURIComponent(repo.id)}/tags`, {
+    method: "POST",
+    body: { tag },
+    config,
+  });
+}
+
+async function removeTag(repoOrId, tag, config) {
+  try {
+    return await apiRequest(`/api/repos/${encodeURIComponent(repoOrId)}/tags/${encodeURIComponent(tag)}`, {
+      method: "DELETE",
+      config,
+    });
+  } catch (error) {
+    if (!(error instanceof CliError) || error.status !== 404) {
+      throw error;
+    }
+  }
+
+  const repo = await resolveRepo(repoOrId, config);
+  return apiRequest(`/api/repos/${encodeURIComponent(repo.id)}/tags/${encodeURIComponent(tag)}`, {
+    method: "DELETE",
+    config,
+  });
+}
+
 function openUrl(url) {
   const commands = {
     darwin: ["open", [url]],
@@ -459,11 +579,33 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   }
 
   if (command === "login") {
-    const { value: token, rest } = readOption(args.slice(1), "--token");
-    if (!token) throw new CliError("login requires --token <token>.");
-    if (rest.length > 0) throw new CliError(`Unknown login arguments: ${rest.join(" ")}`);
+    const tokenOption = readOption(args.slice(1), "--token");
+    const stdinOption = readFlag(tokenOption.rest, "--token-stdin");
+    if (tokenOption.value && stdinOption.found) {
+      throw new CliError("login accepts either --token <token> or --token-stdin, not both.");
+    }
+    const token = tokenOption.value ?? (stdinOption.found ? await readStdin() : "");
+    if (!token) throw new CliError("login requires --token <token> or --token-stdin.");
+    if (stdinOption.rest.length > 0) throw new CliError(`Unknown login arguments: ${stdinOption.rest.join(" ")}`);
     await saveToken(config.tokenPath, token);
     renderLogin({ tokenPath: config.tokenPath }, config.format);
+    return;
+  }
+
+  if (command === "logout") {
+    if (args.length > 1) throw new CliError(`Unknown logout arguments: ${args.slice(1).join(" ")}`);
+    await deleteToken(config.tokenPath);
+    renderLogout({ tokenPath: config.tokenPath }, config.format);
+    return;
+  }
+
+  if (command === "status") {
+    if (args.length > 1) throw new CliError(`Unknown status arguments: ${args.slice(1).join(" ")}`);
+    renderStatus({
+      apiBaseUrl: config.apiBaseUrl,
+      tokenPath: config.tokenPath,
+      tokenConfigured: await hasToken(config.tokenPath),
+    }, config.format);
     return;
   }
 
@@ -505,6 +647,54 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     const question = args.slice(1).join(" ").trim();
     if (!question) throw new CliError("ask requires a question.");
     renderAsk(await apiRequest("/api/ai/ask", { method: "POST", config, body: { question } }), config.format);
+    return;
+  }
+
+  if (command === "favorite" || command === "unfavorite") {
+    const repoOrId = args.slice(1).join(" ").trim();
+    if (!repoOrId) throw new CliError(`${command} requires a repository id or owner/repo.`);
+    renderRepo(
+      await patchRepoCuration(repoOrId, { isFavorite: command === "favorite" }, config),
+      config.format,
+    );
+    return;
+  }
+
+  if (command === "note") {
+    let rest = args.slice(1);
+    const setOption = readOption(rest, "--set");
+    rest = setOption.rest;
+    const clearOption = readFlag(rest, "--clear");
+    rest = clearOption.rest;
+    if (setOption.value !== undefined && clearOption.found) {
+      throw new CliError("note accepts either --set <text> or --clear, not both.");
+    }
+    if (setOption.value === undefined && !clearOption.found) {
+      throw new CliError("note requires --set <text> or --clear.");
+    }
+    const repoOrId = rest.join(" ").trim();
+    if (!repoOrId) throw new CliError("note requires a repository id or owner/repo.");
+    renderRepo(
+      await patchRepoCuration(repoOrId, { note: clearOption.found ? "" : setOption.value }, config),
+      config.format,
+    );
+    return;
+  }
+
+  if (command === "tag") {
+    const action = args[1];
+    if (!["add", "remove"].includes(action)) {
+      throw new CliError("tag requires add or remove.");
+    }
+    const tag = args.at(-1)?.trim();
+    const repoOrId = args.slice(2, -1).join(" ").trim();
+    if (!repoOrId || !tag) {
+      throw new CliError(`tag ${action} requires a repository id or owner/repo and a tag.`);
+    }
+    const data = action === "add"
+      ? await addTag(repoOrId, tag, config)
+      : await removeTag(repoOrId, tag, config);
+    renderTags(data, config.format);
     return;
   }
 

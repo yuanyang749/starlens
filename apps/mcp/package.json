@@ -1,0 +1,14 @@
+{
+  "name": "@starlens/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@starlens/agent-tools": "workspace:*",
+    "tsx": "^4.21.0"
+  }
+}
