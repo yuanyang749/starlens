@@ -11,3 +11,4 @@ coverage
 .env.*
 !.env.example
 !.env.*.example
+node_modules
