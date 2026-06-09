@@ -1,5 +1,7 @@
 # Starlens
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 Starlens is a personal knowledge workbench for GitHub Stars. It syncs starred repositories into PostgreSQL, enriches them with lightweight summaries, and gives users a searchable workspace for tags, notes, favorites, AI-assisted recall, CLI access, and local agent integration.
 
 The project is currently in active `v1` development. The main goal is to make a large GitHub Stars collection useful again without turning it into a heavyweight RAG or team collaboration platform.
@@ -272,4 +274,3 @@ Deployment environment variables should match `.env.neon.example` and use the pr
 ## Project Status
 
 Starlens is not a finished product yet. The highest-value remaining work is tightening production verification, completing scheduled sync, improving deployment documentation, and expanding real-device mobile validation.
-
