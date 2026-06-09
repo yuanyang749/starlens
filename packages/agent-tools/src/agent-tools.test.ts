@@ -70,6 +70,24 @@ describe("agent tools", () => {
     expect(result.content[0]?.text).toContain("review later");
   });
 
+  it("set_star_note accepts an empty note to clear repo curation", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ fullName: "owner/repo", note: "" }));
+
+    await callAgentTool(
+      "set_star_note",
+      { repo: "repo-1", note: "" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/repos/repo-1",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ note: "" }),
+      }),
+    );
+  });
+
   it("add_star_tag posts a normalized tag request", async () => {
     const fetchMock = vi.fn(async () => apiResponse({ tags: ["mobile"] }));
 

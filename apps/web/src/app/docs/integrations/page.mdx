@@ -1,0 +1,200 @@
+export const metadata = {
+  title: "对接配置 | Starlens 文档",
+  description: "Starlens 的 GitHub OAuth、环境变量、API Token、AI Provider、HTTP API 和 MCP 对接配置。",
+};
+
+# 对接配置
+
+Starlens 的对接配置分为四类：登录认证、服务端环境变量、外部工具访问、AI Provider。建议先把登录和数据库跑通，再开启 Token、MCP 和 AI 能力。
+
+<figure className="docs-figure docs-figure--wide">
+  <div className="docs-figure__viewport">
+    <img src="/docs/integration-config-whiteboard.webp" alt="Starlens 对接配置白板图，展示 OAuth、环境变量、API Token、MCP、CLI 和 AI Provider 与 Starlens Server 的关系。" />
+  </div>
+  <figcaption>对接配置围绕 Starlens Server 展开：OAuth 负责用户登录，环境变量负责运行时，Token/MCP 负责工具访问，AI Provider 负责模型调用。</figcaption>
+</figure>
+
+## GitHub OAuth
+
+GitHub OAuth 用于浏览器登录和 Stars 同步授权。创建 OAuth App 后，需要配置回调地址：
+
+```text
+{NEXTAUTH_URL}/api/auth/callback/github
+```
+
+本地开发示例：
+
+```text
+http://localhost:3000/api/auth/callback/github
+```
+
+生产环境示例：
+
+```text
+https://your-starlens.example.com/api/auth/callback/github
+```
+
+必填变量：
+
+| 变量 | 说明 |
+| --- | --- |
+| `AUTH_GITHUB_ID` | GitHub OAuth App 的 Client ID |
+| `AUTH_GITHUB_SECRET` | GitHub OAuth App 的 Client Secret |
+| `NEXTAUTH_URL` | 当前站点根地址，必须和回调域名一致 |
+| `AUTH_SECRET` | NextAuth 会话签名密钥 |
+
+## 服务端环境变量
+
+最小可运行配置：
+
+```bash
+AUTH_SECRET="replace-with-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
+AUTH_GITHUB_ID="github-client-id"
+AUTH_GITHUB_SECRET="github-client-secret"
+DATABASE_URL="postgres://starlens:starlens@localhost:54329/starlens_dev"
+TOKEN_ENCRYPTION_SECRET="replace-with-random-32-byte-secret"
+```
+
+可选 AI 默认配置：
+
+```bash
+OPENAI_API_KEY="sk-..."
+OPENAI_BASE_URL="https://api.openai.com/v1"
+OPENAI_MODEL_KEY="gpt-4.1-mini"
+```
+
+变量说明：
+
+| 变量 | 必填 | 用途 |
+| --- | --- | --- |
+| `DATABASE_URL` | 是 | PostgreSQL 连接串 |
+| `AUTH_SECRET` | 是 | NextAuth 会话密钥 |
+| `NEXTAUTH_URL` | 是 | OAuth 回调和站点绝对地址 |
+| `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID |
+| `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret |
+| `TOKEN_ENCRYPTION_SECRET` | 是 | 加密 GitHub token、AI key 和额外 header |
+| `OPENAI_API_KEY` | 否 | 默认 OpenAI-compatible 能力的密钥 |
+| `OPENAI_BASE_URL` | 否 | 默认 OpenAI-compatible Base URL |
+| `OPENAI_MODEL_KEY` | 否 | 默认模型名称 |
+
+## 个人 API Token
+
+个人 API Token 用于 CLI、脚本和 Agent 访问 Starlens API。Token 在设置页创建，明文只展示一次，服务端只保存哈希、前缀和后缀。
+
+请求头格式：
+
+```http
+Authorization: Bearer stl_xxx
+```
+
+Token 适合调用：
+
+| 能力 | 接口 |
+| --- | --- |
+| 搜索仓库 | `GET /api/search` |
+| 查看详情 | `GET /api/repos/:id` |
+| 触发同步 | `POST /api/sync` |
+| 更新收藏和备注 | `PATCH /api/repos/:id` |
+| 添加标签 | `POST /api/repos/:id/tags` |
+| 删除标签 | `DELETE /api/repos/:id/tags/:tag` |
+| AI 问答 | `POST /api/ai/ask` |
+
+Token 管理接口只允许浏览器会话访问。Bearer Token 不能继续创建新的 Token。
+
+## HTTP API 示例
+
+搜索收藏仓库：
+
+```bash
+curl "http://localhost:3000/api/search?q=vector&page=1&pageSize=20&sort=relevance" \
+  -H "Authorization: Bearer stl_xxx"
+```
+
+更新仓库备注和重点收藏：
+
+```bash
+curl -X PATCH "http://localhost:3000/api/repos/{repoId}" \
+  -H "Authorization: Bearer stl_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"isFavorite":true,"note":"适合做本地 RAG 原型评估。"}'
+```
+
+添加标签：
+
+```bash
+curl -X POST "http://localhost:3000/api/repos/{repoId}/tags" \
+  -H "Authorization: Bearer stl_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"tag":"rag"}'
+```
+
+## AI Provider
+
+AI Provider 在设置页维护，支持多个配置，但运行时通常读取启用且设为默认的配置。
+
+| Provider 类型 | Base URL | 密钥位置 | 模型列表 |
+| --- | --- | --- | --- |
+| `vercel_gateway` | 默认 `https://ai-gateway.vercel.sh/v1` | API Key | OpenAI-compatible `/models` |
+| `openai_compatible` | 用户填写 | API Key | OpenAI-compatible `/v1/models` |
+| `anthropic_native` | 默认 `https://api.anthropic.com` | `x-api-key` | Anthropic `/v1/models` |
+| `gemini_native` | 默认 `https://generativelanguage.googleapis.com` | query `key` | Gemini `v1beta/models` |
+
+配置建议：
+
+- `displayName` 使用能识别用途的名称，例如“公司网关”“个人 Gemini”。
+- `model` 填实际可用模型 ID，不要填展示名。
+- `extraHeaders` 只放网关必需的额外 header，不要放无关业务信息。
+- 保存后使用“验证”检查密钥、Base URL 和模型列表是否可用。
+
+## MCP Server
+
+MCP server 位于 `apps/mcp`，通过 stdio 暴露 Starlens 工具。它不重新实现业务逻辑，只通过 `@starlens/agent-tools` 调用 HTTP API。
+
+本地启动：
+
+```bash
+STARLENS_TOKEN="stl_xxx" \
+STARLENS_API_BASE_URL="http://localhost:3000" \
+corepack pnpm mcp:start
+```
+
+Cursor 配置示例：
+
+```json
+{
+  "mcpServers": {
+    "starlens": {
+      "command": "corepack",
+      "args": ["pnpm", "mcp:start"],
+      "cwd": "/path/to/starlens",
+      "env": {
+        "STARLENS_TOKEN": "stl_xxx",
+        "STARLENS_API_BASE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+可用 MCP 工具：
+
+| 工具 | 用途 |
+| --- | --- |
+| `search_stars` | 搜索和过滤 starred repositories |
+| `show_star` | 查看单个仓库详情 |
+| `sync_stars` | 触发 GitHub Stars 同步 |
+| `favorite_star` | 标记重点收藏 |
+| `unfavorite_star` | 取消重点收藏 |
+| `set_star_note` | 设置或清空备注 |
+| `add_star_tag` | 添加标签 |
+| `remove_star_tag` | 删除标签 |
+| `ask_stars` | 对收藏仓库发起 AI 问答 |
+
+## 安全建议
+
+- 不要把 `.env`、真实 Token 或 AI API Key 提交到仓库。
+- 生产环境为 `AUTH_SECRET` 和 `TOKEN_ENCRYPTION_SECRET` 使用高强度随机值。
+- 为不同设备或 Agent 创建不同 Token，便于撤销和审计。
+- 如果 GitHub OAuth 回调域名变更，需要同步修改 `NEXTAUTH_URL` 和 GitHub OAuth App 配置。
+- 如果 AI Provider 使用企业网关，优先通过额外 header 传递网关要求，不要在提示词或备注里存放密钥。

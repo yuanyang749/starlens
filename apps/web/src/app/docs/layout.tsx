@@ -3,10 +3,12 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 
+// 中文注释：集中维护文档导航，确保顶部导航和侧边目录保持一致。
 const docLinks = [
   { href: "/docs", label: "概览" },
-  { href: "/docs/architecture", label: "技术架构" },
   { href: "/docs/features", label: "功能说明" },
+  { href: "/docs/architecture", label: "技术架构" },
+  { href: "/docs/integrations", label: "对接配置" },
   { href: "/docs/deployment", label: "部署方式" },
 ];
 

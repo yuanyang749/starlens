@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getApiUserMock, searchReposMock } = vi.hoisted(() => ({
+const { getApiUserMock, getDefaultAiRuntimeConfigMock, searchReposMock } = vi.hoisted(() => ({
   getApiUserMock: vi.fn(),
+  getDefaultAiRuntimeConfigMock: vi.fn(),
   searchReposMock: vi.fn(),
 }));
 
@@ -11,6 +12,10 @@ vi.mock("@starlens/server/server/auth/api-user", () => ({
 
 vi.mock("@starlens/server/server/repos/repository", () => ({
   searchRepos: searchReposMock,
+}));
+
+vi.mock("@starlens/server/server/ai/configs", () => ({
+  getDefaultAiRuntimeConfig: getDefaultAiRuntimeConfigMock,
 }));
 
 function repo(id: string, fullName: string) {
@@ -35,6 +40,7 @@ describe("AI ask API route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getApiUserMock.mockResolvedValue({ id: "user-1" });
+    getDefaultAiRuntimeConfigMock.mockResolvedValue(null);
     delete process.env.OPENAI_BASE_URL;
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_MODEL_KEY;
@@ -158,6 +164,65 @@ describe("AI ask API route", () => {
       ok: true,
       data: {
         providerConfigId: "env:newapi-openai-compatible",
+      },
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("uses the user's default OpenAI-compatible provider before env fallback", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "默认配置回答" } }],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    getDefaultAiRuntimeConfigMock.mockResolvedValue({
+      id: "ai-default",
+      providerType: "openai_compatible",
+      baseUrl: "https://provider.test/v1",
+      apiKey: "user-key",
+      extraHeaders: { "x-provider": "custom" },
+      model: "gpt-user",
+    });
+
+    const { POST } = await import("@/app/api/ai/ask/route");
+
+    searchReposMock.mockResolvedValue({
+      items: [repo("repo-1", "owner/repo")],
+      page: 1,
+      pageSize: 8,
+      total: 1,
+      hasMore: false,
+    });
+
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "agent repo" }),
+      }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://provider.test/v1/chat/completions",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          authorization: "Bearer user-key",
+          "x-provider": "custom",
+        }),
+      }),
+    );
+    await expect(json(response)).resolves.toMatchObject({
+      ok: true,
+      data: {
+        answer: "默认配置回答",
+        providerConfigId: "ai-default",
       },
     });
 

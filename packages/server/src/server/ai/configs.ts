@@ -17,6 +17,14 @@ type AiConfigInput = {
   model?: string;
   providerType?: ProviderType;
 };
+export type AiRuntimeConfig = {
+  id: string;
+  providerType: ProviderType;
+  model: string;
+  baseUrl: string | null;
+  apiKey: string;
+  extraHeaders: Record<string, string>;
+};
 
 const providerTypes = new Set<ProviderType>([
   "vercel_gateway",
@@ -96,6 +104,28 @@ export async function listAiConfigs(userId: string) {
   });
 
   return rows.map(toApiConfig);
+}
+
+export async function getDefaultAiRuntimeConfig(userId: string): Promise<AiRuntimeConfig | null> {
+  const config = await getDb().query.userAiConfigs.findFirst({
+    where: and(
+      eq(userAiConfigs.userId, userId),
+      eq(userAiConfigs.enabled, true),
+      eq(userAiConfigs.isDefault, true),
+    ),
+  });
+
+  if (!config) return null;
+
+  // 中文注释：问答运行时需要明文密钥，但只在服务端内存中短暂使用，不暴露给 API 响应。
+  return {
+    id: config.id,
+    providerType: config.providerType as ProviderType,
+    model: config.model,
+    baseUrl: resolveProviderBase(config),
+    apiKey: config.apiKeyEncrypted ? decryptSecret(config.apiKeyEncrypted) : "",
+    extraHeaders: decryptHeaders(config.extraHeadersEncrypted),
+  };
 }
 
 export async function createAiConfig(userId: string, input: AiConfigInput) {

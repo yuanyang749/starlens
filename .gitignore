@@ -4,6 +4,7 @@ node_modules
 dist
 coverage
 .tmp-screens
+*.tsbuildinfo
 .codegraph/
 .cursor/
 .env

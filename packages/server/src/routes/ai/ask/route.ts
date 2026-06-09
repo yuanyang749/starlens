@@ -1,4 +1,8 @@
 import { fail, ok, unauthorized } from "@starlens/server/lib/api-response";
+import {
+  getDefaultAiRuntimeConfig,
+  type AiRuntimeConfig,
+} from "@starlens/server/server/ai/configs";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { searchRepos } from "@starlens/server/server/repos/repository";
 
@@ -43,8 +47,12 @@ type OpenAiCompatibleResponse = {
 };
 
 type SearchRepoItem = Awaited<ReturnType<typeof searchRepos>>["items"][number];
+type ChatRuntimeConfig = Omit<Pick<
+  AiRuntimeConfig,
+  "apiKey" | "baseUrl" | "extraHeaders" | "id" | "model" | "providerType"
+>, "baseUrl"> & { baseUrl: string };
 
-function resolveOpenAiEnv() {
+function resolveOpenAiEnv(): ChatRuntimeConfig | null {
   const baseUrl = process.env.OPENAI_BASE_URL?.trim();
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const model = process.env.OPENAI_MODEL_KEY?.trim();
@@ -53,7 +61,37 @@ function resolveOpenAiEnv() {
     return null;
   }
 
-  return { baseUrl, apiKey, model };
+  return {
+    id: "env:newapi-openai-compatible",
+    providerType: "openai_compatible",
+    baseUrl,
+    apiKey,
+    extraHeaders: {},
+    model,
+  };
+}
+
+function supportsChatCompletions(config: AiRuntimeConfig | null): config is ChatRuntimeConfig {
+  return Boolean(
+    config
+      && config.apiKey.trim()
+      && config.baseUrl?.trim()
+      && (config.providerType === "openai_compatible" || config.providerType === "vercel_gateway"),
+  );
+}
+
+async function resolveChatRuntimeConfig(userId: string) {
+  try {
+    const defaultConfig = await getDefaultAiRuntimeConfig(userId);
+    if (supportsChatCompletions(defaultConfig)) {
+      return defaultConfig;
+    }
+  } catch {
+    // 中文注释：默认配置损坏时不阻断搜索体验，继续走环境变量或确定性本地回答。
+  }
+
+  // 中文注释：保留环境变量兜底，避免没有默认配置时破坏本地和部署环境的既有 AI 行为。
+  return resolveOpenAiEnv();
 }
 
 function resolveChatCompletionsUrl(baseUrl: string) {
@@ -190,18 +228,18 @@ function mergeCandidate(
   }
 }
 
-async function expandQuestionTermsWithMinimax(question: string) {
-  const env = resolveOpenAiEnv();
-  if (!env) return [];
+async function expandQuestionTermsWithProvider(question: string, config: ChatRuntimeConfig | null) {
+  if (!config) return [];
 
-  const response = await fetch(resolveChatCompletionsUrl(env.baseUrl), {
+  const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
     headers: {
+      ...config.extraHeaders,
       "content-type": "application/json",
-      authorization: `Bearer ${env.apiKey}`,
+      authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: env.model,
+      model: config.model,
       temperature: 0,
       max_tokens: 120,
       messages: [
@@ -228,9 +266,8 @@ async function expandQuestionTermsWithMinimax(question: string) {
     .slice(0, 6);
 }
 
-async function pickCandidatesWithMinimax(question: string, pool: Candidate[]) {
-  const env = resolveOpenAiEnv();
-  if (!env || pool.length === 0) return [];
+async function pickCandidatesWithProvider(question: string, pool: Candidate[], config: ChatRuntimeConfig | null) {
+  if (!config || pool.length === 0) return [];
 
   const compactPool = pool.slice(0, 30).map((item, index) => ({
     idx: index + 1,
@@ -241,14 +278,15 @@ async function pickCandidatesWithMinimax(question: string, pool: Candidate[]) {
     tags: item.tags.length > 0 ? item.tags : item.topics,
   }));
 
-  const response = await fetch(resolveChatCompletionsUrl(env.baseUrl), {
+  const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
     headers: {
+      ...config.extraHeaders,
       "content-type": "application/json",
-      authorization: `Bearer ${env.apiKey}`,
+      authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: env.model,
+      model: config.model,
       temperature: 0,
       max_tokens: 180,
       messages: [
@@ -297,11 +335,11 @@ function toCandidate(item: SearchRepoItem): Candidate {
   };
 }
 
-async function recallCandidates(userId: string, question: string) {
+async function recallCandidates(userId: string, question: string, config: ChatRuntimeConfig | null) {
   const querySpecs = uniqueQuerySpecs([
     { query: question, kind: "question" },
     ...buildHeuristicTerms(question).map((query) => ({ query, kind: "heuristic" as const })),
-    ...(await expandQuestionTermsWithMinimax(question)).map((query) => ({ query, kind: "expanded" as const })),
+    ...(await expandQuestionTermsWithProvider(question, config)).map((query) => ({ query, kind: "expanded" as const })),
   ]).slice(0, 8);
 
   const merged = new Map<string, RecalledCandidate>();
@@ -344,7 +382,7 @@ async function recallCandidates(userId: string, question: string) {
       score: 250 - index * 10,
     }));
     if (candidates.length === 0) {
-      candidates = (await pickCandidatesWithMinimax(question, broadPool)).map((candidate, index) => ({
+      candidates = (await pickCandidatesWithProvider(question, broadPool, config)).map((candidate, index) => ({
         ...candidate,
         source: "ai_pool_pick" as const,
         reason: "Selected by AI fallback from recent repository candidates.",
@@ -359,20 +397,20 @@ async function recallCandidates(userId: string, question: string) {
   };
 }
 
-async function askMinimax(question: string, candidates: Candidate[]) {
-  const env = resolveOpenAiEnv();
-  if (!env) {
+async function askProvider(question: string, candidates: Candidate[], config: ChatRuntimeConfig | null) {
+  if (!config) {
     return null;
   }
 
-  const response = await fetch(resolveChatCompletionsUrl(env.baseUrl), {
+  const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
     headers: {
+      ...config.extraHeaders,
       "content-type": "application/json",
-      authorization: `Bearer ${env.apiKey}`,
+      authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: env.model,
+      model: config.model,
       temperature: 0.2,
       max_tokens: 220,
       messages: [
@@ -411,7 +449,8 @@ export async function POST(request: Request) {
   }
 
   const question = body.question.trim();
-  const { candidates, queries } = await recallCandidates(user.id, question);
+  const chatConfig = await resolveChatRuntimeConfig(user.id);
+  const { candidates, queries } = await recallCandidates(user.id, question, chatConfig);
   const hasCandidates = candidates.length > 0;
 
   let answer =
@@ -421,7 +460,7 @@ export async function POST(request: Request) {
 
   if (hasCandidates) {
     try {
-      const aiAnswer = await askMinimax(question, candidates);
+      const aiAnswer = await askProvider(question, candidates, chatConfig);
       if (aiAnswer) {
         answer = aiAnswer;
       }
@@ -438,6 +477,6 @@ export async function POST(request: Request) {
       reason: item.reason,
       source: item.source,
     })),
-    providerConfigId: resolveOpenAiEnv() ? "env:newapi-openai-compatible" : null,
+    providerConfigId: chatConfig?.id ?? null,
   });
 }

@@ -127,7 +127,7 @@
 }
 
 .docs-content {
-  max-width: 780px;
+  max-width: 860px;
   padding-bottom: 36px;
 }
 
@@ -182,13 +182,21 @@
 }
 
 .docs-content table {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
   margin: 20px 0 28px;
   border-collapse: collapse;
   overflow: hidden;
   border: 1px solid rgba(219, 226, 234, 0.95);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.78);
+}
+
+/* 中文注释：文档页会展示较宽的知识图，单独放宽图片容器避免细节被压缩。 */
+.docs-figure--wide {
+  margin-right: calc(clamp(0px, 4vw, 60px) * -1);
 }
 
 .docs-content th,
@@ -311,6 +319,10 @@
 
   .docs-figure {
     padding: 12px;
+  }
+
+  .docs-figure--wide {
+    margin-right: 0;
   }
 
   .docs-figure img {

@@ -1,11 +1,18 @@
 export const metadata = {
   title: "Starlens 文档",
-  description: "Starlens 用户文档概览。",
+  description: "Starlens 用户文档、技术架构、功能说明和对接配置概览。",
 };
 
 # Starlens 用户文档
 
-Starlens 是一个面向 GitHub Stars 的个人知识工作台。它帮助你同步收藏仓库、补充标签与备注、使用自然语言搜索，并把收藏过的项目变成可被开发工具调用的上下文。
+Starlens 是一个面向 GitHub Stars 的个人知识工作台。它会把收藏仓库同步到你自己的 PostgreSQL 数据库，补充标签、备注、摘要和检索文本，再通过 Web 工作台、AI 问答、CLI 和 MCP 工具提供统一入口。
+
+<figure className="docs-figure docs-figure--wide">
+  <div className="docs-figure__viewport">
+    <img src="/docs/knowledge-flow-whiteboard.webp" alt="Starlens 知识流白板图，从 GitHub Stars 同步到 PostgreSQL，再分发给搜索、AI、工作台、CLI 和 MCP。" />
+  </div>
+  <figcaption>GitHub Stars 是原始输入，Starlens 负责同步、整理、索引和对接，让收藏仓库进入日常开发工具链。</figcaption>
+</figure>
 
 ## 适合谁使用
 
@@ -13,12 +20,32 @@ Starlens 是一个面向 GitHub Stars 的个人知识工作台。它帮助你同
 - 希望用标签、备注和 AI 摘要整理开源项目的人。
 - 希望让 CLI、Agent 或内部工具检索自己收藏仓库的团队。
 
+## 能解决什么问题
+
+| 场景 | Starlens 提供的能力 |
+| --- | --- |
+| 忘记仓库名称，只记得用途 | 使用仓库描述、README 摘要、主题、标签和备注做联合搜索 |
+| 想把 Stars 分成长期知识库 | 给仓库添加个人标签、备注和重点收藏状态 |
+| 想让 AI 基于自己的 Stars 回答 | 先搜索候选仓库，再调用已配置的 AI Provider 生成回答 |
+| 想给本地 Agent 使用收藏库 | 通过个人 API Token 或 MCP server 暴露工具能力 |
+| 想自托管数据 | 使用 PostgreSQL 和 GitHub OAuth，在 Vercel 或自有服务器部署 |
+
 ## 文档内容
 
-- [技术架构](/docs/architecture)：了解 Web 应用、数据库、同步任务和 AI 能力的模块划分。
 - [功能说明](/docs/features)：了解仓库搜索、筛选、标签、备注、收藏和 AI 问答。
+- [技术架构](/docs/architecture)：了解 Web 应用、数据库、同步任务和 AI 能力的模块划分。
+- [对接配置](/docs/integrations)：了解 GitHub OAuth、API Token、AI Provider、CLI 和 MCP 的配置方式。
 - [部署方式](/docs/deployment)：了解本地开发、Vercel 部署和自托管部署的基础流程。
 
 ## 推荐阅读顺序
 
-如果你只是想部署并试用，先看部署方式；如果你要二次开发，先看技术架构，再看功能说明。
+如果你只是想部署并试用，先看部署方式，再看对接配置。如果你要二次开发，先看技术架构，再看功能说明和接口约定。
+
+## 快速启动路径
+
+1. 创建 GitHub OAuth App，并把回调地址指向 `NEXTAUTH_URL/api/auth/callback/github`。
+2. 准备 PostgreSQL，配置 `DATABASE_URL`、`AUTH_SECRET`、`AUTH_GITHUB_ID` 和 `AUTH_GITHUB_SECRET`。
+3. 执行数据库迁移并启动 Web 应用。
+4. 登录后触发一次 Stars 同步。
+5. 在工作台中搜索、筛选、添加标签和备注。
+6. 在设置页配置 AI Provider，或在 Tokens 页面创建 CLI / Agent Token。

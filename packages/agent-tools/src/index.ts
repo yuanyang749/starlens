@@ -168,6 +168,16 @@ function stringArg(args: Record<string, unknown>, name: string) {
   return value.trim();
 }
 
+function noteArg(args: Record<string, unknown>) {
+  const value = args.note;
+  if (typeof value !== "string") {
+    throw new AgentToolError("note is required.");
+  }
+
+  // 中文注释：备注允许空字符串，用于让 MCP/Agent 明确清空已有备注。
+  return value.trim();
+}
+
 async function apiRequest<T>(
   path: string,
   {
@@ -311,7 +321,7 @@ export async function callAgentTool(
     case "unfavorite_star":
       return textResult(await patchRepo(stringArg(args, "repo"), { isFavorite: false }, context));
     case "set_star_note":
-      return textResult(await patchRepo(stringArg(args, "repo"), { note: stringArg(args, "note") }, context));
+      return textResult(await patchRepo(stringArg(args, "repo"), { note: noteArg(args) }, context));
     case "add_star_tag":
       return textResult(await tagRepo(stringArg(args, "repo"), stringArg(args, "tag"), "POST", context));
     case "remove_star_tag":

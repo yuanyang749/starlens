@@ -1,11 +1,11 @@
 export const metadata = {
   title: "部署方式 | Starlens 文档",
-  description: "Starlens 的本地开发、Vercel 部署和自托管部署说明。",
+  description: "Starlens 的本地开发、Vercel 部署、自托管部署和上线检查说明。",
 };
 
 # 部署方式
 
-Starlens 可以在本地开发环境运行，也可以部署到 Vercel 或自托管环境。部署前需要准备 PostgreSQL 数据库和 GitHub OAuth 应用。
+Starlens 可以在本地开发环境运行，也可以部署到 Vercel 或自托管环境。部署前需要准备 PostgreSQL 数据库、GitHub OAuth 应用和加密密钥。如果要启用 AI，还需要配置至少一个 AI Provider。
 
 <figure className="docs-figure">
   <div className="docs-figure__viewport">
@@ -29,19 +29,57 @@ corepack pnpm db:migrate:local
 corepack pnpm dev
 ```
 
+推荐 `.env` 模板：
+
+```bash
+AUTH_SECRET="replace-with-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
+AUTH_GITHUB_ID="github-client-id"
+AUTH_GITHUB_SECRET="github-client-secret"
+DATABASE_URL="postgres://starlens:starlens@localhost:54329/starlens_dev"
+TOKEN_ENCRYPTION_SECRET="replace-with-random-32-byte-secret"
+OPENAI_API_KEY=""
+OPENAI_BASE_URL=""
+OPENAI_MODEL_KEY=""
+```
+
+本地 GitHub OAuth 回调地址应配置为：
+
+```text
+http://localhost:3000/api/auth/callback/github
+```
+
 ## Vercel 部署
 
 Vercel 部署适合希望快速上线 Web 应用的场景。你需要在 Vercel 项目环境变量中配置数据库连接串、NextAuth 密钥和 GitHub OAuth 凭据。
 
 推荐变量：
 
-| 变量 | 用途 |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL 连接串 |
-| `NEXTAUTH_SECRET` | NextAuth 会话密钥 |
-| `NEXTAUTH_URL` | 线上站点地址 |
-| `AUTH_GITHUB_ID` | GitHub OAuth Client ID |
-| `AUTH_GITHUB_SECRET` | GitHub OAuth Client Secret |
+| 变量 | 必填 | 用途 |
+| --- | --- | --- |
+| `DATABASE_URL` | 是 | PostgreSQL 连接串，推荐使用托管 PostgreSQL 或 Neon |
+| `AUTH_SECRET` | 是 | NextAuth 会话密钥 |
+| `NEXTAUTH_URL` | 是 | 线上站点地址 |
+| `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID |
+| `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret |
+| `TOKEN_ENCRYPTION_SECRET` | 是 | 加密 GitHub token、AI key 和额外 header |
+| `OPENAI_API_KEY` | 否 | 默认 AI Provider 密钥 |
+| `OPENAI_BASE_URL` | 否 | 默认 OpenAI-compatible Base URL |
+| `OPENAI_MODEL_KEY` | 否 | 默认模型名称 |
+
+Vercel 上线流程：
+
+1. 创建 Vercel 项目并指向仓库。
+2. 配置 Production、Preview 和 Development 环境变量。
+3. 在 GitHub OAuth App 中新增生产回调地址。
+4. 执行数据库迁移。
+5. 部署后访问 `/docs`、`/app` 和 `/api/search` 做基础检查。
+
+生产 GitHub OAuth 回调地址示例：
+
+```text
+https://your-vercel-domain.vercel.app/api/auth/callback/github
+```
 
 ## 自托管部署
 
@@ -60,9 +98,63 @@ corepack pnpm build
 corepack pnpm --filter @starlens/web start
 ```
 
+反向代理需要转发 HTTPS 请求到 Next.js 服务，并保持 `NEXTAUTH_URL` 与公网域名一致。建议在代理层开启 HTTPS、HTTP/2、压缩和基础访问日志。
+
+## 数据库迁移
+
+Starlens 使用 Drizzle 管理 PostgreSQL schema。首次上线或 schema 变更后执行：
+
+```bash
+corepack pnpm db:migrate
+```
+
+本地开发可以使用：
+
+```bash
+corepack pnpm db:migrate:local
+```
+
+Neon 环境可以使用：
+
+```bash
+corepack pnpm db:migrate:neon
+```
+
+迁移前建议确认目标 `DATABASE_URL` 指向正确环境，避免把开发迁移误打到生产库。
+
+## AI 功能启用
+
+AI 功能不是启动 Web 应用的硬依赖。上线后可以在设置页创建用户级 AI Provider，也可以通过环境变量提供默认 OpenAI-compatible 配置。
+
+启用前确认：
+
+- Provider 的 API Key 可用。
+- Base URL 包含正确协议和路径。
+- 模型 ID 是真实可调用的模型 ID。
+- 如果使用网关，额外 header 已正确配置。
+- 设置页中的 Provider 验证结果为 `success`。
+
+## CLI / MCP 接入
+
+CLI 和 MCP 不需要单独部署公网服务。它们通过个人 API Token 调用当前 Starlens 站点。
+
+本地 MCP 示例：
+
+```bash
+STARLENS_TOKEN="stl_xxx" \
+STARLENS_API_BASE_URL="https://your-starlens.example.com" \
+corepack pnpm mcp:start
+```
+
+如果 API 部署在内网，Agent 或 IDE 所在机器必须能访问 `STARLENS_API_BASE_URL`。
+
 ## 部署检查
 
 - GitHub OAuth 回调地址需要和线上域名一致。
 - 数据库迁移需要在首次上线前执行。
 - 如果启用 AI 功能，需要在设置页配置对应 Provider。
 - 如果要给 CLI 使用，需要在 Tokens 页面创建个人 API Token。
+- `/api/sync` 能成功触发同步，并在 GitHub 速率限制内完成。
+- `/api/search` 能返回当前用户的数据，且不会返回其他用户仓库。
+- Token 撤销后，旧 Bearer Token 不能继续访问 API。
+- 生产环境不要暴露 `.env`、数据库连接串或 AI API Key。
