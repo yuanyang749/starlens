@@ -119,4 +119,48 @@ describe("AI ask API route", () => {
       error: { code: "invalid_question" },
     });
   });
+
+  it("returns the newapi provider id when OpenAI-compatible env vars are enabled", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "" } }],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.OPENAI_BASE_URL = "https://newapi.520ai.xin/v1";
+    process.env.OPENAI_API_KEY = "test-key";
+    process.env.OPENAI_MODEL_KEY = "gpt-5.4-mini";
+
+    const { POST } = await import("@/app/api/ai/ask/route");
+
+    searchReposMock.mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 8,
+      total: 0,
+      hasMore: false,
+    });
+
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "agent repo" }),
+      }),
+    );
+
+    await expect(json(response)).resolves.toMatchObject({
+      ok: true,
+      data: {
+        providerConfigId: "env:newapi-openai-compatible",
+      },
+    });
+
+    vi.unstubAllGlobals();
+  });
 });

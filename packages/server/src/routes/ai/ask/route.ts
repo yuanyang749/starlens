@@ -438,6 +438,6 @@ export async function POST(request: Request) {
       reason: item.reason,
       source: item.source,
     })),
-    providerConfigId: resolveOpenAiEnv() ? "env:minimax-openai-compatible" : null,
+    providerConfigId: resolveOpenAiEnv() ? "env:newapi-openai-compatible" : null,
   });
 }

@@ -116,6 +116,42 @@ describe("tokens settings interactions", () => {
     expect(el.textContent).toContain("Copied");
   });
 
+  it("shows copyable CLI and MCP setup snippets after token creation without rendering the raw token", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
+    const token = { id: "x", name: "T", note: "Cursor MCP", tokenPrefix: "stl_secret", tokenSuffix: "_token", createdAt: new Date().toISOString(), lastUsedAt: null };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { ...token, token: "stl_secret_token" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [token] })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { el } = mount(<TokensSettingsView />);
+    await act(async () => Promise.resolve());
+
+    const noteInput = Array.from(el.querySelectorAll("input")).find((item) =>
+      item.getAttribute("placeholder") === "Remark for this token",
+    ) as HTMLInputElement | undefined;
+    const create = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("New token"));
+    act(() => setInputValue(noteInput!, "Cursor MCP"));
+    await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    expect(el.textContent).toContain("CLI setup");
+    expect(el.textContent).toContain("Cursor MCP config");
+    expect(el.textContent).toContain("STARLENS_TOKEN");
+    expect(el.textContent).not.toContain("stl_secret_token");
+    expect(el.textContent).toContain("stl_secret********_token");
+
+    const copyCli = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Copy CLI setup"));
+    const copyMcp = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Copy MCP config"));
+    await act(async () => copyCli?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => copyMcp?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    expect(writeTextMock).toHaveBeenNthCalledWith(1, expect.stringContaining("stl_secret_token"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_TOKEN"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("stl_secret_token"));
+  });
+
   it("server error", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: false, error: { code: "x", message: "Boom" } }), { status: 500 })));
     const { el } = mount(<TokensSettingsView />);

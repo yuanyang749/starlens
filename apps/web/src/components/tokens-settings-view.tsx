@@ -15,6 +15,46 @@ function maskToken(token: Pick<TokenRecord, "tokenPrefix" | "tokenSuffix">, rawT
   return `${token.tokenPrefix}********${token.tokenSuffix || "******"}`;
 }
 
+function shellQuote(value: string) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function currentApiBaseUrl() {
+  if (typeof window === "undefined") {
+    return "http://localhost:3000";
+  }
+
+  return window.location.origin;
+}
+
+function buildCliSetupSnippet(rawToken: string) {
+  return `printf '%s\\n' ${shellQuote(rawToken)} | corepack pnpm --filter @starlens/cli start -- login --token-stdin`;
+}
+
+function buildMcpConfigSnippet(rawToken: string) {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        starlens: {
+          command: "corepack",
+          args: ["pnpm", "mcp:start"],
+          cwd: "/path/to/starlens",
+          env: {
+            STARLENS_TOKEN: rawToken,
+            STARLENS_API_BASE_URL: currentApiBaseUrl(),
+          },
+        },
+      },
+    },
+    null,
+    2,
+  );
+}
+
+function maskSnippet(snippet: string, rawToken: string, maskedToken: string) {
+  return snippet.replaceAll(rawToken, maskedToken);
+}
+
 export function TokensSettingsView() {
   const [tokens, setTokens] = useState<TokenRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +62,7 @@ export function TokensSettingsView() {
   const [toast, setToast] = useState<string | null>(null);
   const [copyableTokens, setCopyableTokens] = useState<Record<string, string>>({});
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
+  const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const canCreateToken = noteDraft.trim().length > 0;
 
@@ -96,6 +137,16 @@ export function TokensSettingsView() {
     }
   };
 
+  const copySnippet = async (id: string, kind: "cli" | "mcp", snippet: string) => {
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setCopiedSnippetId(`${id}:${kind}`);
+      setToast(kind === "cli" ? "CLI setup copied." : "MCP config copied.");
+    } catch {
+      setError("Failed to copy setup snippet.");
+    }
+  };
+
   return (
     <section className="app-panel rounded-[24px] p-5">
       <div className="mb-5 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
@@ -141,6 +192,9 @@ export function TokensSettingsView() {
         <div className="space-y-4">
           {tokens.map((token) => {
             const rawToken = copyableTokens[token.id];
+            const maskedToken = maskToken(token, rawToken);
+            const cliSnippet = rawToken ? buildCliSetupSnippet(rawToken) : "";
+            const mcpSnippet = rawToken ? buildMcpConfigSnippet(rawToken) : "";
 
             return (
               <article key={token.id} className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
@@ -148,7 +202,7 @@ export function TokensSettingsView() {
                   <div>
                     <h2 className="text-lg font-semibold tracking-tight">{token.name}</h2>
                     {token.note ? <p className="mt-1 text-sm text-[color:var(--foreground)]">{token.note}</p> : null}
-                    <p className="mt-1 font-mono text-sm text-[color:var(--muted)]">{maskToken(token, rawToken)}</p>
+                    <p className="mt-1 font-mono text-sm text-[color:var(--muted)]">{maskedToken}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     {rawToken ? (
@@ -164,6 +218,42 @@ export function TokensSettingsView() {
                     <button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline">Revoke</button>
                   </div>
                 </div>
+                {rawToken ? (
+                  <div className="mt-4 grid gap-3 border-t border-[color:var(--line)] pt-4 lg:grid-cols-2">
+                    <div className="rounded-[16px] bg-white p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium text-[color:var(--foreground)]">CLI setup</span>
+                        <button
+                          type="button"
+                          onClick={() => void copySnippet(token.id, "cli", cliSnippet)}
+                          className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          {copiedSnippetId === `${token.id}:cli` ? "Copied" : "Copy CLI setup"}
+                        </button>
+                      </div>
+                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
+                        {maskSnippet(cliSnippet, rawToken, maskedToken)}
+                      </pre>
+                    </div>
+                    <div className="rounded-[16px] bg-white p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium text-[color:var(--foreground)]">Cursor MCP config</span>
+                        <button
+                          type="button"
+                          onClick={() => void copySnippet(token.id, "mcp", mcpSnippet)}
+                          className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          {copiedSnippetId === `${token.id}:mcp` ? "Copied" : "Copy MCP config"}
+                        </button>
+                      </div>
+                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
+                        {maskSnippet(mcpSnippet, rawToken, maskedToken)}
+                      </pre>
+                    </div>
+                  </div>
+                ) : null}
               </article>
             );
           })}
