@@ -5,7 +5,7 @@ export const metadata = {
 
 # 技术架构
 
-Starlens 采用 monorepo 组织，核心 Web 应用使用 Next.js App Router 构建，服务端模块复用 `@starlens/server`，共享类型和文本处理逻辑放在 `@starlens/core`，CLI / MCP 对接能力放在 `@starlens/agent-tools`。
+Starlens 采用 monorepo 组织，核心 Web 应用使用 Next.js App Router 构建，服务端模块复用 `@starlens/server`，共享类型和文本处理逻辑放在 `@starlens/core`，CLI、HTTP Agent 和 MCP 对接能力放在 `@starlens/agent-tools`。
 
 <figure className="docs-figure">
   <div className="docs-figure__viewport">
@@ -25,7 +25,7 @@ Starlens 采用 monorepo 组织，核心 Web 应用使用 Next.js App Router 构
 | 搜索服务 | 基于仓库元数据、README 摘要、标签和备注构建检索文本 |
 | AI 服务 | 支持摘要、重排、自然语言问答和模型配置 |
 | API Token | 让 CLI 或外部工具以 Bearer token 调用 Starlens API |
-| MCP Server | 把 Starlens API 包装成本地 stdio 工具，供 IDE 或 Agent 调用 |
+| MCP Server | 把 Starlens API 包装成本地 stdio 工具，供 Codex、opencode、Claude Code、Cursor 和支持 MCP 的 IDE 调用 |
 
 ## 运行时分层
 
@@ -35,7 +35,7 @@ Starlens 采用 monorepo 组织，核心 Web 应用使用 Next.js App Router 构
 | Mobile App | `apps/mobile` | 移动端入口和与 Web 一致的 API 路由代理 |
 | Server Package | `packages/server` | 认证、数据库、GitHub 同步、AI 配置和业务路由 |
 | Core Package | `packages/core` | 共享类型、搜索常量、仓库文本构建和 mock 数据 |
-| Agent Tools | `packages/agent-tools` | HTTP API 的工具封装，供 CLI / MCP 复用 |
+| Agent Tools | `packages/agent-tools` | HTTP API 的工具封装，供 CLI、HTTP Agent 和 MCP 复用 |
 | MCP App | `apps/mcp` | stdio MCP server，向外暴露 `search_stars` 等工具 |
 
 API 路由保持薄层设计：`apps/web/src/app/api/*` 主要转发到 `packages/server/src/routes/*` 的实现。这样 Web、Mobile 和 Agent 能共享同一套业务逻辑。
@@ -47,7 +47,7 @@ API 路由保持薄层设计：`apps/web/src/app/api/*` 主要转发到 `package
 3. 服务端将仓库元数据、README 摘要、标签和备注写入 PostgreSQL。
 4. 搜索接口根据关键词、语言、Owner、标签、收藏状态和排序方式返回候选仓库。
 5. AI 问答接口先检索候选仓库，再按默认 AI Provider 生成回答或解释候选结果。
-6. CLI 和 MCP 工具通过 Bearer Token 复用同一组 HTTP API。
+6. CLI、HTTP Agent 和 MCP 工具通过 Bearer Token 复用同一组 HTTP API。
 
 ## 数据存储
 

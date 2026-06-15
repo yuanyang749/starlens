@@ -116,7 +116,7 @@ describe("tokens settings interactions", () => {
     expect(el.textContent).toContain("已复制");
   });
 
-  it("shows copyable CLI and MCP setup snippets after token creation without rendering the raw token", async () => {
+  it("shows copyable CLI, agent HTTP, and MCP setup snippets after token creation without rendering the raw token", async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
     const token = { id: "x", name: "T", note: "Cursor MCP", tokenPrefix: "stl_secret", tokenSuffix: "_token", createdAt: new Date().toISOString(), lastUsedAt: null };
@@ -137,19 +137,25 @@ describe("tokens settings interactions", () => {
     await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
     expect(el.textContent).toContain("CLI 配置");
+    expect(el.textContent).toContain("Agent HTTP 配置");
     expect(el.textContent).toContain("Cursor MCP 配置");
     expect(el.textContent).toContain("STARLENS_TOKEN");
     expect(el.textContent).not.toContain("stl_secret_token");
     expect(el.textContent).toContain("stl_secret********_token");
 
     const copyCli = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 CLI 配置"));
+    const copyAgent = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 Agent 配置"));
     const copyMcp = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 MCP 配置"));
     await act(async () => copyCli?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => copyAgent?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => copyMcp?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
     expect(writeTextMock).toHaveBeenNthCalledWith(1, expect.stringContaining("stl_secret_token"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_TOKEN"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("stl_secret_token"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("/api/search"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(3, expect.stringContaining("STARLENS_TOKEN"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(3, expect.stringContaining("stl_secret_token"));
   });
 
   it("server error", async () => {

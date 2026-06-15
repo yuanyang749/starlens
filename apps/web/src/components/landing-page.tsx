@@ -49,7 +49,7 @@ const painCards = [
   {
     title: "Claude Code、Codex 和 Agent 查不到你的收藏",
     body: "开发工具需要上下文时，GitHub Stars 仍然躺在浏览器里，Agent 无法直接把你收藏过的项目变成可调用知识。",
-    proof: "通过 CLI、API / MCP 和个人 token，让开发工具也能检索、引用、整理你的 Stars。",
+    proof: "通过 CLI、HTTP API、Cursor MCP 和个人 token，让开发工具也能检索、引用、整理你的 Stars。",
     icon: Bot,
   },
 ];
@@ -475,8 +475,8 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             </article>
             <article className="landing-agent-card landing-hover-card">
               <h3>Agent 集成</h3>
-              <p>通过 API / MCP，让 Claude Code、Codex 和你的 Agent 直接检索收藏项目。</p>
-              {["Claude Code / Codex", "Starlens API / MCP", "你的 Stars 数据与索引"].map((item) => (
+              <p>Agent 通过 HTTP API 直连 Starlens，终端 coding CLI、Cursor 和 IDE 通过 MCP 使用同一组能力。</p>
+              {["Claude Code / Codex / opencode", "Starlens HTTP API", "Cursor MCP"].map((item) => (
                 <span key={item}>{item}</span>
               ))}
             </article>

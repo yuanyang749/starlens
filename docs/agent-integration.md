@@ -2,16 +2,17 @@
 
 ## 1. 当前定位
 
-Starlens 对 agent 和 IDE 的支持分为两层：
+Starlens 对 agent 和 IDE 的支持分为两条明确路径：
 
 - HTTP API
-  - 所有 agent 都可以直接使用 `Authorization: Bearer <token>` 调用 `/api/*`
-  - 适合 Hermes、OpenClaw 或自定义 agent runtime
+  - Hermes、OpenClaw 或自定义 agent runtime 的默认接入方式
+  - 使用 `Authorization: Bearer <token>` 直接调用 `/api/*`
+  - 适合服务端、容器、远程 worker 和需要审计/重试/限流的运行时
 - MCP server
   - 本地 stdio server，位于 `apps/mcp`
-  - 适合 Cursor、支持 MCP 的 IDE 和桌面 agent 客户端
+  - 只推荐给 Codex、opencode、Claude Code、Cursor、支持 MCP 的 IDE 和桌面 MCP 客户端
 
-MCP 层不重新实现业务逻辑，只复用 `packages/agent-tools`，再由该包调用现有 HTTP API。
+MCP 层不重新实现业务逻辑，只复用 `packages/agent-tools`，再由该包调用现有 HTTP API。对 Hermes、OpenClaw 这类 agent runtime，优先保持最短链路：`agent runtime -> Starlens HTTP API`。
 
 ## 2. 前置条件
 
@@ -27,7 +28,51 @@ http://localhost:3000
 
 生产或自部署时将 `STARLENS_API_BASE_URL` 改为对应站点地址。
 
-## 3. MCP 启动
+## 3. Agent HTTP 接入
+
+Hermes、OpenClaw 和自定义 agent runtime 直接配置 HTTP tool。基础配置如下：
+
+```bash
+STARLENS_TOKEN="stl_xxx"
+STARLENS_API_BASE_URL="https://your-starlens.example.com"
+```
+
+统一请求头：
+
+```http
+Authorization: Bearer stl_xxx
+```
+
+常用 HTTP tool 映射：
+
+| Agent 工具 | HTTP 接口 | 方法 |
+| --- | --- | --- |
+| `search_stars` | `/api/search?q={query}&pageSize={pageSize}` | `GET` |
+| `show_star` | `/api/repos/{repoIdOrFullName}` | `GET` |
+| `sync_stars` | `/api/sync` | `POST` |
+| `favorite_star` | `/api/repos/{repoIdOrFullName}` | `PATCH` |
+| `set_star_note` | `/api/repos/{repoIdOrFullName}` | `PATCH` |
+| `add_star_tag` | `/api/repos/{repoIdOrFullName}/tags` | `POST` |
+| `remove_star_tag` | `/api/repos/{repoIdOrFullName}/tags/{tag}` | `DELETE` |
+| `ask_stars` | `/api/ai/ask` | `POST` |
+
+最小搜索示例：
+
+```bash
+curl "$STARLENS_API_BASE_URL/api/search?q=react&pageSize=10" \
+  -H "Authorization: Bearer $STARLENS_TOKEN"
+```
+
+设置备注示例：
+
+```bash
+curl -X PATCH "$STARLENS_API_BASE_URL/api/repos/{repoIdOrFullName}" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"note":"适合做 Agent 检索上下文。"}'
+```
+
+## 4. Cursor / IDE MCP 启动
 
 在仓库根目录运行：
 
@@ -46,7 +91,7 @@ corepack pnpm mcp:start
   - 可选
   - 默认 `http://localhost:3000`
 
-## 4. Cursor 示例
+## 5. Cursor 示例
 
 在项目或用户级 MCP 配置中添加：
 
@@ -72,28 +117,75 @@ corepack pnpm mcp:start
 - 不要把真实 token 提交到仓库。
 - 如果 Cursor 配置支持环境变量引用，优先引用系统环境变量。
 
-## 5. Hermes / OpenClaw 示例
+## 6. 终端 Coding CLI 示例
 
-如果 runtime 支持 MCP stdio server，使用同样的命令：
+Codex、opencode、Claude Code 这类终端 coding CLI 属于本地开发工具客户端，推荐使用 MCP。它们可以自动发现 Starlens 工具，并在对话中直接调用 `search_stars`、`show_star` 和 `ask_stars`。
 
-```bash
-corepack pnpm mcp:start
-```
-
-并传入：
+为了避免把 token 写进多个配置文件，建议先创建本机私有 env 文件：
 
 ```bash
-STARLENS_TOKEN=stl_xxx
-STARLENS_API_BASE_URL=https://your-starlens.example.com
+mkdir -p ~/.starlens
+chmod 700 ~/.starlens
+
+cat > ~/.starlens/agent.env <<'EOF'
+export STARLENS_TOKEN="stl_xxx"
+export STARLENS_API_BASE_URL="http://localhost:3000"
+EOF
+
+chmod 600 ~/.starlens/agent.env
 ```
 
-如果 runtime 只支持 HTTP tool，则直接调用 Starlens HTTP API：
+Codex `~/.codex/config.toml`：
 
-```http
-Authorization: Bearer stl_xxx
+```toml
+[mcp_servers.starlens]
+type = "stdio"
+command = "zsh"
+args = ["-lc", "source \"$HOME/.starlens/agent.env\" && cd \"/path/to/starlens\" && corepack pnpm mcp:start"]
+startup_timeout_sec = 30
+default_tools_approval_mode = "approve"
 ```
 
-## 6. MCP 工具清单
+opencode `~/.config/opencode/opencode.json`：
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "starlens": {
+      "type": "local",
+      "command": [
+        "zsh",
+        "-lc",
+        "source \"$HOME/.starlens/agent.env\" && cd \"/path/to/starlens\" && corepack pnpm mcp:start"
+      ],
+      "enabled": true,
+      "timeout": 10000
+    }
+  }
+}
+```
+
+Claude Code：
+
+```bash
+claude mcp add-json starlens '{
+  "type": "stdio",
+  "command": "zsh",
+  "args": [
+    "-lc",
+    "source \"$HOME/.starlens/agent.env\" && cd \"/path/to/starlens\" && corepack pnpm mcp:start"
+  ]
+}'
+```
+
+验证提示示例：
+
+```text
+Use the starlens MCP tool to search my starred repositories for react with pageSize 1.
+```
+
+## 7. MCP 工具清单
 
 - `search_stars`
   - 搜索和过滤 starred repositories
@@ -114,7 +206,9 @@ Authorization: Bearer stl_xxx
 - `ask_stars`
   - 调用 Starlens AI 问答
 
-## 7. 安全边界
+Hermes、OpenClaw 不需要通过 MCP 使用这些能力。它们应按第 3 节把同名能力映射为 HTTP tools。
+
+## 8. 安全边界
 
 - token 只存哈希，明文只在创建时返回一次。
 - `v1` token 是用户级粗粒度权限，不做 scope 权限矩阵。

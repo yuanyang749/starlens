@@ -31,6 +31,16 @@ function buildCliSetupSnippet(rawToken: string) {
   return `printf '%s\\n' ${shellQuote(rawToken)} | corepack pnpm --filter @starlens/cli start -- login --token-stdin`;
 }
 
+function buildAgentHttpSnippet(rawToken: string) {
+  return [
+    `STARLENS_TOKEN=${shellQuote(rawToken)}`,
+    `STARLENS_API_BASE_URL=${shellQuote(currentApiBaseUrl())}`,
+    "",
+    'curl "$STARLENS_API_BASE_URL/api/search?q=react&pageSize=10" \\',
+    '  -H "Authorization: Bearer $STARLENS_TOKEN"',
+  ].join("\n");
+}
+
 function buildMcpConfigSnippet(rawToken: string) {
   return JSON.stringify(
     {
@@ -137,11 +147,17 @@ export function TokensSettingsView() {
     }
   };
 
-  const copySnippet = async (id: string, kind: "cli" | "mcp", snippet: string) => {
+  const copySnippet = async (id: string, kind: "cli" | "agent" | "mcp", snippet: string) => {
     try {
       await navigator.clipboard.writeText(snippet);
       setCopiedSnippetId(`${id}:${kind}`);
-      setToast(kind === "cli" ? "CLI 配置已复制。" : "MCP 配置已复制。");
+      setToast(
+        kind === "cli"
+          ? "CLI 配置已复制。"
+          : kind === "agent"
+            ? "Agent HTTP 配置已复制。"
+            : "MCP 配置已复制。",
+      );
     } catch {
       setError("配置片段复制失败。");
     }
@@ -194,6 +210,7 @@ export function TokensSettingsView() {
             const rawToken = copyableTokens[token.id];
             const maskedToken = maskToken(token, rawToken);
             const cliSnippet = rawToken ? buildCliSetupSnippet(rawToken) : "";
+            const agentSnippet = rawToken ? buildAgentHttpSnippet(rawToken) : "";
             const mcpSnippet = rawToken ? buildMcpConfigSnippet(rawToken) : "";
 
             return (
@@ -219,7 +236,7 @@ export function TokensSettingsView() {
                   </div>
                 </div>
                 {rawToken ? (
-                  <div className="mt-4 grid gap-3 border-t border-[color:var(--line)] pt-4 lg:grid-cols-2">
+                  <div className="mt-4 grid gap-3 border-t border-[color:var(--line)] pt-4 xl:grid-cols-3">
                     <div className="rounded-[16px] bg-white p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <span className="text-sm font-medium text-[color:var(--foreground)]">CLI 配置</span>
@@ -234,6 +251,22 @@ export function TokensSettingsView() {
                       </div>
                       <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
                         {maskSnippet(cliSnippet, rawToken, maskedToken)}
+                      </pre>
+                    </div>
+                    <div className="rounded-[16px] bg-white p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium text-[color:var(--foreground)]">Agent HTTP 配置</span>
+                        <button
+                          type="button"
+                          onClick={() => void copySnippet(token.id, "agent", agentSnippet)}
+                          className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          {copiedSnippetId === `${token.id}:agent` ? "已复制" : "复制 Agent 配置"}
+                        </button>
+                      </div>
+                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
+                        {maskSnippet(agentSnippet, rawToken, maskedToken)}
                       </pre>
                     </div>
                     <div className="rounded-[16px] bg-white p-3">

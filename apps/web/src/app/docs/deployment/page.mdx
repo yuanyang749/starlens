@@ -134,9 +134,16 @@ AI 功能不是启动 Web 应用的硬依赖。上线后可以在设置页创建
 - 如果使用网关，额外 header 已正确配置。
 - 设置页中的 Provider 验证结果为 `success`。
 
-## CLI / MCP 接入
+## CLI / Agent / MCP 接入
 
-CLI 和 MCP 不需要单独部署公网服务。它们通过个人 API Token 调用当前 Starlens 站点。
+CLI、Agent HTTP tools 和 MCP 不需要单独部署公网服务。它们通过个人 API Token 调用当前 Starlens 站点。
+
+Agent runtime 示例：
+
+```bash
+STARLENS_TOKEN="stl_xxx"
+STARLENS_API_BASE_URL="https://your-starlens.example.com"
+```
 
 本地 MCP 示例：
 
@@ -146,7 +153,7 @@ STARLENS_API_BASE_URL="https://your-starlens.example.com" \
 corepack pnpm mcp:start
 ```
 
-如果 API 部署在内网，Agent 或 IDE 所在机器必须能访问 `STARLENS_API_BASE_URL`。
+如果 API 部署在内网，Agent runtime、CLI 或 IDE 所在机器必须能访问 `STARLENS_API_BASE_URL`。
 
 ## 部署检查
 

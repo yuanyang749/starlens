@@ -30,7 +30,7 @@ describe("landing page workspace links", () => {
     const { el } = mount(<LandingPage githubAuthEnabled />);
 
     const workspaceLinks = Array.from(el.querySelectorAll("a")).filter((link) =>
-      link.textContent?.includes("Workspace"),
+      link.textContent?.includes("工作台"),
     );
 
     expect(workspaceLinks.length).toBeGreaterThan(0);

@@ -5,7 +5,7 @@ export const metadata = {
 
 # Starlens 用户文档
 
-Starlens 是一个面向 GitHub Stars 的个人知识工作台。它会把收藏仓库同步到你自己的 PostgreSQL 数据库，补充标签、备注、摘要和检索文本，再通过 Web 工作台、AI 问答、CLI 和 MCP 工具提供统一入口。
+Starlens 是一个面向 GitHub Stars 的个人知识工作台。它会把收藏仓库同步到你自己的 PostgreSQL 数据库，补充标签、备注、摘要和检索文本，再通过 Web 工作台、AI 问答、CLI、HTTP API 和 Cursor MCP 工具提供统一入口。
 
 <figure className="docs-figure docs-figure--wide">
   <div className="docs-figure__viewport">
@@ -27,7 +27,7 @@ Starlens 是一个面向 GitHub Stars 的个人知识工作台。它会把收藏
 | 忘记仓库名称，只记得用途 | 使用仓库描述、README 摘要、主题、标签和备注做联合搜索 |
 | 想把 Stars 分成长期知识库 | 给仓库添加个人标签、备注和重点收藏状态 |
 | 想让 AI 基于自己的 Stars 回答 | 先搜索候选仓库，再调用已配置的 AI Provider 生成回答 |
-| 想给本地 Agent 使用收藏库 | 通过个人 API Token 或 MCP server 暴露工具能力 |
+| 想给 Agent 使用收藏库 | 通过个人 API Token 调用 HTTP API |
 | 想自托管数据 | 使用 PostgreSQL 和 GitHub OAuth，在 Vercel 或自有服务器部署 |
 
 ## 文档内容
