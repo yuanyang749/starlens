@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Starlens Mobile",
     short_name: "Starlens",
-    description: "Mobile workbench for GitHub Stars.",
+    description: "面向 GitHub Stars 的移动工作台。",
     start_url: "/",
     display: "standalone",
     background_color: "#f7f8fb",

@@ -1,20 +1,20 @@
 export const SOURCE_LABELS: Record<string, string> = {
-  github_description: "GitHub original description",
-  github_topics: "GitHub topics",
+  github_description: "GitHub 原始描述",
+  github_topics: "GitHub Topics",
   github_readme: "GitHub README",
-  github_readme_excerpt: "GitHub README excerpt",
-  repo_metadata: "Repository metadata",
-  curation_metadata: "Notes and tags",
-  system_fallback: "System fallback",
+  github_readme_excerpt: "GitHub README 摘要",
+  repo_metadata: "仓库元数据",
+  curation_metadata: "备注与标签",
+  system_fallback: "系统兜底",
 };
 
 export function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime()) || date.getTime() === 0) {
-    return "Not updated yet";
+    return "尚未更新";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("zh-CN", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -25,17 +25,17 @@ export function formatDateTime(value: string) {
 export function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime()) || date.getTime() === 0) {
-    return "No date";
+    return "无日期";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("zh-CN", {
     month: "short",
     day: "numeric",
   }).format(date);
 }
 
 export function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat("en", {
+  return new Intl.NumberFormat("zh-CN", {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value);

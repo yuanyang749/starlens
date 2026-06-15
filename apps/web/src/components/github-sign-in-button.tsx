@@ -17,7 +17,7 @@ export function GitHubSignInButton({
   className,
   githubAuthEnabled,
   callbackUrl = "/app",
-  disabledTitle = "GitHub OAuth is not configured in this local environment.",
+  disabledTitle = "当前本地环境尚未配置 GitHub OAuth。",
 }: GitHubSignInButtonProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,8 +45,7 @@ export function GitHubSignInButton({
       className={submitting ? `${className} opacity-90` : className}
       aria-busy={submitting}
     >
-      {submitting ? "Redirecting..." : children}
+      {submitting ? "正在跳转..." : children}
     </button>
   );
 }
-

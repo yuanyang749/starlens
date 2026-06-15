@@ -18,18 +18,17 @@ export function GeneralSettingsView({
       <section className="app-panel rounded-[24px] p-6">
         <div className="mb-4 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
           <Globe2 className="h-4 w-4 text-[color:var(--accent)]" />
-          Interface language
+          界面语言
         </div>
         <p className="max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-          The current product copy is English-only. Keep the system setting
-          honest until full internationalization is actually wired.
+          当前产品默认使用简体中文。技术名词会保留 GitHub、Provider、API Token 等原文，避免过度翻译影响理解。
         </p>
         <div className="mt-6 rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4 md:max-w-sm">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">
-            Current language
+            当前语言
           </p>
           <p className="mt-2 text-xl font-semibold tracking-tight text-[color:var(--foreground)]">
-            English
+            简体中文
           </p>
         </div>
       </section>
@@ -37,20 +36,19 @@ export function GeneralSettingsView({
       <section className="app-panel rounded-[24px] p-6">
         <div className="mb-4 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
           <Info className="h-4 w-4 text-[color:var(--accent)]" />
-          Build information
+          构建信息
         </div>
         <div className="space-y-4">
           <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
             <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">
-              Version
+              版本
             </p>
             <p className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
               {appVersion}
             </p>
           </div>
           <p className="text-sm leading-7 text-[color:var(--muted)]">
-            This block is reserved for runtime and release information, so
-            system-level metadata stays separate from provider and token setup.
+            这里保留运行时和发布信息，让系统级元数据与 Provider、Token 配置分开管理。
           </p>
         </div>
       </section>

@@ -56,18 +56,24 @@ type ProviderForm = {
 type CreatedToken = TokenRecord & { token?: string };
 
 const providerOptions: Array<{ label: string; value: ProviderType }> = [
-  { label: "OpenAI compatible", value: "openai_compatible" },
+  { label: "OpenAI-compatible", value: "openai_compatible" },
   { label: "Vercel AI Gateway", value: "vercel_gateway" },
-  { label: "Anthropic native", value: "anthropic_native" },
-  { label: "Gemini native", value: "gemini_native" },
+  { label: "Anthropic Native", value: "anthropic_native" },
+  { label: "Gemini Native", value: "gemini_native" },
 ];
 
 const tabs: Array<{ mode: WorkbenchMode; label: string; icon: typeof Search }> = [
   { mode: "all", label: "Stars", icon: Search },
-  { mode: "favorites", label: "Favorites", icon: Star },
-  { mode: "recent", label: "Recent", icon: Home },
-  { mode: "settings", label: "Settings", icon: Settings2 },
+  { mode: "favorites", label: "重点", icon: Star },
+  { mode: "recent", label: "最近", icon: Home },
+  { mode: "settings", label: "设置", icon: Settings2 },
 ];
+
+const settingsSectionLabels: Record<SettingsSection, string> = {
+  general: "通用",
+  providers: "AI Provider",
+  tokens: "API Token",
+};
 
 function repoSummary(repo: RepoSummary) {
   return sanitizeSummaryText(repo.aiSummary || repo.repoSummary || repo.description);
@@ -97,12 +103,12 @@ function RepoCard({
     <article className={selected ? "mobile-repo-card is-selected" : "mobile-repo-card"}>
       <button type="button" className="text-left" onClick={onOpen}>
         <h2>{repo.fullName}</h2>
-        <p className="mt-2">{summary || "No summary available."}</p>
+        <p className="mt-2">{summary || "暂无摘要。"}</p>
       </button>
       <div className="mobile-repo-card__meta">
-        <span>{formatCompactNumber(repo.stargazersCount)} stars</span>
-        <span>{repo.language || "Unknown"}</span>
-        <span>Updated {formatDateTime(repo.updatedAtGithub)}</span>
+        <span>{formatCompactNumber(repo.stargazersCount)} Stars</span>
+        <span>{repo.language || "未知"}</span>
+        <span>更新 {formatDateTime(repo.updatedAtGithub)}</span>
       </div>
       <div className="mobile-chip-row">
         {(repo.tags.length > 0 ? repo.tags : repo.topics).slice(0, 4).map((item) => (
@@ -111,17 +117,17 @@ function RepoCard({
       </div>
       <div className="mobile-repo-card__actions">
         <button type="button" className="mobile-button" onClick={onOpen}>
-          Details
+          详情
         </button>
         <button
           type="button"
           className={repo.isFavorite ? "mobile-button mobile-button--primary" : "mobile-button"}
           disabled={favoriteUpdating}
           onClick={onFavorite}
-          aria-label={repo.isFavorite ? "Favorited" : "Favorite"}
+          aria-label={repo.isFavorite ? "已重点收藏" : "重点收藏"}
         >
           <Star className={repo.isFavorite ? "h-4 w-4 fill-current" : "h-4 w-4"} />
-          {repo.isFavorite ? "Saved" : "Save"}
+          {repo.isFavorite ? "已收藏" : "收藏"}
         </button>
       </div>
     </article>
@@ -159,16 +165,16 @@ function RepoDetail({
 }) {
   const githubUrl = safeExternalUrl(repo.htmlUrl);
   const homepageUrl = safeExternalUrl(repo.homepage);
-  const summary = repoSummary(repo) || "README summary is not available yet.";
+  const summary = repoSummary(repo) || "README 摘要暂不可用。";
 
   return (
-    <aside className="mobile-detail" aria-label="Selected repository">
+    <aside className="mobile-detail" aria-label="已选仓库">
       <div className="mobile-detail-header">
-        <button type="button" className="mobile-icon-button" onClick={onClose} aria-label="Back to repositories">
+        <button type="button" className="mobile-icon-button" onClick={onClose} aria-label="返回仓库列表">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <strong>Repository</strong>
-        <button type="button" className="mobile-icon-button" onClick={onClose} aria-label="Close details">
+        <strong>仓库</strong>
+        <button type="button" className="mobile-icon-button" onClick={onClose} aria-label="关闭详情">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -178,33 +184,33 @@ function RepoDetail({
           <h1>{repo.fullName}</h1>
           <p className="mt-2">{repo.description}</p>
           <div className="mobile-repo-card__meta mt-3">
-            <span>{formatCompactNumber(repo.stargazersCount)} stars</span>
-            <span>{formatCompactNumber(repo.forksCount)} forks</span>
-            <span>{repo.language || "Unknown"}</span>
+            <span>{formatCompactNumber(repo.stargazersCount)} Stars</span>
+            <span>{formatCompactNumber(repo.forksCount)} Forks</span>
+            <span>{repo.language || "未知"}</span>
           </div>
         </section>
 
         <section>
-          <h2 className="mobile-section-title">Summary</h2>
+          <h2 className="mobile-section-title">摘要</h2>
           <p>{summary}</p>
         </section>
 
         <section>
-          <h2 className="mobile-section-title">My note</h2>
+          <h2 className="mobile-section-title">我的备注</h2>
           <textarea
             className="mobile-textarea"
-            aria-label="My note"
+            aria-label="我的备注"
             value={noteDraft}
             onChange={(event) => onNoteChange(event.target.value)}
           />
           <button type="button" className="mobile-button mt-2" onClick={onSaveNote}>
             <Check className="h-4 w-4" />
-            Save note
+            保存备注
           </button>
         </section>
 
         <section>
-          <h2 className="mobile-section-title">Tags</h2>
+          <h2 className="mobile-section-title">标签</h2>
           <div className="mobile-chip-row">
             {repo.tags.map((tag) => (
               <button
@@ -224,17 +230,17 @@ function RepoDetail({
               className="mobile-input"
               value={newTag}
               onChange={(event) => onNewTagChange(event.target.value)}
-              placeholder="New tag"
+              placeholder="新标签"
             />
             <button type="button" className="mobile-button" disabled={tagSubmitting} onClick={onAddTag}>
               <Tags className="h-4 w-4" />
-              Add
+              添加
             </button>
           </div>
         </section>
 
         <section>
-          <h2 className="mobile-section-title">Actions</h2>
+          <h2 className="mobile-section-title">操作</h2>
           <div className="mobile-detail-actions">
             <button
               type="button"
@@ -243,7 +249,7 @@ function RepoDetail({
               onClick={onFavorite}
             >
               <Star className={repo.isFavorite ? "h-4 w-4 fill-current" : "h-4 w-4"} />
-              {repo.isFavorite ? "Favorited" : "Favorite"}
+              {repo.isFavorite ? "已重点收藏" : "重点收藏"}
             </button>
             {githubUrl ? (
               <a className="mobile-button" href={githubUrl} target="_blank" rel="noopener noreferrer">
@@ -254,7 +260,7 @@ function RepoDetail({
             {homepageUrl ? (
               <a className="mobile-button" href={homepageUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
-                Homepage
+                主页
               </a>
             ) : null}
           </div>
@@ -305,37 +311,37 @@ function MobileSettings({
         }),
       });
       setProviderForm((current) => ({ ...current, apiKey: "" }));
-      onMessage("Provider config saved.");
+      onMessage("Provider 配置已保存。");
       onReload();
     } catch (caught) {
-      onError(caught instanceof Error ? caught.message : "Failed to create provider.");
+      onError(caught instanceof Error ? caught.message : "Provider 创建失败。");
     }
   }
 
   async function validateProvider(id: string) {
     try {
       const result = await fetchApi<{ message: string; status: string }>(`/api/ai/configs/${id}/validate`, { method: "POST" });
-      onMessage(result.message || `Validation ${result.status}.`);
+      onMessage(result.message || `验证${result.status === "success" ? "成功" : `结果：${result.status}`}。`);
       onReload();
     } catch (caught) {
-      onError(caught instanceof Error ? caught.message : "Failed to validate provider.");
+      onError(caught instanceof Error ? caught.message : "Provider 验证失败。");
     }
   }
 
   async function deleteProvider(id: string) {
     try {
       await fetchApi(`/api/ai/configs/${id}`, { method: "DELETE" });
-      onMessage("Provider deleted.");
+      onMessage("Provider 已删除。");
       onReload();
     } catch (caught) {
-      onError(caught instanceof Error ? caught.message : "Failed to delete provider.");
+      onError(caught instanceof Error ? caught.message : "Provider 删除失败。");
     }
   }
 
   async function createToken() {
     const note = tokenNote.trim();
     if (!note) {
-      onError("Remark is required.");
+      onError("请填写 Token 用途备注。");
       return;
     }
 
@@ -344,7 +350,7 @@ function MobileSettings({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          name: `Mobile token ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+          name: `移动端 Token ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
           note,
         }),
       });
@@ -352,20 +358,20 @@ function MobileSettings({
         setCopyableTokens((current) => ({ ...current, [token.id]: token.token! }));
       }
       setTokenNote("");
-      onMessage("Token created.");
+      onMessage("Token 已创建。");
       onReload();
     } catch (caught) {
-      onError(caught instanceof Error ? caught.message : "Failed to create token.");
+      onError(caught instanceof Error ? caught.message : "Token 创建失败。");
     }
   }
 
   async function revokeToken(id: string) {
     try {
       await fetchApi(`/api/tokens/${id}`, { method: "DELETE" });
-      onMessage("Token revoked.");
+      onMessage("Token 已撤销。");
       onReload();
     } catch (caught) {
-      onError(caught instanceof Error ? caught.message : "Failed to revoke token.");
+      onError(caught instanceof Error ? caught.message : "Token 撤销失败。");
     }
   }
 
@@ -379,7 +385,7 @@ function MobileSettings({
             className={section === item ? "mobile-button is-active" : "mobile-button"}
             onClick={() => onSectionChange(item)}
           >
-            {item[0].toUpperCase() + item.slice(1)}
+            {settingsSectionLabels[item]}
           </button>
         ))}
       </div>
@@ -387,11 +393,11 @@ function MobileSettings({
       {section === "general" ? (
         <div className="mobile-settings-list">
           <article className="mobile-settings-item">
-            <strong>Interface language</strong>
-            <p>English</p>
+            <strong>界面语言</strong>
+            <p>简体中文</p>
           </article>
           <article className="mobile-settings-item">
-            <strong>Build information</strong>
+            <strong>构建信息</strong>
             <p>Starlens Mobile 0.1.0</p>
           </article>
         </div>
@@ -400,28 +406,28 @@ function MobileSettings({
       {section === "providers" ? (
         <div className="mobile-settings-list">
           <article className="mobile-settings-item">
-            <strong>New provider</strong>
+            <strong>新建 Provider</strong>
             <div className="mt-3 grid gap-2">
-              <input className="mobile-input" placeholder="Display name" value={providerForm.displayName} onChange={(event) => setProviderForm((current) => ({ ...current, displayName: event.target.value }))} />
+              <input className="mobile-input" placeholder="显示名称" value={providerForm.displayName} onChange={(event) => setProviderForm((current) => ({ ...current, displayName: event.target.value }))} />
               <select className="mobile-select" value={providerForm.providerType} onChange={(event) => setProviderForm((current) => ({ ...current, providerType: event.target.value as ProviderType }))}>
                 {providerOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              <input className="mobile-input" placeholder="Model" value={providerForm.model} onChange={(event) => setProviderForm((current) => ({ ...current, model: event.target.value }))} />
+              <input className="mobile-input" placeholder="模型" value={providerForm.model} onChange={(event) => setProviderForm((current) => ({ ...current, model: event.target.value }))} />
               <input className="mobile-input" placeholder="Base URL" value={providerForm.baseUrl} onChange={(event) => setProviderForm((current) => ({ ...current, baseUrl: event.target.value }))} />
-              <input className="mobile-input" placeholder="API key" type="password" value={providerForm.apiKey} onChange={(event) => setProviderForm((current) => ({ ...current, apiKey: event.target.value }))} />
+              <input className="mobile-input" placeholder="API Key" type="password" value={providerForm.apiKey} onChange={(event) => setProviderForm((current) => ({ ...current, apiKey: event.target.value }))} />
               <button type="button" className="mobile-button mobile-button--primary" onClick={createProvider}>
                 <Bot className="h-4 w-4" />
-                Create provider
+                创建 Provider
               </button>
             </div>
           </article>
           {providers.map((provider) => (
             <article key={provider.id} className="mobile-settings-item">
               <strong>{provider.displayName}</strong>
-              <p>{provider.providerType} · {provider.model}{provider.isDefault ? " · default" : ""}</p>
+              <p>{provider.providerType} · {provider.model}{provider.isDefault ? " · 默认" : ""}</p>
               <div className="mobile-detail-actions mt-3">
-                <button type="button" className="mobile-button" onClick={() => validateProvider(provider.id)}>Validate</button>
-                <button type="button" className="mobile-button" onClick={() => deleteProvider(provider.id)}>Delete</button>
+                <button type="button" className="mobile-button" onClick={() => validateProvider(provider.id)}>验证</button>
+                <button type="button" className="mobile-button" onClick={() => deleteProvider(provider.id)}>删除</button>
               </div>
             </article>
           ))}
@@ -431,12 +437,12 @@ function MobileSettings({
       {section === "tokens" ? (
         <div className="mobile-settings-list">
           <article className="mobile-settings-item">
-            <strong>New token</strong>
+            <strong>新建 Token</strong>
             <div className="mt-3 grid gap-2">
-              <input className="mobile-input" placeholder="Remark" value={tokenNote} onChange={(event) => setTokenNote(event.target.value)} />
+              <input className="mobile-input" placeholder="用途备注" value={tokenNote} onChange={(event) => setTokenNote(event.target.value)} />
               <button type="button" className="mobile-button mobile-button--primary" onClick={createToken}>
                 <KeyRound className="h-4 w-4" />
-                Create token
+                创建 Token
               </button>
             </div>
           </article>
@@ -452,10 +458,10 @@ function MobileSettings({
                     className="mobile-button"
                     onClick={() => navigator.clipboard.writeText(copyableTokens[token.id])}
                   >
-                    Copy
+                    复制
                   </button>
                 ) : null}
-                <button type="button" className="mobile-button" onClick={() => revokeToken(token.id)}>Revoke</button>
+                <button type="button" className="mobile-button" onClick={() => revokeToken(token.id)}>撤销</button>
               </div>
             </article>
           ))}
@@ -523,12 +529,12 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
               type="button"
               className="mobile-icon-button"
               aria-expanded={!searchCollapsed}
-              aria-label={searchCollapsed ? "Expand search controls" : "Collapse search controls"}
+              aria-label={searchCollapsed ? "展开搜索区" : "收起搜索区"}
               onClick={() => setSearchCollapsed((collapsed) => !collapsed)}
             >
               {searchCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
             </button>
-            <button type="button" className="mobile-icon-button" aria-label="Sign out" onClick={() => void signOut({ callbackUrl: "/" })}>
+            <button type="button" className="mobile-icon-button" aria-label="退出登录" onClick={() => void signOut({ callbackUrl: "/" })}>
               {userAvatarUrl && !avatarFailed ? (
                 <Image src={userAvatarUrl} alt={userName} width={32} height={32} className="rounded-full" unoptimized onError={() => setAvatarFailed(true)} />
               ) : (
@@ -540,36 +546,36 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
         {searchCollapsed ? (
           <button type="button" className="mobile-search-summary" onClick={() => setSearchCollapsed(false)}>
             <Search className="h-4 w-4" />
-            <span>{workbench.submittedQuery || workbench.queryDraft || "Search controls hidden"}</span>
+            <span>{workbench.submittedQuery || workbench.queryDraft || "搜索区已收起"}</span>
           </button>
         ) : (
           <>
             <div className="mobile-search">
               <input
                 className="mobile-input"
-                aria-label="Search your starred repositories"
+                aria-label="搜索你的 Stars"
                 role="searchbox"
                 value={workbench.queryDraft}
                 onChange={(event) => actions.setQueryDraft(event.target.value)}
-                placeholder="Search stars..."
+                placeholder="搜索 Stars..."
               />
-              <button type="button" className="mobile-icon-button" aria-label="Search repositories" disabled={!canSearch} onClick={actions.submitSearch}>
+              <button type="button" className="mobile-icon-button" aria-label="搜索仓库" disabled={!canSearch} onClick={actions.submitSearch}>
                 <Search className="h-5 w-5" />
               </button>
-              <button type="button" className="mobile-icon-button mobile-icon-button--primary" aria-label="AI Search" disabled={!canSearch || workbench.aiSearching} onClick={() => void actions.aiSearch()}>
+              <button type="button" className="mobile-icon-button mobile-icon-button--primary" aria-label="AI 搜索" disabled={!canSearch || workbench.aiSearching} onClick={() => void actions.aiSearch()}>
                 {workbench.aiSearching ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
               </button>
             </div>
             <div className="mobile-actions">
               <button type="button" className="mobile-button mobile-button--primary" disabled={workbench.syncing} onClick={() => void actions.syncNow()}>
                 <RefreshCw className={workbench.syncing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-                {workbench.syncing ? "Syncing" : "Sync"}
+                {workbench.syncing ? "同步中" : "同步"}
               </button>
-              <button type="button" className="mobile-button" onClick={actions.clearFilters}>Clear</button>
+              <button type="button" className="mobile-button" onClick={actions.clearFilters}>清空</button>
             </div>
             <div className="mobile-filter-grid">
-              <input className="mobile-input" aria-label="Filter by language" placeholder="Language" value={workbench.language} onChange={(event) => actions.setLanguage(event.target.value)} disabled={workbench.aiSearchMode} />
-              <input className="mobile-input" aria-label="Filter by tag" placeholder="Tag" value={workbench.tagFilter} onChange={(event) => actions.setTagFilter(event.target.value)} disabled={workbench.aiSearchMode} />
+              <input className="mobile-input" aria-label="按语言筛选" placeholder="语言" value={workbench.language} onChange={(event) => actions.setLanguage(event.target.value)} disabled={workbench.aiSearchMode} />
+              <input className="mobile-input" aria-label="按标签筛选" placeholder="标签" value={workbench.tagFilter} onChange={(event) => actions.setTagFilter(event.target.value)} disabled={workbench.aiSearchMode} />
             </div>
           </>
         )}
@@ -592,10 +598,10 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
         <>
           <div className="mobile-status">
             {workbench.loadingRepos
-              ? "Loading repositories..."
-              : `${workbench.repos.length} of ${workbench.total} repositories loaded`}
+              ? "正在加载仓库..."
+              : `${workbench.repos.length} / ${workbench.total} 个仓库已加载`}
           </div>
-          <section className="mobile-list" aria-label="Repositories">
+          <section className="mobile-list" aria-label="仓库列表">
             {workbench.repos.map((repo) => (
               <RepoCard
                 key={repo.id}
@@ -608,8 +614,8 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
             ))}
             {workbench.repos.length === 0 ? (
               <div className="mobile-empty">
-                <strong>No repositories</strong>
-                <p>Sync GitHub Stars or adjust filters to populate the mobile workbench.</p>
+                <strong>暂无仓库</strong>
+                <p>同步 GitHub Stars，或调整筛选条件后再查看移动端工作台。</p>
               </div>
             ) : null}
           </section>
@@ -617,12 +623,12 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
             {workbench.loadingMore ? (
               <>
                 <LoaderCircle className="h-4 w-4 animate-spin" />
-                Loading more
+                加载中
               </>
             ) : workbench.hasMore ? (
-              "Scroll for more"
+              "继续下滑加载"
             ) : workbench.repos.length > 0 ? (
-              "All repositories loaded"
+              "已加载全部仓库"
             ) : null}
           </div>
         </>
@@ -646,7 +652,7 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
         />
       ) : null}
 
-      <nav className="mobile-tabbar" aria-label="Mobile workbench navigation">
+      <nav className="mobile-tabbar" aria-label="移动端工作台导航">
         {tabs.map(({ mode, label, icon: Icon }) => (
           <button
             key={mode}

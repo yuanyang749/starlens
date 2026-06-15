@@ -307,7 +307,7 @@
 
 .repo-table-pane__header {
   display: grid;
-  grid-template-columns: minmax(250px, 1.8fr) 90px 120px 110px minmax(160px, 1fr) 104px;
+  grid-template-columns: minmax(180px, 1.9fr) minmax(64px, 0.45fr) minmax(86px, 0.65fr) minmax(78px, 0.6fr) minmax(120px, 1fr) 76px;
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
@@ -326,7 +326,7 @@
 .repo-table-row {
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(250px, 1.8fr) 90px 120px 110px minmax(160px, 1fr) 104px;
+  grid-template-columns: minmax(180px, 1.9fr) minmax(64px, 0.45fr) minmax(86px, 0.65fr) minmax(78px, 0.6fr) minmax(120px, 1fr) 76px;
   align-items: center;
   gap: 12px;
   padding: 12px 18px;

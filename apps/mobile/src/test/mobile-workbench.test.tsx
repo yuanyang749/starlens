@@ -227,21 +227,21 @@ describe("MobileWorkbench", () => {
     const { container } = renderMobile();
 
     expect(container.textContent).toContain("Stars");
-    expect(container.textContent).toContain("Favorites");
-    expect(container.textContent).toContain("Recent");
-    expect(container.textContent).toContain("Settings");
+    expect(container.textContent).toContain("重点");
+    expect(container.textContent).toContain("最近");
+    expect(container.textContent).toContain("设置");
     expect(container.textContent).toContain("acme/starlens");
     expect(container.querySelector('[role="searchbox"]')).not.toBeNull();
 
     const favoritesTab = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Favorites",
+      (button) => button.textContent === "重点",
     );
     expect(favoritesTab).toBeTruthy();
     click(favoritesTab!);
     expect(mocks.workbench?.actions.setMode).toHaveBeenCalledWith("favorites");
 
     const detailsButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Details",
+      (button) => button.textContent === "详情",
     );
     expect(detailsButton).toBeTruthy();
     click(detailsButton!);
@@ -251,7 +251,7 @@ describe("MobileWorkbench", () => {
   it("collapses and expands the top search controls", () => {
     const { container } = renderMobile();
 
-    const collapseButton = container.querySelector('button[aria-label="Collapse search controls"]');
+    const collapseButton = container.querySelector('button[aria-label="收起搜索区"]');
     expect(collapseButton).not.toBeNull();
     click(collapseButton!);
     expect(container.querySelector('[role="searchbox"]')).toBeNull();
@@ -267,11 +267,11 @@ describe("MobileWorkbench", () => {
     mocks.repoParam = "repo-1";
     const { container } = renderMobile();
 
-    expect(container.textContent).toContain("Repository");
-    expect(container.textContent).toContain("My note");
-    expect(container.textContent).toContain("Tags");
+    expect(container.textContent).toContain("仓库");
+    expect(container.textContent).toContain("我的备注");
+    expect(container.textContent).toContain("标签");
 
-    const closeButton = container.querySelector('button[aria-label="Close details"]');
+    const closeButton = container.querySelector('button[aria-label="关闭详情"]');
     expect(closeButton).not.toBeNull();
     click(closeButton!);
     expect(mocks.push).toHaveBeenCalledWith("/", { scroll: false });
@@ -281,11 +281,11 @@ describe("MobileWorkbench", () => {
     mocks.workbench = workbenchFixture({ mode: "settings", settingsSection: "general" });
     const { container, rerender } = renderMobile();
 
-    expect(container.textContent).toContain("Interface language");
-    expect(container.textContent).toContain("Build information");
+    expect(container.textContent).toContain("界面语言");
+    expect(container.textContent).toContain("构建信息");
 
     const providersButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Providers",
+      (button) => button.textContent === "AI Provider",
     );
     expect(providersButton).toBeTruthy();
     click(providersButton!);
@@ -293,11 +293,11 @@ describe("MobileWorkbench", () => {
 
     mocks.workbench = workbenchFixture({ mode: "settings", settingsSection: "providers" });
     rerender();
-    expect(container.textContent).toContain("New provider");
+    expect(container.textContent).toContain("新建 Provider");
     expect(container.textContent).toContain("OpenAI");
 
     const tokensButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Tokens",
+      (button) => button.textContent === "API Token",
     );
     expect(tokensButton).toBeTruthy();
     click(tokensButton!);
@@ -305,7 +305,7 @@ describe("MobileWorkbench", () => {
 
     mocks.workbench = workbenchFixture({ mode: "settings", settingsSection: "tokens" });
     rerender();
-    expect(container.textContent).toContain("New token");
+    expect(container.textContent).toContain("新建 Token");
     expect(container.textContent).toContain("Mobile token");
   });
 });

@@ -101,8 +101,8 @@ export function RepoTablePane({
             <input
               value={language}
               onChange={(event) => onLanguageChange(event.target.value)}
-              aria-label="Filter by language"
-              placeholder="Language"
+              aria-label="按语言筛选"
+              placeholder="语言"
               className="workbench-input"
               disabled={isAiSearchMode}
             />
@@ -110,7 +110,7 @@ export function RepoTablePane({
               <button
                 type="button"
                 className="workbench-input-clear"
-                aria-label="Clear language"
+                aria-label="清空语言筛选"
                 onClick={() => onLanguageChange("")}
                 disabled={isAiSearchMode}
               >
@@ -122,8 +122,8 @@ export function RepoTablePane({
             <input
               value={tagFilter}
               onChange={(event) => onTagFilterChange(event.target.value)}
-              aria-label="Filter by tag"
-              placeholder="Tag"
+              aria-label="按标签筛选"
+              placeholder="标签"
               className="workbench-input"
               disabled={isAiSearchMode}
             />
@@ -131,7 +131,7 @@ export function RepoTablePane({
               <button
                 type="button"
                 className="workbench-input-clear"
-                aria-label="Clear tag"
+                aria-label="清空标签筛选"
                 onClick={() => onTagFilterChange("")}
                 disabled={isAiSearchMode}
               >
@@ -144,14 +144,14 @@ export function RepoTablePane({
             onValueChange={(value) => onSortChange(value as SearchSort)}
             disabled={isAiSearchMode}
           >
-            <SelectTrigger className="workbench-select-trigger repo-table-pane__sort-trigger" aria-label="Sort repositories">
-              <SelectValue placeholder="Sort repositories" />
+            <SelectTrigger className="workbench-select-trigger repo-table-pane__sort-trigger" aria-label="仓库排序">
+              <SelectValue placeholder="仓库排序" />
             </SelectTrigger>
             <SelectContent className="workbench-select-content" position="popper">
-              <SelectItem value="updated">Updated</SelectItem>
-              <SelectItem value="recent">Recent</SelectItem>
+              <SelectItem value="updated">最近更新</SelectItem>
+              <SelectItem value="recent">最近同步</SelectItem>
               <SelectItem value="stars">Stars</SelectItem>
-              <SelectItem value="relevance">Relevance</SelectItem>
+              <SelectItem value="relevance">相关度</SelectItem>
             </SelectContent>
           </Select>
           <button
@@ -161,7 +161,7 @@ export function RepoTablePane({
             disabled={isAiSearchMode}
           >
             <Star className="h-4 w-4" />
-            Favorites
+            重点收藏
           </button>
         </div>
         <div className="repo-table-pane__filters-actions">
@@ -171,14 +171,14 @@ export function RepoTablePane({
                 type="button"
                 onClick={onClearFilters}
                 className="workbench-icon-button workbench-icon-button--round"
-                aria-label="Clear filters"
+                aria-label="清空筛选"
                 disabled={isAiSearchMode}
               >
                 <X className="h-4 w-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>Clear filters</span>
+              <span>清空筛选</span>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -187,26 +187,26 @@ export function RepoTablePane({
                 type="button"
                 onClick={onResetSort}
                 className="workbench-icon-button workbench-icon-button--round"
-                aria-label="Reset sort"
+                aria-label="重置排序"
                 disabled={isAiSearchMode}
               >
                 <ArrowDownUp className="h-4 w-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>Reset sort</span>
+              <span>重置排序</span>
             </TooltipContent>
           </Tooltip>
         </div>
       </div>
 
       <div className="repo-table-pane__header">
-        <span>Repository</span>
+        <span>仓库</span>
         <span>Stars</span>
-        <span>Language</span>
-        <span>Updated</span>
-        <span>Tags</span>
-        <span>Actions</span>
+        <span>语言</span>
+        <span>更新</span>
+        <span>标签</span>
+        <span>操作</span>
       </div>
 
       <div className="repo-table-pane__body">
@@ -225,16 +225,16 @@ export function RepoTablePane({
           <div className="repo-table-empty">
             {isAiSearchMode ? (
               <>
-                <p className="repo-table-empty__title">No AI matched repositories yet.</p>
+                <p className="repo-table-empty__title">还没有 AI 匹配结果。</p>
                 <p className="repo-table-empty__body">
-                  Run AI Search with a more specific query to see relevance-ranked repositories here.
+                  换一个更具体的问题，再用 AI 搜索查看按相关度排序的仓库。
                 </p>
               </>
             ) : (
               <>
-                <p className="repo-table-empty__title">No synced repositories yet.</p>
+                <p className="repo-table-empty__title">还没有同步仓库。</p>
                 <p className="repo-table-empty__body">
-                  Run your first GitHub sync to import public starred repositories into the workbench.
+                  先同步一次 GitHub Stars，导入公开星标仓库。
                 </p>
                 <button
                   type="button"
@@ -242,7 +242,7 @@ export function RepoTablePane({
                   disabled={syncing}
                   className="workbench-button workbench-button--primary"
                 >
-                  {syncing ? "Syncing" : "Start first sync"}
+                  {syncing ? "同步中" : "开始首次同步"}
                 </button>
               </>
             )}
@@ -251,7 +251,7 @@ export function RepoTablePane({
       </div>
 
       <div className="repo-table-pane__footer">
-        <p>{repos.length === 0 ? "0" : `${pageStart}-${pageEnd}`} of {total} repositories</p>
+        <p>{repos.length === 0 ? "0" : `${pageStart}-${pageEnd}`} / {total} 个仓库</p>
         <div className="repo-table-pagination">
           <button
             type="button"
@@ -259,7 +259,7 @@ export function RepoTablePane({
             onClick={() => onPageChange(safePage - 1)}
             disabled={safePage <= 1}
           >
-            Prev
+            上一页
           </button>
           {pageItems.map((item, index) =>
             item === "ellipsis" ? (
@@ -281,7 +281,7 @@ export function RepoTablePane({
             onClick={() => onPageChange(safePage + 1)}
             disabled={safePage >= totalPages}
           >
-            Next
+            下一页
           </button>
         </div>
       </div>

@@ -73,7 +73,7 @@ export function TokensSettingsView() {
       setTokens(data);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof ApiClientError ? err.message : "Failed to load tokens.");
+      setError(err instanceof ApiClientError ? err.message : "API Token 加载失败。");
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export function TokensSettingsView() {
 
   const createToken = async () => {
     if (!canCreateToken) {
-      setError("Remark is required.");
+      setError("请填写 Token 用途备注。");
       return;
     }
 
@@ -103,9 +103,9 @@ export function TokensSettingsView() {
       }
       setNoteDraft("");
       await loadTokens();
-      setToast("Token created successfully.");
+      setToast("Token 创建成功。");
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to create token.");
+      setError(err instanceof ApiClientError ? err.message : "Token 创建失败。");
     }
   };
 
@@ -118,9 +118,9 @@ export function TokensSettingsView() {
         return next;
       });
       await loadTokens();
-      setToast("Token revoked.");
+      setToast("Token 已撤销。");
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to revoke token.");
+      setError(err instanceof ApiClientError ? err.message : "Token 撤销失败。");
     }
   };
 
@@ -131,9 +131,9 @@ export function TokensSettingsView() {
     try {
       await navigator.clipboard.writeText(token);
       setCopiedTokenId(id);
-      setToast("Token copied.");
+      setToast("Token 已复制。");
     } catch {
-      setError("Failed to copy token.");
+      setError("Token 复制失败。");
     }
   };
 
@@ -141,9 +141,9 @@ export function TokensSettingsView() {
     try {
       await navigator.clipboard.writeText(snippet);
       setCopiedSnippetId(`${id}:${kind}`);
-      setToast(kind === "cli" ? "CLI setup copied." : "MCP config copied.");
+      setToast(kind === "cli" ? "CLI 配置已复制。" : "MCP 配置已复制。");
     } catch {
-      setError("Failed to copy setup snippet.");
+      setError("配置片段复制失败。");
     }
   };
 
@@ -151,20 +151,20 @@ export function TokensSettingsView() {
     <section className="app-panel rounded-[24px] p-5">
       <div className="mb-5 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
         <KeyRound className="h-4 w-4 text-[color:var(--accent)]" />
-        Active tokens
+        可用 API Token
       </div>
 
       <label className="mb-4 block">
         <span className="mb-2 block text-sm font-medium text-[color:var(--foreground)]">
-          Remark <span className="text-red-500">*</span>
+          用途备注 <span className="text-red-500">*</span>
         </span>
         <input
           value={noteDraft}
           onChange={(event) => {
             setNoteDraft(event.target.value);
-            if (error === "Remark is required.") setError(null);
+            if (error === "请填写 Token 用途备注。") setError(null);
           }}
-          placeholder="Remark for this token"
+          placeholder="Token 用途备注"
           required
           className="h-11 w-full rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
         />
@@ -177,17 +177,17 @@ export function TokensSettingsView() {
           disabled={!canCreateToken}
           className="inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
         >
-          <Plus className="h-4 w-4" />New token
+          <Plus className="h-4 w-4" />新建 Token
         </button>
       </div>
 
       {toast ? <p className="mb-3 text-sm text-emerald-500">{toast}</p> : null}
-      {error ? <div className="mb-3 rounded border border-red-400 p-3 text-sm text-red-500">{error} <button onClick={() => { setLoading(true); loadTokens(); }} className="underline">Retry</button></div> : null}
+      {error ? <div className="mb-3 rounded border border-red-400 p-3 text-sm text-red-500">{error} <button onClick={() => { setLoading(true); loadTokens(); }} className="underline">重试</button></div> : null}
 
       {loading ? (
         <div className="space-y-3" data-testid="tokens-skeleton">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded bg-[color:var(--surface-2)]" />)}</div>
       ) : tokens.length === 0 ? (
-        <p className="rounded-[18px] border border-dashed border-[color:var(--line)] p-4 text-sm text-[color:var(--muted)]">No tokens yet.</p>
+        <p className="rounded-[18px] border border-dashed border-[color:var(--line)] p-4 text-sm text-[color:var(--muted)]">暂无 API Token。</p>
       ) : (
         <div className="space-y-4">
           {tokens.map((token) => {
@@ -212,24 +212,24 @@ export function TokensSettingsView() {
                         className="inline-flex items-center gap-1 text-sm text-[color:var(--accent)] underline"
                       >
                         <Copy className="h-3.5 w-3.5" />
-                        {copiedTokenId === token.id ? "Copied" : "Copy"}
+                        {copiedTokenId === token.id ? "已复制" : "复制"}
                       </button>
                     ) : null}
-                    <button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline">Revoke</button>
+                    <button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline">撤销</button>
                   </div>
                 </div>
                 {rawToken ? (
                   <div className="mt-4 grid gap-3 border-t border-[color:var(--line)] pt-4 lg:grid-cols-2">
                     <div className="rounded-[16px] bg-white p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-[color:var(--foreground)]">CLI setup</span>
+                        <span className="text-sm font-medium text-[color:var(--foreground)]">CLI 配置</span>
                         <button
                           type="button"
                           onClick={() => void copySnippet(token.id, "cli", cliSnippet)}
                           className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                          {copiedSnippetId === `${token.id}:cli` ? "Copied" : "Copy CLI setup"}
+                          {copiedSnippetId === `${token.id}:cli` ? "已复制" : "复制 CLI 配置"}
                         </button>
                       </div>
                       <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
@@ -238,14 +238,14 @@ export function TokensSettingsView() {
                     </div>
                     <div className="rounded-[16px] bg-white p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-[color:var(--foreground)]">Cursor MCP config</span>
+                        <span className="text-sm font-medium text-[color:var(--foreground)]">Cursor MCP 配置</span>
                         <button
                           type="button"
                           onClick={() => void copySnippet(token.id, "mcp", mcpSnippet)}
                           className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                          {copiedSnippetId === `${token.id}:mcp` ? "Copied" : "Copy MCP config"}
+                          {copiedSnippetId === `${token.id}:mcp` ? "已复制" : "复制 MCP 配置"}
                         </button>
                       </div>
                       <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
@@ -263,11 +263,11 @@ export function TokensSettingsView() {
       <div className="mt-5 grid gap-3 border-t border-[color:var(--line)] pt-4 md:grid-cols-2">
         <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)]">
           <TerminalSquare className="h-4 w-4 text-[color:var(--accent)]" />
-          Planned CLI path
+          CLI 接入路径
         </div>
         <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)]">
           <ShieldCheck className="h-4 w-4 text-[color:var(--accent)]" />
-          Rules for the real implementation
+          正式实现规则
         </div>
       </div>
     </section>

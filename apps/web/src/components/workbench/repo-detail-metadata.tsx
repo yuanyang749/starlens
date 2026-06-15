@@ -8,14 +8,14 @@ type RepoDetailMetadataProps = {
 
 export function RepoDetailMetadata({ repo }: RepoDetailMetadataProps) {
   const items = [
-    { label: `${formatCompactNumber(repo.stargazersCount)} stars`, icon: Star },
-    { label: repo.language || "Unknown", icon: Globe },
+    { label: `${formatCompactNumber(repo.stargazersCount)} Stars`, icon: Star },
+    { label: repo.language || "未知", icon: Globe },
     { label: repo.license.name, icon: Scale },
-    { label: `Updated ${formatDateTime(repo.updatedAtGithub)}`, icon: CalendarClock },
-    { label: `Created ${formatDateTime(repo.createdAtGithub)}`, icon: CalendarClock },
-    { label: `Pushed ${formatDateTime(repo.pushedAtGithub)}`, icon: CalendarClock },
-    { label: `Watchers ${formatCompactNumber(repo.watchersCount)}`, icon: FolderGit2 },
-    { label: `Branch ${repo.defaultBranch}`, icon: FolderGit2 },
+    { label: `更新 ${formatDateTime(repo.updatedAtGithub)}`, icon: CalendarClock },
+    { label: `创建 ${formatDateTime(repo.createdAtGithub)}`, icon: CalendarClock },
+    { label: `推送 ${formatDateTime(repo.pushedAtGithub)}`, icon: CalendarClock },
+    { label: `关注 ${formatCompactNumber(repo.watchersCount)}`, icon: FolderGit2 },
+    { label: `分支 ${repo.defaultBranch}`, icon: FolderGit2 },
   ];
 
   return (

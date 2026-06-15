@@ -48,18 +48,18 @@ export function WorkbenchTopbar({
       <label className="workbench-topbar__search">
         <Search className="h-4 w-4 shrink-0" />
         <input
-          aria-label="Search your starred repositories"
+          aria-label="搜索你的 Stars"
           role="searchbox"
           value={queryDraft}
           onChange={(event) => onQueryDraftChange(event.target.value)}
-          placeholder="Search your starred repositories..."
+          placeholder="搜索你的 Stars..."
           className="w-full bg-transparent outline-none"
         />
         {queryDraft ? (
           <button
             type="button"
             className="workbench-input-clear"
-            aria-label="Clear search"
+            aria-label="清空搜索"
             onClick={() => onQueryDraftChange("")}
           >
             <X className="h-3.5 w-3.5" />
@@ -73,10 +73,10 @@ export function WorkbenchTopbar({
           onClick={onSearch}
           disabled={!canSearch}
           className="workbench-button workbench-button--ghost"
-          aria-label="Search repositories"
+          aria-label="搜索仓库"
         >
           <Search className="h-4 w-4" />
-          Search
+          搜索
         </button>
         <button
           type="button"
@@ -86,14 +86,14 @@ export function WorkbenchTopbar({
           className={aiSearching
             ? "workbench-button workbench-button--primary workbench-button--loading"
             : "workbench-button workbench-button--primary"}
-          aria-label={aiSearching ? "AI searching" : "AI Search"}
+          aria-label={aiSearching ? "AI 搜索中" : "AI 搜索"}
         >
           {aiSearching ? (
             <LoaderCircle className="h-4 w-4 workbench-button__spinner" />
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          {aiSearching ? "Searching..." : "AI Search"}
+          {aiSearching ? "搜索中..." : "AI 搜索"}
         </button>
         <button
           type="button"
@@ -103,10 +103,10 @@ export function WorkbenchTopbar({
           className={syncing
             ? "workbench-button workbench-button--primary workbench-button--loading"
             : "workbench-button workbench-button--primary"}
-          aria-label={syncing ? "Syncing" : "Sync now"}
+          aria-label={syncing ? "同步中" : "立即同步"}
         >
           <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
-          {syncing ? "Syncing..." : "Sync now"}
+          {syncing ? "同步中..." : "立即同步"}
         </button>
         <SignOutButton className="workbench-button workbench-button--ghost" />
         <div className="workbench-user-pill" aria-label={userName}>

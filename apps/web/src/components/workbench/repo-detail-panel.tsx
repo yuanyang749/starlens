@@ -33,7 +33,7 @@ function CollapsibleText({
           onClick={() => setExpanded((value) => !value)}
           className="repo-detail-link"
         >
-          {expanded ? "Collapse" : "Expand"}
+          {expanded ? "收起" : "展开"}
         </button>
       ) : null}
     </div>
@@ -75,10 +75,10 @@ export function RepoDetailPanel({
     return (
       <aside data-testid="repo-detail-panel" className="repo-detail-panel repo-detail-panel--empty">
         <div>
-          <p className="repo-detail-panel__eyebrow">Selected repository</p>
-          <p className="repo-detail-panel__empty-title">Select a repository</p>
+          <p className="repo-detail-panel__eyebrow">已选仓库</p>
+          <p className="repo-detail-panel__empty-title">选择一个仓库</p>
           <p className="repo-detail-panel__empty-copy">
-            Choose a repo from the table to inspect metadata, notes, tags, and summaries.
+            从列表中选择仓库，查看元数据、备注、标签和摘要。
           </p>
         </div>
       </aside>
@@ -89,13 +89,13 @@ export function RepoDetailPanel({
   const homepageUrl = repo.homepage ? safeExternalUrl(repo.homepage) : null;
   const summaryText =
     sanitizeSummaryText(repo.aiSummary || repo.readmeExcerpt || repo.repoSummary) ||
-    "README summary is not available yet.";
+    "README 摘要暂不可用。";
 
   return (
-    <aside data-testid="repo-detail-panel" className="repo-detail-panel" aria-label="Selected repository">
+    <aside data-testid="repo-detail-panel" className="repo-detail-panel" aria-label="已选仓库">
       <div className="repo-detail-panel__header">
         <div>
-          <p className="repo-detail-panel__eyebrow">Selected repository</p>
+          <p className="repo-detail-panel__eyebrow">已选仓库</p>
           <h2 className="repo-detail-panel__title">{repo.fullName}</h2>
         </div>
       </div>
@@ -112,7 +112,7 @@ export function RepoDetailPanel({
       <RepoDetailMetadata repo={repo} />
 
       <section className="repo-detail-section">
-        <h3 className="repo-detail-section__title">Topics</h3>
+        <h3 className="repo-detail-section__title">主题标签</h3>
         <div className="repo-detail-section__chips">
           {repo.topics.map((topic) => (
             <span key={topic} className="repo-chip">
@@ -124,7 +124,7 @@ export function RepoDetailPanel({
 
       <section className="repo-detail-section">
         <div className="repo-detail-section__header">
-          <h3 className="repo-detail-section__title">My note</h3>
+          <h3 className="repo-detail-section__title">我的备注</h3>
           <div className="repo-detail-section__actions">
             {noteSaveFeedback ? (
               <span className="repo-detail-save-status" role="status" aria-live="polite">
@@ -133,12 +133,12 @@ export function RepoDetailPanel({
             ) : null}
             <button type="button" onClick={onSaveNote} className="workbench-button workbench-button--ghost">
               <Check className="h-4 w-4" />
-              Save
+              保存
             </button>
           </div>
         </div>
         <textarea
-          aria-label="My note"
+          aria-label="我的备注"
           value={noteDraft}
           onChange={(event) => onNoteChange(event.target.value)}
           className="repo-note-textarea"
@@ -162,14 +162,14 @@ export function RepoDetailPanel({
             <input
               value={newTag}
               onChange={(event) => onNewTagChange(event.target.value)}
-              placeholder="New tag"
+              placeholder="新标签"
               className="workbench-input"
             />
             {newTag ? (
               <button
                 type="button"
                 className="workbench-input-clear"
-                aria-label="Clear new tag"
+                aria-label="清空新标签"
                 onClick={() => onNewTagChange("")}
               >
                 <X className="h-3.5 w-3.5" />
@@ -183,14 +183,14 @@ export function RepoDetailPanel({
             className="workbench-button workbench-button--ghost"
           >
             <Plus className="h-4 w-4" />
-            Add
+            添加
           </button>
         </div>
       </section>
 
       <section className="repo-detail-section">
         <div className="repo-detail-section__header">
-          <h3 className="repo-detail-section__title">AI summary</h3>
+          <h3 className="repo-detail-section__title">AI 摘要</h3>
           <span className="repo-detail-hint">
             README {formatDateTime(repo.readmeExcerptUpdatedAt)}
           </span>
@@ -203,41 +203,41 @@ export function RepoDetailPanel({
             className="repo-summary-card__body"
           />
           <p className="repo-detail-hint">
-            Generated from {SOURCE_LABELS[repo.readmeExcerptSource] ?? repo.readmeExcerptSource}
+            来源：{SOURCE_LABELS[repo.readmeExcerptSource] ?? repo.readmeExcerptSource}
           </p>
         </div>
       </section>
 
       <section className="repo-detail-section">
-        <h3 className="repo-detail-section__title">Actions</h3>
+        <h3 className="repo-detail-section__title">操作</h3>
         <div className="repo-actions">
           <button
             type="button"
             onClick={() => void onFavoriteToggle()}
             disabled={favoriteUpdating}
             className="workbench-button workbench-button--ghost"
-            aria-label={repo.isFavorite ? "Favorited" : "Favorite"}
+            aria-label={repo.isFavorite ? "已重点收藏" : "重点收藏"}
           >
             <Star className={repo.isFavorite ? "h-4 w-4 fill-current" : "h-4 w-4"} />
-            {repo.isFavorite ? "Favorited" : "Favorite"}
+            {repo.isFavorite ? "已重点收藏" : "重点收藏"}
           </button>
           {githubUrl ? (
             <a href={githubUrl} target="_blank" rel="noopener noreferrer" className="workbench-button workbench-button--ghost">
-              Open on GitHub
+              在 GitHub 打开
             </a>
           ) : null}
           {homepageUrl ? (
             <a href={homepageUrl} target="_blank" rel="noopener noreferrer" className="workbench-button workbench-button--ghost">
               <Globe className="h-4 w-4" />
-              Homepage
+              项目主页
             </a>
           ) : null}
         </div>
       </section>
 
       <div className="repo-detail-footer">
-        <span>Summary source: {SOURCE_LABELS[repo.repoSummarySource] ?? repo.repoSummarySource}</span>
-        <span>Updated {formatDateTime(repo.repoSummaryUpdatedAt)}</span>
+        <span>摘要来源：{SOURCE_LABELS[repo.repoSummarySource] ?? repo.repoSummarySource}</span>
+        <span>更新 {formatDateTime(repo.repoSummaryUpdatedAt)}</span>
       </div>
     </aside>
   );

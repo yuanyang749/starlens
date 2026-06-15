@@ -29,17 +29,17 @@ afterEach(() => {
 });
 
 describe("general settings layout", () => {
-  it("renders English as the only current interface language", () => {
+  it("renders Simplified Chinese as the current interface language", () => {
     const { el } = mount(<GeneralSettingsView appVersion="0.1.0-test" />);
 
     expect(el.querySelector('[data-testid="general-settings-view"]')).toBeTruthy();
-    expect(el.textContent).toContain("Interface language");
-    expect(el.textContent).toContain("Build information");
+    expect(el.textContent).toContain("界面语言");
+    expect(el.textContent).toContain("构建信息");
     expect(el.textContent).toContain("0.1.0-test");
-    expect(el.textContent).toContain("English");
+    expect(el.textContent).toContain("简体中文");
     expect(el.querySelector("select")).toBeNull();
     expect(el.textContent).not.toContain("Configuration domain");
-    expect(el.textContent).not.toContain("简体中文");
+    expect(el.textContent).not.toContain("English");
   });
 });
 
@@ -50,9 +50,9 @@ describe("tokens settings interactions", () => {
     await act(async () => Promise.resolve());
 
     expect(el.querySelectorAll(".app-panel")).toHaveLength(1);
-    expect(el.textContent).toContain("Active tokens");
-    expect(el.textContent).toContain("Planned CLI path");
-    expect(el.textContent).toContain("Rules for the real implementation");
+    expect(el.textContent).toContain("可用 API Token");
+    expect(el.textContent).toContain("CLI 接入路径");
+    expect(el.textContent).toContain("正式实现规则");
   });
 
   it("requires a remark before creating a token and places the button below the input", async () => {
@@ -62,9 +62,9 @@ describe("tokens settings interactions", () => {
     await act(async () => Promise.resolve());
 
     const noteInput = Array.from(el.querySelectorAll("input")).find((item) =>
-      item.getAttribute("placeholder") === "Remark for this token",
+      item.getAttribute("placeholder") === "Token 用途备注",
     ) as HTMLInputElement | undefined;
-    const btn = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("New token")) as HTMLButtonElement | undefined;
+    const btn = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("新建 Token")) as HTMLButtonElement | undefined;
 
     expect(noteInput).toBeTruthy();
     expect(noteInput?.required).toBe(true);
@@ -94,9 +94,9 @@ describe("tokens settings interactions", () => {
     const { el } = mount(<TokensSettingsView />);
     await act(async () => Promise.resolve());
     const noteInput = Array.from(el.querySelectorAll("input")).find((item) =>
-      item.getAttribute("placeholder") === "Remark for this token",
+      item.getAttribute("placeholder") === "Token 用途备注",
     ) as HTMLInputElement | undefined;
-    const btn = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("New token"));
+    const btn = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("新建 Token"));
     expect(noteInput).toBeTruthy();
     expect(btn).toBeTruthy();
     act(() => setInputValue(noteInput!, "CI runner"));
@@ -110,10 +110,10 @@ describe("tokens settings interactions", () => {
     expect(el.textContent).toContain("stl_secret********_token");
     expect(el.textContent).toContain("CI runner");
 
-    const copy = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Copy"));
+    const copy = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制"));
     await act(async () => copy?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(writeTextMock).toHaveBeenCalledWith("stl_secret_token");
-    expect(el.textContent).toContain("Copied");
+    expect(el.textContent).toContain("已复制");
   });
 
   it("shows copyable CLI and MCP setup snippets after token creation without rendering the raw token", async () => {
@@ -130,20 +130,20 @@ describe("tokens settings interactions", () => {
     await act(async () => Promise.resolve());
 
     const noteInput = Array.from(el.querySelectorAll("input")).find((item) =>
-      item.getAttribute("placeholder") === "Remark for this token",
+      item.getAttribute("placeholder") === "Token 用途备注",
     ) as HTMLInputElement | undefined;
-    const create = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("New token"));
+    const create = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("新建 Token"));
     act(() => setInputValue(noteInput!, "Cursor MCP"));
     await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
-    expect(el.textContent).toContain("CLI setup");
-    expect(el.textContent).toContain("Cursor MCP config");
+    expect(el.textContent).toContain("CLI 配置");
+    expect(el.textContent).toContain("Cursor MCP 配置");
     expect(el.textContent).toContain("STARLENS_TOKEN");
     expect(el.textContent).not.toContain("stl_secret_token");
     expect(el.textContent).toContain("stl_secret********_token");
 
-    const copyCli = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Copy CLI setup"));
-    const copyMcp = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Copy MCP config"));
+    const copyCli = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 CLI 配置"));
+    const copyMcp = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 MCP 配置"));
     await act(async () => copyCli?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => copyMcp?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
@@ -169,9 +169,9 @@ describe("tokens settings interactions", () => {
     const { el } = mount(<TokensSettingsView />);
     await act(async () => Promise.resolve());
     expect(el.textContent).toContain("For local scripts");
-    const revoke = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Revoke"));
+    const revoke = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("撤销"));
     await act(async () => revoke?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(el.textContent).toContain("No tokens yet");
+    expect(el.textContent).toContain("暂无 API Token");
   });
 
   it("clears the one-time token after revoke", async () => {
@@ -186,17 +186,17 @@ describe("tokens settings interactions", () => {
     const { el } = mount(<TokensSettingsView />);
     await act(async () => Promise.resolve());
     const noteInput = Array.from(el.querySelectorAll("input")).find((item) =>
-      item.getAttribute("placeholder") === "Remark for this token",
+      item.getAttribute("placeholder") === "Token 用途备注",
     ) as HTMLInputElement | undefined;
-    const create = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("New token"));
+    const create = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("新建 Token"));
     act(() => setInputValue(noteInput!, "For local scripts"));
     await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(el.textContent).not.toContain("stl_secret_token");
     expect(el.textContent).toContain("stl_secret********_token");
-    const revoke = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("Revoke"));
+    const revoke = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("撤销"));
     await act(async () => revoke?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(el.textContent).not.toContain("stl_secret_token");
-    expect(el.textContent).toContain("Token revoked");
+    expect(el.textContent).toContain("Token 已撤销");
   });
 });
 
@@ -211,7 +211,7 @@ describe("AI settings interactions", () => {
     await act(async () => Promise.resolve());
 
     expect(el.querySelector("select")).toBeNull();
-    expect(el.querySelector('button[aria-label="Provider type"]')).toBeTruthy();
+    expect(el.querySelector('button[aria-label="Provider 类型"]')).toBeTruthy();
 
     const setInput = (placeholder: string, value: string) => {
       const input = Array.from(el.querySelectorAll("input")).find(
@@ -228,13 +228,13 @@ describe("AI settings interactions", () => {
       });
     };
 
-    setInput("Display name", "DeepSeek");
-    setInput("Model", "deepseek-chat");
+    setInput("显示名称", "DeepSeek");
+    setInput("模型", "deepseek-chat");
     setInput("Base URL", "https://api.deepseek.com");
-    setInput("API key", "sk-test");
+    setInput("API Key", "sk-test");
 
     const button = Array.from(el.querySelectorAll("button")).find((item) =>
-      item.textContent?.includes("Create config"),
+      item.textContent?.includes("创建配置"),
     );
     await act(async () => button?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
@@ -270,7 +270,7 @@ describe("AI settings interactions", () => {
     const { el } = mount(<AISettingsView />);
     await act(async () => Promise.resolve());
     const validate = Array.from(el.querySelectorAll("button")).find((item) =>
-      item.textContent?.includes("Validate"),
+      item.textContent?.includes("验证"),
     );
     await act(async () => validate?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(el.textContent).toContain("fetch failed");

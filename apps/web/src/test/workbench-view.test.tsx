@@ -110,14 +110,14 @@ describe("workbench view", () => {
     const { el } = mount(<WorkbenchView userName="Tester" />);
     await flushWorkbench();
 
-    expect(el.textContent).toContain("WORKBENCH");
+    expect(el.textContent).toContain("工作台");
     expect(el.textContent).not.toContain("DISCOVER");
-    expect(el.textContent).toContain("TOOLS");
-    expect(el.textContent).toContain("SYSTEM");
-    expect(el.textContent).toContain("Repository");
-    expect(el.textContent).toContain("Selected repository");
-    expect(el.textContent).toContain("AI Search");
-    expect(el.textContent).toContain("Search");
+    expect(el.textContent).toContain("工具");
+    expect(el.textContent).toContain("系统");
+    expect(el.textContent).toContain("仓库");
+    expect(el.textContent).toContain("已选仓库");
+    expect(el.textContent).toContain("AI 搜索");
+    expect(el.textContent).toContain("搜索");
   });
 
   it("keeps favorite and note controls available for the selected repo", async () => {
@@ -125,16 +125,16 @@ describe("workbench view", () => {
     await flushWorkbench();
 
     const favoriteButton = Array.from(el.querySelectorAll("button")).find((button) =>
-      button.getAttribute("aria-label")?.match(/favorite|favorited/i) ||
-      button.textContent?.match(/favorite|favorited/i),
+      button.getAttribute("aria-label")?.includes("重点收藏") ||
+      button.textContent?.includes("重点收藏"),
     );
     const noteBox = Array.from(el.querySelectorAll("textarea")).find(
-      (node) => node.getAttribute("aria-label") === "My note",
+      (node) => node.getAttribute("aria-label") === "我的备注",
     );
 
     expect(favoriteButton).toBeTruthy();
     expect(noteBox).toBeTruthy();
-    expect(el.textContent).toContain("Open on GitHub");
+    expect(el.textContent).toContain("在 GitHub 打开");
   });
 
   it("shows lightweight feedback after manually saving a note", async () => {
@@ -172,9 +172,9 @@ describe("workbench view", () => {
     const { el } = mount(<WorkbenchView userName="Tester" />);
     await flushWorkbench();
 
-    const noteBox = el.querySelector('textarea[aria-label="My note"]') as HTMLTextAreaElement | null;
+    const noteBox = el.querySelector('textarea[aria-label="我的备注"]') as HTMLTextAreaElement | null;
     const saveButton = Array.from(el.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Save"),
+      button.textContent?.includes("保存"),
     ) as HTMLButtonElement | undefined;
 
     expect(noteBox).toBeTruthy();
@@ -198,7 +198,7 @@ describe("workbench view", () => {
     );
 
     expect(JSON.parse(String(patchCall?.[1]?.body ?? "{}"))).toMatchObject({ note: "这个好" });
-    expect(el.textContent).toContain("Saved");
+    expect(el.textContent).toContain("已保存");
   });
 
   it("shows loading state for AI Search after clicking the button", async () => {
@@ -240,7 +240,7 @@ describe("workbench view", () => {
 
     const searchBox = el.querySelector('input[role="searchbox"]') as HTMLInputElement | null;
     const aiSearchButton = Array.from(el.querySelectorAll("button")).find(
-      (button) => button.getAttribute("aria-label") === "AI Search",
+      (button) => button.getAttribute("aria-label") === "AI 搜索",
     ) as HTMLButtonElement | undefined;
 
     expect(searchBox).toBeTruthy();
@@ -258,7 +258,7 @@ describe("workbench view", () => {
 
     expect(aiSearchButton?.disabled).toBe(true);
     expect(aiSearchButton?.getAttribute("aria-busy")).toBe("true");
-    expect(aiSearchButton?.textContent).toContain("Searching");
+    expect(aiSearchButton?.textContent).toContain("搜索中");
 
     await act(async () => {
       resolveAiSearch?.(
@@ -282,7 +282,7 @@ describe("workbench view", () => {
     });
 
     await flushWorkbench();
-    expect(el.textContent).toContain("AI Search: Matched repo-1");
+    expect(el.textContent).toContain("AI 搜索：Matched repo-1");
     expect(el.textContent).toContain("Matched your question directly: \"repo-1\".");
   });
 
@@ -295,9 +295,9 @@ describe("workbench view", () => {
     const rowTags = Array.from(repoPane?.querySelectorAll(".repo-table-row .repo-chip") ?? []);
     const headerText = repoPane?.querySelector(".repo-table-pane__header")?.textContent ?? "";
     const actionGroup = repoPane?.querySelector(".repo-table-pane__filters-actions");
-    const clearButton = actionGroup?.querySelector('button[aria-label="Clear filters"]');
-    const resetSortButton = actionGroup?.querySelector('button[aria-label="Reset sort"]');
-    const topbarSyncButton = el.querySelector('[data-testid="workbench-topbar"] button[aria-label="Sync now"]');
+    const clearButton = actionGroup?.querySelector('button[aria-label="清空筛选"]');
+    const resetSortButton = actionGroup?.querySelector('button[aria-label="重置排序"]');
+    const topbarSyncButton = el.querySelector('[data-testid="workbench-topbar"] button[aria-label="立即同步"]');
 
     expect(repoPane).toBeTruthy();
     expect(listFilterInput).toBeNull();
@@ -306,7 +306,7 @@ describe("workbench view", () => {
     expect(resetSortButton).toBeTruthy();
     expect(clearButton?.textContent?.trim()).toBe("");
     expect(resetSortButton?.textContent?.trim()).toBe("");
-    expect(actionGroup?.querySelector('button[aria-label="Sync now"]')).toBeNull();
+    expect(actionGroup?.querySelector('button[aria-label="立即同步"]')).toBeNull();
 
     await act(async () => {
       (clearButton as HTMLButtonElement | null)?.focus();
@@ -314,12 +314,12 @@ describe("workbench view", () => {
       await Promise.resolve();
     });
 
-    expect(document.body.textContent).toContain("Clear filters");
+    expect(document.body.textContent).toContain("清空筛选");
     expect(topbarSyncButton).toBeTruthy();
-    expect(topbarSyncButton?.textContent).toContain("Sync now");
+    expect(topbarSyncButton?.textContent).toContain("立即同步");
     expect(topbarSyncButton?.className).toContain("workbench-button--primary");
-    expect(headerText).toContain("Actions");
-    expect(headerText).toContain("Tags");
+    expect(headerText).toContain("操作");
+    expect(headerText).toContain("标签");
     expect(rowTags.length).toBeGreaterThan(0);
     expect(rowTags.some((chip) => chip.textContent?.includes("frontend"))).toBe(true);
   });
@@ -330,7 +330,7 @@ describe("workbench view", () => {
 
     const body = el.querySelector(".workbench-body");
     const sidebar = el.querySelector('[data-testid="workbench-sidebar"]');
-    const collapseButton = el.querySelector('button[aria-label="Collapse sidebar"]') as HTMLButtonElement | null;
+    const collapseButton = el.querySelector('button[aria-label="收起侧边栏"]') as HTMLButtonElement | null;
 
     expect(body?.className).not.toContain("is-sidebar-collapsed");
     expect(sidebar?.className).not.toContain("is-collapsed");
@@ -343,8 +343,8 @@ describe("workbench view", () => {
 
     expect(body?.className).toContain("is-sidebar-collapsed");
     expect(sidebar?.className).toContain("is-collapsed");
-    expect(el.querySelector('button[aria-label="All Stars"]')).toBeTruthy();
-    expect(el.querySelector('button[aria-label="Expand sidebar"]')).toBeTruthy();
+    expect(el.querySelector('button[aria-label="全部 Stars"]')).toBeTruthy();
+    expect(el.querySelector('button[aria-label="展开侧边栏"]')).toBeTruthy();
   });
 
   it("does not render the temporary Discover sidebar section", async () => {
@@ -354,8 +354,19 @@ describe("workbench view", () => {
     expect(el.querySelector('section[aria-label="Discover"]')).toBeNull();
     expect(el.querySelector('button[aria-label="Languages"]')).toBeNull();
     expect(el.querySelector('button[aria-label="Tags"]')).toBeNull();
-    expect(el.querySelector('input[aria-label="Filter by language"]')).toBeTruthy();
-    expect(el.querySelector('input[aria-label="Filter by tag"]')).toBeTruthy();
+    expect(el.querySelector('input[aria-label="按语言筛选"]')).toBeTruthy();
+    expect(el.querySelector('input[aria-label="按标签筛选"]')).toBeTruthy();
+  });
+
+  it("renders a documentation shortcut in the sidebar tools section", async () => {
+    const { el } = mount(<WorkbenchView userName="Tester" />);
+    await flushWorkbench();
+
+    const docsLink = el.querySelector('a[aria-label="使用文档"]') as HTMLAnchorElement | null;
+
+    expect(docsLink).toBeTruthy();
+    expect(docsLink?.getAttribute("href")).toBe("/docs");
+    expect(docsLink?.textContent).toContain("使用文档");
   });
 
   it("does not render a close details button in the detail panel", async () => {
@@ -371,13 +382,13 @@ describe("workbench view", () => {
     await flushWorkbench();
 
     const generalEntry = Array.from(el.querySelectorAll(".workbench-nav-item")).find((node) =>
-      node.textContent?.includes("General"),
+      node.textContent?.includes("通用设置"),
     ) as HTMLElement | undefined;
 
     expect(generalEntry).toBeTruthy();
-    expect(el.textContent).toContain("Providers");
+    expect(el.textContent).toContain("AI Provider");
     expect(el.querySelector('[data-testid="repo-table-pane"]')).toBeTruthy();
-    expect(el.textContent).toContain("Selected repository");
+    expect(el.textContent).toContain("已选仓库");
 
     await act(async () => {
       generalEntry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -389,9 +400,9 @@ describe("workbench view", () => {
     expect(el.querySelector('[data-testid="workbench-sidebar"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="repo-table-pane"]')).toBeNull();
     expect(el.querySelector('[data-testid="workbench-settings-pane"]')).toBeTruthy();
-    expect(el.textContent).toContain("Interface language");
-    expect(el.textContent).toContain("Build information");
-    expect(el.textContent).not.toContain("Selected repository");
+    expect(el.textContent).toContain("界面语言");
+    expect(el.textContent).toContain("构建信息");
+    expect(el.textContent).not.toContain("已选仓库");
   });
 
   it("does not request search while typing and only searches on manual submit", async () => {
@@ -427,7 +438,7 @@ describe("workbench view", () => {
     ).length;
     const searchBox = el.querySelector('input[role="searchbox"]') as HTMLInputElement | null;
     const searchButton = Array.from(el.querySelectorAll("button")).find(
-      (button) => button.getAttribute("aria-label") === "Search repositories",
+      (button) => button.getAttribute("aria-label") === "搜索仓库",
     ) as HTMLButtonElement | undefined;
 
     expect(searchBox).toBeTruthy();
@@ -489,10 +500,10 @@ describe("workbench view", () => {
     await flushWorkbench();
 
     const searchButton = Array.from(el.querySelectorAll("button")).find(
-      (button) => button.getAttribute("aria-label") === "Search repositories",
+      (button) => button.getAttribute("aria-label") === "搜索仓库",
     ) as HTMLButtonElement | undefined;
     const aiSearchButton = Array.from(el.querySelectorAll("button")).find(
-      (button) => button.getAttribute("aria-label") === "AI Search",
+      (button) => button.getAttribute("aria-label") === "AI 搜索",
     ) as HTMLButtonElement | undefined;
 
     expect(searchButton?.disabled).toBe(true);

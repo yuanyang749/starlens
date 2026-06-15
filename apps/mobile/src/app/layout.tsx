@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Starlens Mobile",
-  description: "Mobile workbench for searching and organizing GitHub stars.",
+  description: "用于搜索、整理和同步 GitHub Stars 的移动工作台。",
   applicationName: "Starlens",
   appleWebApp: {
     capable: true,
@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body>{children}</body>
     </html>
   );

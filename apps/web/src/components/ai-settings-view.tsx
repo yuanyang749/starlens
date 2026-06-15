@@ -13,11 +13,18 @@ import {
 import { ApiClientError, fetchApi } from "@/lib/api-client";
 
 const providerOptions: Array<{ label: string; value: ProviderType }> = [
-  { label: "OpenAI compatible", value: "openai_compatible" },
+  { label: "OpenAI-compatible", value: "openai_compatible" },
   { label: "Vercel AI Gateway", value: "vercel_gateway" },
-  { label: "Anthropic native", value: "anthropic_native" },
-  { label: "Gemini native", value: "gemini_native" },
+  { label: "Anthropic Native", value: "anthropic_native" },
+  { label: "Gemini Native", value: "gemini_native" },
 ];
+
+function formatValidationStatus(status: string) {
+  if (status === "success") return "验证成功";
+  if (status === "warning") return "验证警告";
+  if (status === "error") return "验证失败";
+  return status;
+}
 
 export function AISettingsView() {
   const [configs, setConfigs] = useState<AiConfig[]>([]);
@@ -43,7 +50,7 @@ export function AISettingsView() {
       setSelectedId((prev) => prev ?? data[0]?.id ?? null);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof ApiClientError ? err.message : "Failed to load AI configs.");
+      setError(err instanceof ApiClientError ? err.message : "AI 配置加载失败。");
     } finally {
       setLoading(false);
     }
@@ -80,9 +87,9 @@ export function AISettingsView() {
       });
       setForm((current) => ({ ...current, apiKey: "" }));
       await loadConfigs();
-      setMessage("Provider config saved.");
+      setMessage("Provider 配置已保存。");
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to create AI config.");
+      setError(err instanceof ApiClientError ? err.message : "AI 配置创建失败。");
     }
   };
 
@@ -95,9 +102,9 @@ export function AISettingsView() {
         body: JSON.stringify(payload),
       });
       await loadConfigs();
-      setMessage("Provider config updated.");
+      setMessage("Provider 配置已更新。");
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to update AI config.");
+      setError(err instanceof ApiClientError ? err.message : "AI 配置更新失败。");
     }
   };
 
@@ -111,13 +118,13 @@ export function AISettingsView() {
       await loadConfigs();
       if (result.status === "error") {
         setMessage(null);
-        setError(result.message || "Provider validation failed.");
+        setError(result.message || "Provider 验证失败。");
         return;
       }
       setError(null);
-      setMessage(result.message || `Validation ${result.status}.`);
+      setMessage(result.message || `验证${result.status === "success" ? "成功" : `结果：${result.status}`}。`);
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to validate AI config.");
+      setError(err instanceof ApiClientError ? err.message : "AI 配置验证失败。");
     }
   };
 
@@ -126,7 +133,7 @@ export function AISettingsView() {
       <section className="app-panel rounded-[24px] p-5">
         <div className="mb-5 flex items-center gap-2 text-sm font-medium">
           <Bot className="h-4 w-4" />
-          Saved providers
+          已保存 Provider
         </div>
         {message ? <p className="mb-3 text-sm text-emerald-500">{message}</p> : null}
         {error ? (
@@ -139,7 +146,7 @@ export function AISettingsView() {
                 loadConfigs();
               }}
             >
-              Retry
+              重试
             </button>
           </div>
         ) : null}
@@ -153,7 +160,7 @@ export function AISettingsView() {
             ))}
           </div>
         ) : configs.length === 0 ? (
-          <p className="rounded border border-dashed p-4 text-sm">No providers yet.</p>
+          <p className="rounded border border-dashed p-4 text-sm">暂无 Provider。</p>
         ) : (
           <div className="space-y-3">
             {configs.map((config) => (
@@ -172,13 +179,13 @@ export function AISettingsView() {
                     }}
                     className="text-sm text-red-500 underline"
                   >
-                    Delete
+                    删除
                   </button>
                 </div>
                 <div className="mt-2 text-xs text-[color:var(--muted)]">
                   {config.providerType} · {config.model}
-                  {config.isDefault ? " · default" : ""}
-                  {config.lastValidationStatus ? ` · ${config.lastValidationStatus}` : ""}
+                  {config.isDefault ? " · 默认" : ""}
+                  {config.lastValidationStatus ? ` · ${formatValidationStatus(config.lastValidationStatus)}` : ""}
                 </div>
               </article>
             ))}
@@ -191,7 +198,7 @@ export function AISettingsView() {
           <input
             value={form.displayName}
             onChange={(event) => updateForm({ displayName: event.target.value })}
-            placeholder="Display name"
+            placeholder="显示名称"
             className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
           />
           <Select
@@ -199,7 +206,7 @@ export function AISettingsView() {
             onValueChange={(value) => updateForm({ providerType: value as ProviderType })}
           >
             <SelectTrigger
-              aria-label="Provider type"
+              aria-label="Provider 类型"
               className="ai-provider-select-trigger"
             >
               <SelectValue />
@@ -215,7 +222,7 @@ export function AISettingsView() {
           <input
             value={form.model}
             onChange={(event) => updateForm({ model: event.target.value })}
-            placeholder="Model"
+            placeholder="模型"
             className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
           />
           <input
@@ -227,7 +234,7 @@ export function AISettingsView() {
           <input
             value={form.apiKey}
             onChange={(event) => updateForm({ apiKey: event.target.value })}
-            placeholder="API key"
+            placeholder="API Key"
             type="password"
             className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none md:col-span-2"
           />
@@ -239,7 +246,7 @@ export function AISettingsView() {
               onChange={(event) => updateForm({ enabled: event.target.checked })}
               type="checkbox"
             />
-            Enabled
+            启用
           </label>
           <label className="inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">
             <input
@@ -247,38 +254,38 @@ export function AISettingsView() {
               onChange={(event) => updateForm({ isDefault: event.target.checked })}
               type="checkbox"
             />
-            Default
+            默认
           </label>
           <button
             onClick={createConfig}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-black px-4 text-sm font-medium text-white"
           >
             <Plus className="h-4 w-4" />
-            Create config
+            创建配置
           </button>
         </div>
 
         {selected ? (
           <div className="mt-6 space-y-3 rounded-[18px] border border-[color:var(--line)] p-4">
-            <div className="text-sm font-medium">Editing: {selected.displayName}</div>
+            <div className="text-sm font-medium">正在编辑：{selected.displayName}</div>
             <div className="flex flex-wrap gap-3 text-sm">
               <button
                 className="underline"
                 onClick={() => patchSelected({ isDefault: true })}
               >
-                Set default
+                设为默认
               </button>
               <button className="underline" onClick={validateSelected}>
-                Validate
+                验证
               </button>
               <button
                 className="underline"
                 onClick={async () => {
                   await fetchApi(`/api/ai/configs/${selected.id}/models`);
-                  setMessage("Model list fetched.");
+                  setMessage("模型列表已获取。");
                 }}
               >
-                Fetch models
+                获取模型
               </button>
             </div>
           </div>

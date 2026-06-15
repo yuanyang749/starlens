@@ -8,7 +8,7 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Starlens",
-  description: "A calm workbench for finding and organizing your GitHub stars.",
+  description: "用于搜索、整理和同步 GitHub Stars 的中文工作台。",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", "font-sans", geist.variable)} suppressHydrationWarning>
+    <html lang="zh-CN" className={cn("h-full", "font-sans", geist.variable)} suppressHydrationWarning>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
       </body>

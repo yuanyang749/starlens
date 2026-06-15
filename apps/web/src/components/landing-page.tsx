@@ -147,7 +147,7 @@ function WorkspaceLink({
   if (!githubAuthEnabled) {
     return (
       <span
-        title="GitHub OAuth is not configured in this local environment."
+        title="当前本地环境尚未配置 GitHub OAuth。"
         className={`${className} cursor-not-allowed opacity-55`}
       >
         {children}
@@ -576,7 +576,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             className="landing-button landing-button--primary h-10 px-4 text-xs font-semibold"
           >
             <Github className="h-4 w-4" />
-            Workspace
+            进入工作台
           </WorkspaceLink>
         </div>
         </footer>

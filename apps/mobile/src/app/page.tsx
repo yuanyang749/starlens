@@ -11,7 +11,7 @@ export default async function MobilePage() {
 
   return (
     <MobileWorkbench
-      userName={user.name ?? user.email ?? "GitHub user"}
+      userName={user.name ?? user.email ?? "GitHub 用户"}
       userAvatarUrl={user.image ?? null}
     />
   );

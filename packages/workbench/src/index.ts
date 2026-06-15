@@ -68,7 +68,7 @@ export async function fetchApi<T>(input: RequestInfo | URL, init?: RequestInit):
   const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
 
   if (!payload || payload.ok !== true) {
-    const message = payload?.error?.message ?? `Request failed with status ${response.status}`;
+    const message = payload?.error?.message ?? `请求失败，状态码 ${response.status}`;
     const code = payload?.error?.code ?? "invalid_api_response";
     throw new ApiClientError(message, code, response.status);
   }
@@ -172,7 +172,7 @@ export function useMobileWorkbench() {
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === "AbortError") return;
-        setError(caught instanceof Error ? caught.message : "Search failed.");
+        setError(caught instanceof Error ? caught.message : "搜索失败。");
       })
       .finally(() => setLoadingRepos(false));
   }, [fetchSearchPage]);
@@ -199,7 +199,7 @@ export function useMobileWorkbench() {
       setPageSize(data.pageSize);
       setError(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Load more failed.");
+      setError(caught instanceof Error ? caught.message : "加载更多失败。");
     } finally {
       setLoadingMore(false);
     }
@@ -222,7 +222,7 @@ export function useMobileWorkbench() {
       })
       .catch((caught) => {
         if (caught instanceof DOMException && caught.name === "AbortError") return;
-        setError(caught instanceof Error ? caught.message : "Detail failed.");
+        setError(caught instanceof Error ? caught.message : "详情加载失败。");
       });
     return () => controller.abort();
   }, [selectedId]);
@@ -264,10 +264,10 @@ export function useMobileWorkbench() {
     try {
       const result = await fetchApi<SyncResult>("/api/sync", { method: "POST" });
       setLastSync(result);
-      setMessage(`Sync ${result.status}: ${result.counts.fetched} fetched.`);
+      setMessage(`同步${result.status === "success" ? "完成" : "失败"}：获取 ${result.counts.fetched} 个。`);
       await refreshList();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Sync failed.");
+      setError(caught instanceof Error ? caught.message : "同步失败。");
     } finally {
       setSyncing(false);
     }
@@ -291,9 +291,9 @@ export function useMobileWorkbench() {
       setMode("all");
       setPage(1);
       setSelectedId(reposFromAi[0]?.id ?? null);
-      setMessage(reposFromAi.length > 0 ? `AI Search: ${result.answer}` : "AI Search found no repositories.");
+      setMessage(reposFromAi.length > 0 ? `AI 搜索：${result.answer}` : "AI 搜索未找到匹配仓库。");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "AI Search failed.");
+      setError(caught instanceof Error ? caught.message : "AI 搜索失败。");
     } finally {
       setAiSearching(false);
     }
@@ -318,7 +318,7 @@ export function useMobileWorkbench() {
       return true;
     } catch (caught) {
       patchRepoInList(current);
-      setError(caught instanceof Error ? caught.message : "Update failed.");
+      setError(caught instanceof Error ? caught.message : "更新失败。");
       return false;
     }
   }, [aiSearchResults, patchRepoInList, repos, selectedRepo]);
@@ -342,7 +342,7 @@ export function useMobileWorkbench() {
     if (!selectedRepo) return;
     if (noteDebounceRef.current) clearTimeout(noteDebounceRef.current);
     const saved = await updateRepo(selectedRepo.id, { note: noteDraft });
-    if (saved) setMessage("Note saved.");
+    if (saved) setMessage("备注已保存。");
   }, [noteDraft, selectedRepo, updateRepo]);
 
   const addTag = useCallback(async () => {
@@ -359,7 +359,7 @@ export function useMobileWorkbench() {
       patchRepoInList(repo);
       setNewTag("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Add tag failed.");
+      setError(caught instanceof Error ? caught.message : "添加标签失败。");
     } finally {
       setTagSubmitting(false);
     }
@@ -373,7 +373,7 @@ export function useMobileWorkbench() {
       const repo = await fetchApi<RepoSummary>(`/api/repos/${selectedRepo.id}`);
       patchRepoInList(repo);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Delete tag failed.");
+      setError(caught instanceof Error ? caught.message : "删除标签失败。");
     } finally {
       setTagDeleting(null);
     }
@@ -388,7 +388,7 @@ export function useMobileWorkbench() {
       setProviders(nextProviders);
       setTokens(nextTokens);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Settings failed.");
+      setError(caught instanceof Error ? caught.message : "设置加载失败。");
     }
   }, []);
 

@@ -16,7 +16,7 @@ export default async function MobileWorkspacePage() {
       <DesktopWorkspaceRedirect />
       <MobileWorkbench
         basePath="/mobile"
-        userName={user.name ?? user.email ?? "GitHub user"}
+        userName={user.name ?? user.email ?? "GitHub 用户"}
         userAvatarUrl={user.image ?? null}
       />
     </>

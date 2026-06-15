@@ -18,7 +18,7 @@ export function SignOutButton({
       }
     >
       <LogOut className="h-4 w-4" />
-      Sign out
+      退出登录
     </button>
   );
 }

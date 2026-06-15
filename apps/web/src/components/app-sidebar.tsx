@@ -15,13 +15,13 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/app", label: "All stars", icon: Search },
-  { href: "/app", label: "Favorites", icon: Star },
-  { href: "/app", label: "Recent", icon: Layers3 },
-  { href: "/app", label: "By tag", icon: Tag },
-  { href: "/app/providers", label: "Providers", icon: Bot },
-  { href: "/app/tokens", label: "Tokens", icon: KeyRound },
-  { href: "/app/general", label: "General", icon: Settings2 },
+  { href: "/app", label: "全部 Stars", icon: Search },
+  { href: "/app", label: "重点收藏", icon: Star },
+  { href: "/app", label: "最近同步", icon: Layers3 },
+  { href: "/app", label: "按标签", icon: Tag },
+  { href: "/app/providers", label: "AI Provider", icon: Bot },
+  { href: "/app/tokens", label: "API Token", icon: KeyRound },
+  { href: "/app/general", label: "通用设置", icon: Settings2 },
 ];
 
 export function AppSidebar() {
@@ -64,10 +64,10 @@ export function AppSidebar() {
       <div className="mt-auto border-t border-[color:var(--line)] px-6 py-5 text-sm text-[color:var(--muted)]">
         <div className="mb-2 flex items-center gap-2 text-[color:var(--foreground)]">
           <House className="h-4 w-4 text-[color:var(--accent)]" />
-          Public and app split
+          公共站点与工作台分离
         </div>
         <p className="leading-7">
-          The public site stays product-facing while the app holds the real workspace flow.
+          首页负责产品介绍，工作台承载搜索、同步和配置等实际操作流程。
         </p>
       </div>
     </aside>

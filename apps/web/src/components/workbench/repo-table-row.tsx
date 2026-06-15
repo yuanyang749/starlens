@@ -55,7 +55,7 @@ export function RepoTableRow({
       <span className="repo-table-row__metric">{formatCompactNumber(repo.stargazersCount)}</span>
       <span className="repo-table-row__language">
         <span className="repo-language-dot" aria-hidden="true" />
-        {repo.language || "Unknown"}
+        {repo.language || "未知"}
       </span>
       <span className="repo-table-row__updated">{formatDate(repo.pushedAtGithub)}</span>
       <span className="repo-table-row__tags">

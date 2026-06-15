@@ -61,8 +61,8 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
     response = await fetch(input, init);
   } catch (caught) {
     throw new Error(
-      `Network request failed: ${
-        caught instanceof Error ? caught.message : "Please check your connection."
+      `网络请求失败：${
+        caught instanceof Error ? caught.message : "请检查网络连接。"
       }`,
     );
   }
@@ -72,18 +72,18 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   try {
     payload = (await response.json()) as ApiResponse<T>;
   } catch {
-    throw new Error("Response parsing failed: server returned invalid JSON.");
+    throw new Error("响应解析失败：服务器返回了无效 JSON。");
   }
 
   if (!payload.ok) {
-    throw new Error(`Business request failed: ${payload.error.message}`);
+    throw new Error(`业务请求失败：${payload.error.message}`);
   }
 
   return payload.data;
 }
 
 export function WorkbenchView({
-  userName = "GitHub user",
+  userName = "GitHub 用户",
   userAvatarUrl = null,
 }: {
   userName?: string;
@@ -170,8 +170,8 @@ export function WorkbenchView({
 
         setError(
           caught instanceof Error
-            ? `List request failed: ${caught.message}`
-            : "List request failed: search failed.",
+            ? `列表请求失败：${caught.message}`
+            : "列表请求失败：搜索失败。",
         );
       });
 
@@ -221,8 +221,8 @@ export function WorkbenchView({
 
         setError(
           caught instanceof Error
-            ? `Detail request failed: ${caught.message}`
-            : "Detail request failed: loading failed.",
+            ? `详情请求失败：${caught.message}`
+            : "详情请求失败：加载失败。",
         );
       });
 
@@ -265,8 +265,8 @@ export function WorkbenchView({
         patchRepoInList(currentRepo);
         setError(
           caught instanceof Error
-            ? `Detail request failed: ${caught.message}`
-            : "Detail request failed: update failed.",
+            ? `详情请求失败：${caught.message}`
+            : "详情请求失败：更新失败。",
         );
         return false;
       }
@@ -317,7 +317,7 @@ export function WorkbenchView({
 
     const saved = await updateRepo(selectedRepo.id, { note: noteDraft });
     if (saved) {
-      showNoteSaveFeedback("Saved");
+      showNoteSaveFeedback("已保存");
     }
   }, [noteDraft, selectedRepo, showNoteSaveFeedback, updateRepo]);
 
@@ -338,25 +338,25 @@ export function WorkbenchView({
     try {
       const result = await apiJson<SyncResult>("/api/sync", { method: "POST" });
       setLastSync(result);
-      const statusText = result.status === "success" ? "completed" : "failed";
+      const statusText = result.status === "success" ? "完成" : "失败";
       setSyncMessage(
-        `Sync ${statusText}: ${result.counts.fetched} fetched, ${result.counts.unstarred} unstarred.`,
+        `同步${statusText}：获取 ${result.counts.fetched} 个，取消 Star ${result.counts.unstarred} 个。`,
       );
 
       if (result.status === "error") {
         const levelHint =
           result.errorLevel === "auth"
-            ? "GitHub token may be expired, please reconnect."
+            ? "GitHub Token 可能已过期，请重新连接。"
             : result.errorLevel === "rate_limit"
-              ? "GitHub API rate limit reached, retry later."
+              ? "GitHub API 已触发限流，请稍后重试。"
               : result.errorLevel === "network"
-                ? "Network issue detected, please retry."
-                : "Unknown sync issue.";
+                ? "检测到网络问题，请重试。"
+                : "未知同步问题。";
         setError(`${levelHint}${result.errorSummary ? ` (${result.errorSummary})` : ""}`);
       }
       refreshList();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Sync failed.");
+      setError(caught instanceof Error ? caught.message : "同步失败。");
     } finally {
       setSyncing(false);
     }
@@ -388,8 +388,8 @@ export function WorkbenchView({
       setNewTag(tag);
       setError(
         caught instanceof Error
-          ? `Detail request failed: ${caught.message}`
-          : "Detail request failed: add tag failed.",
+          ? `详情请求失败：${caught.message}`
+          : "详情请求失败：添加标签失败。",
       );
     } finally {
       setTagSubmitting(false);
@@ -402,7 +402,7 @@ export function WorkbenchView({
     const question = (queryDirty ? queryDraft : query).trim();
 
     if (!question) {
-      setError("AI Search needs a query.");
+      setError("AI 搜索需要先输入问题。");
       return;
     }
 
@@ -439,8 +439,8 @@ export function WorkbenchView({
 
       setSyncMessage(
         aiRepos.length > 0
-          ? `AI Search: ${result.answer}`
-          : "AI Search: 未找到匹配仓库，请尝试更具体关键词。",
+          ? `AI 搜索：${result.answer}`
+          : "AI 搜索：未找到匹配仓库，请尝试更具体关键词。",
       );
       setAiSearchInsights(
         result.candidates
@@ -459,8 +459,8 @@ export function WorkbenchView({
     } catch (caught) {
       setError(
         caught instanceof Error
-          ? `AI Search failed: ${caught.message}`
-          : "AI Search failed.",
+          ? `AI 搜索失败：${caught.message}`
+          : "AI 搜索失败。",
       );
     } finally {
       setAiSearching(false);
@@ -528,8 +528,8 @@ export function WorkbenchView({
       patchRepoInList(prevRepo);
       setError(
         caught instanceof Error
-          ? `Detail request failed: ${caught.message}`
-          : "Detail request failed: delete tag failed.",
+          ? `详情请求失败：${caught.message}`
+          : "详情请求失败：删除标签失败。",
       );
     } finally {
       setTagDeleting(null);
@@ -549,7 +549,7 @@ export function WorkbenchView({
       return formatDateTime(repos[0].lastSyncedAt);
     }
 
-    return "Not synced yet";
+    return "尚未同步";
   }, [lastSync, repos, selectedRepo]);
 
   const favoriteCount = useMemo(
@@ -600,7 +600,7 @@ export function WorkbenchView({
           <button
             type="button"
             className="workbench-banner__close"
-            aria-label="Dismiss error"
+            aria-label="关闭错误提示"
             onClick={() => setError(null)}
           >
             <X className="h-4 w-4" />
@@ -625,7 +625,7 @@ export function WorkbenchView({
           <button
             type="button"
             className="workbench-banner__close"
-            aria-label="Dismiss message"
+            aria-label="关闭提示"
             onClick={() => {
               setSyncMessage(null);
               setAiSearchInsights([]);
@@ -678,7 +678,7 @@ export function WorkbenchView({
           favoriteCount={favoriteCount}
           lastSyncText={lastSyncText}
           syncStatusText={
-            lastSync ? `${lastSync.counts.fetched} repos · ${lastSync.status}` : `${allStarsTotal} repos tracked`
+            lastSync ? `${lastSync.counts.fetched} 个仓库 · ${lastSync.status === "success" ? "成功" : "失败"}` : `已追踪 ${allStarsTotal} 个仓库`
           }
           collapsed={sidebarCollapsed}
           onCollapsedChange={setSidebarCollapsed}
