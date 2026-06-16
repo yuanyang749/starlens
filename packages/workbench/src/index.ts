@@ -51,6 +51,64 @@ export type WorkbenchMode = "all" | "favorites" | "recent" | "settings";
 
 export type SettingsSection = "general" | "providers" | "tokens";
 
+// 中文注释：显式声明共享 hook 的公共返回类型，避免干净 Docker 构建时跨包推断退化为 any。
+export type MobileWorkbenchState = {
+  mode: WorkbenchMode;
+  settingsSection: SettingsSection;
+  queryDraft: string;
+  submittedQuery: string;
+  language: string;
+  tagFilter: string;
+  sort: SearchSort;
+  page: number;
+  pageSize: number;
+  repos: RepoSummary[];
+  total: number;
+  totalPages: number;
+  selectedId: string | null;
+  selectedRepo: RepoSummary | null;
+  noteDraft: string;
+  newTag: string;
+  error: string | null;
+  message: string | null;
+  lastSync: SyncResult | null;
+  syncing: boolean;
+  loadingRepos: boolean;
+  loadingMore: boolean;
+  aiSearching: boolean;
+  aiSearchMode: boolean;
+  hasMore: boolean;
+  favoriteUpdatingId: string | null;
+  tagSubmitting: boolean;
+  tagDeleting: string | null;
+  providers: AiConfig[];
+  tokens: TokenRecord[];
+  actions: {
+    setMode: (value: WorkbenchMode) => void;
+    setSettingsSection: (value: SettingsSection) => void;
+    setQueryDraft: (value: string) => void;
+    submitSearch: () => void;
+    aiSearch: () => Promise<void>;
+    syncNow: () => Promise<void>;
+    setLanguage: (value: string) => void;
+    setTagFilter: (value: string) => void;
+    setSort: (value: SearchSort) => void;
+    setPage: (value: number) => void;
+    loadMore: () => Promise<void>;
+    clearFilters: () => void;
+    setSelectedId: (value: string | null) => void;
+    setError: (value: string | null) => void;
+    setMessage: (value: string | null) => void;
+    toggleFavorite: (repo: RepoSummary) => Promise<void>;
+    changeNote: (value: string) => void;
+    saveNoteNow: () => Promise<void>;
+    setNewTag: (value: string) => void;
+    addTag: () => Promise<void>;
+    deleteTag: (tag: string) => Promise<void>;
+    loadSettings: () => Promise<void>;
+  };
+};
+
 export class ApiClientError extends Error {
   code: string;
   status: number;
@@ -96,7 +154,7 @@ function buildSearchParams(input: {
   return params;
 }
 
-export function useMobileWorkbench() {
+export function useMobileWorkbench(): MobileWorkbenchState {
   const [mode, setMode] = useState<WorkbenchMode>("all");
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("general");
   const [queryDraft, setQueryDraft] = useState("");

@@ -1,0 +1,45 @@
+# 中文注释：Starlens 自托管推荐反代配置，先保留 HTTP 和 ACME challenge，证书签发后再启用 HTTPS server。
+server {
+    listen 80;
+    listen [::]:80;
+    server_name starlens.520ai.xin;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /usr/share/nginx/html;
+        default_type "text/plain";
+        allow all;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3333;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+
+# 中文注释：证书路径生成后取消下面 server 块注释，并把 HTTP server 中的 location / 改为 301 跳转。
+# server {
+#     listen 443 ssl http2;
+#     listen [::]:443 ssl http2;
+#     server_name starlens.520ai.xin;
+#
+#     ssl_certificate /usr/local/openresty/nginx/conf/ssl/starlens.520ai.xin/fullchain.pem;
+#     ssl_certificate_key /usr/local/openresty/nginx/conf/ssl/starlens.520ai.xin/privkey.pem;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#
+#     location / {
+#         proxy_pass http://127.0.0.1:3333;
+#         proxy_http_version 1.1;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto https;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection "upgrade";
+#     }
+# }

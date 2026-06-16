@@ -1,0 +1,37 @@
+services:
+  starlens-web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: runner
+    image: starlens-web:latest
+    container_name: starlens-web
+    restart: unless-stopped
+    env_file:
+      - ./.env.production
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    ports:
+      - "3333:3000"
+    networks:
+      - 1panel-network
+
+  starlens-migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: migrator
+    image: starlens-migrate:latest
+    container_name: starlens-migrate
+    profiles:
+      - migrate
+    env_file:
+      - ./.env.production
+    networks:
+      - 1panel-network
+
+networks:
+  1panel-network:
+    external: true

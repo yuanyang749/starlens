@@ -100,6 +100,75 @@ corepack pnpm --filter @starlens/web start
 
 反向代理需要转发 HTTPS 请求到 Next.js 服务，并保持 `NEXTAUTH_URL` 与公网域名一致。建议在代理层开启 HTTPS、HTTP/2、压缩和基础访问日志。
 
+## Docker 自托管
+
+仓库内提供 Docker 部署配置，适合 1Panel、OpenResty 和自管 PostgreSQL 的服务器。默认宿主机端口使用 `3333`，容器内仍使用 Next.js 默认的 `3000`。
+
+准备生产环境变量：
+
+```bash
+cp deploy/.env.production.example deploy/.env.production
+```
+
+至少填写：
+
+| 变量 | 说明 |
+| --- | --- |
+| `NEXTAUTH_URL` | 对外访问地址，例如 `http://your-server-ip:3333` 或正式 HTTPS 域名 |
+| `DATABASE_URL` | PostgreSQL 连接串；1Panel 同网络容器可使用 `1Panel-postgresql-xIiE:5432` |
+| `AUTH_SECRET` | NextAuth 会话密钥 |
+| `AUTH_GITHUB_ID` | GitHub OAuth Client ID |
+| `AUTH_GITHUB_SECRET` | GitHub OAuth Client Secret |
+| `TOKEN_ENCRYPTION_SECRET` | GitHub token、AI key 和额外 header 的加密密钥 |
+
+启动前先执行迁移：
+
+```bash
+docker compose -f deploy/docker-compose.yml --profile migrate run --rm starlens-migrate
+```
+
+启动 Web 服务：
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --build starlens-web
+```
+
+服务默认暴露在：
+
+```text
+http://服务器地址:3333
+```
+
+如果前面有 OpenResty 或 1Panel 网站反代，代理目标应指向 `127.0.0.1:3333`，并把 `NEXTAUTH_URL` 改成最终 HTTPS 域名。GitHub OAuth App 的回调地址必须同步改为：
+
+```text
+{NEXTAUTH_URL}/api/auth/callback/github
+```
+
+### OpenResty 与 HTTPS
+
+1Panel/OpenResty 场景下可以复用仓库里的反代模板：
+
+```bash
+cp deploy/openresty-starlens.conf.example /opt/1panel/www/conf.d/starlens.520ai.xin.conf
+docker exec 1Panel-openresty-oXOm nginx -t
+docker exec 1Panel-openresty-oXOm nginx -s reload
+```
+
+正式域名上线前，需要在 Cloudflare 创建 DNS 记录：
+
+```text
+A  starlens  服务器公网 IP
+```
+
+DNS 生效后，推荐用 Let’s Encrypt/acme.sh 签发免费证书并自动续期：
+
+```bash
+DOMAIN=starlens.520ai.xin PUBLIC_IP=140.238.61.108 bash deploy/issue-letsencrypt.sh
+```
+
+`acme.sh` 会安装 cron 任务自动续期。证书路径生成后，在 OpenResty 配置中启用 HTTPS server，并把 HTTP 站点的 `/` 访问改为 301 跳转到 HTTPS。
+
 ## 数据库迁移
 
 Starlens 使用 Drizzle 管理 PostgreSQL schema。首次上线或 schema 变更后执行：

@@ -15,6 +15,9 @@ const withMDX = createMDX({
 const nextConfig: NextConfig = {
   // 中文注释：允许文档页直接使用 MDX，保持用户文档可读、可维护。
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
+  // 中文注释：自托管 Docker 部署只复制独立运行产物，减少镜像体积和运行时依赖。
+  output: "standalone",
+  outputFileTracingRoot: workspaceRoot,
   transpilePackages: ["@starlens/core", "@starlens/mobile", "@starlens/server", "@starlens/workbench"],
   turbopack: {
     root: workspaceRoot,
