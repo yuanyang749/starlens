@@ -5,6 +5,7 @@ const {
   deleteAiConfigMock,
   getAiConfigModelsMock,
   getApiUserMock,
+  getSystemDefaultAiRuntimeStatusMock,
   listAiConfigsMock,
   updateAiConfigMock,
   validateAiConfigMock,
@@ -13,6 +14,7 @@ const {
   deleteAiConfigMock: vi.fn(),
   getAiConfigModelsMock: vi.fn(),
   getApiUserMock: vi.fn(),
+  getSystemDefaultAiRuntimeStatusMock: vi.fn(),
   listAiConfigsMock: vi.fn(),
   updateAiConfigMock: vi.fn(),
   validateAiConfigMock: vi.fn(),
@@ -26,6 +28,7 @@ vi.mock("@starlens/server/server/ai/configs", () => ({
   createAiConfig: createAiConfigMock,
   deleteAiConfig: deleteAiConfigMock,
   getAiConfigModels: getAiConfigModelsMock,
+  getSystemDefaultAiRuntimeStatus: getSystemDefaultAiRuntimeStatusMock,
   listAiConfigs: listAiConfigsMock,
   updateAiConfig: updateAiConfigMock,
   validateAiConfig: validateAiConfigMock,
@@ -148,6 +151,31 @@ describe("AI config API routes", () => {
     await expect(json(models)).resolves.toMatchObject({
       ok: true,
       data: { models: [{ id: "deepseek-chat" }], source: "provider" },
+    });
+  });
+
+  it("returns redacted system default AI runtime status", async () => {
+    const { GET } = await import("@/app/api/ai/system-default/route");
+    getSystemDefaultAiRuntimeStatusMock.mockReturnValue({
+      baseUrl: "https://newapi.example/v1",
+      configured: true,
+      enabled: true,
+      model: "gpt-4.1-mini",
+      providerType: "openai_compatible",
+      source: "system_default",
+    });
+
+    const response = await GET(new Request("https://starlens.test/api/ai/system-default"));
+
+    expect(getSystemDefaultAiRuntimeStatusMock).toHaveBeenCalledWith();
+    await expect(json(response)).resolves.toMatchObject({
+      ok: true,
+      data: {
+        baseUrl: "https://newapi.example/v1",
+        configured: true,
+        model: "gpt-4.1-mini",
+        providerType: "openai_compatible",
+      },
     });
   });
 });

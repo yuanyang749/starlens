@@ -5,6 +5,18 @@ import type { AiConfig, ProviderType } from "@starlens/core";
 import { getDb } from "../../db/client";
 import { userAiConfigs } from "../../db/schema";
 import { decryptSecret, encryptSecret } from "../crypto/secrets";
+import {
+  cleanString,
+  normalizeProviderType,
+  providerDefaults,
+  resolveSystemDefaultAiRuntimeConfig,
+  supportsRuntimeCapability,
+  type AiRuntimeCapability,
+  type AiRuntimeConfig,
+  type AiRuntimeConfigResolution,
+  type AiRuntimeConfigSource,
+  type SystemDefaultAiRuntimeStatus,
+} from "./runtime-resolver";
 
 type AiConfigRow = typeof userAiConfigs.$inferSelect;
 type AiConfigInput = {
@@ -17,28 +29,14 @@ type AiConfigInput = {
   model?: string;
   providerType?: ProviderType;
 };
-export type AiRuntimeConfig = {
-  id: string;
-  providerType: ProviderType;
-  model: string;
-  baseUrl: string | null;
-  apiKey: string;
-  extraHeaders: Record<string, string>;
-};
-
-const providerTypes = new Set<ProviderType>([
-  "vercel_gateway",
-  "openai_compatible",
-  "anthropic_native",
-  "gemini_native",
-]);
-
-const providerDefaults: Record<ProviderType, string | null> = {
-  anthropic_native: "https://api.anthropic.com",
-  gemini_native: "https://generativelanguage.googleapis.com",
-  openai_compatible: null,
-  vercel_gateway: "https://ai-gateway.vercel.sh/v1",
-};
+export type {
+  AiRuntimeCapability,
+  AiRuntimeConfig,
+  AiRuntimeConfigResolution,
+  AiRuntimeConfigSource,
+  SystemDefaultAiRuntimeStatus,
+} from "./runtime-resolver";
+export { getSystemDefaultAiRuntimeStatus } from "./runtime-resolver";
 
 function toApiConfig(config: AiConfigRow): AiConfig {
   return {
@@ -53,16 +51,6 @@ function toApiConfig(config: AiConfigRow): AiConfig {
     lastValidationStatus: config.lastValidationStatus as AiConfig["lastValidationStatus"],
     lastValidationError: config.lastValidationError,
   };
-}
-
-function normalizeProviderType(value: unknown): ProviderType | null {
-  return typeof value === "string" && providerTypes.has(value as ProviderType)
-    ? (value as ProviderType)
-    : null;
-}
-
-function cleanString(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function encryptHeaders(headers?: Record<string, string> | null) {
@@ -125,6 +113,36 @@ export async function getDefaultAiRuntimeConfig(userId: string): Promise<AiRunti
     baseUrl: resolveProviderBase(config),
     apiKey: config.apiKeyEncrypted ? decryptSecret(config.apiKeyEncrypted) : "",
     extraHeaders: decryptHeaders(config.extraHeadersEncrypted),
+  };
+}
+
+export async function resolveAiRuntimeConfig(
+  userId: string,
+  capability: AiRuntimeCapability,
+): Promise<AiRuntimeConfigResolution> {
+  try {
+    const userDefault = await getDefaultAiRuntimeConfig(userId);
+    if (supportsRuntimeCapability(userDefault, capability)) {
+      return {
+        config: userDefault,
+        source: "user_default",
+      };
+    }
+  } catch {
+    // 中文注释：用户默认配置损坏时继续尝试系统默认，避免把整条 AI 链路直接打断。
+  }
+
+  const systemDefault = resolveSystemDefaultAiRuntimeConfig();
+  if (supportsRuntimeCapability(systemDefault, capability)) {
+    return {
+      config: systemDefault,
+      source: "system_default",
+    };
+  }
+
+  return {
+    config: null,
+    source: "none",
   };
 }
 

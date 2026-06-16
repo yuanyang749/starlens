@@ -19,6 +19,15 @@ const providerOptions: Array<{ label: string; value: ProviderType }> = [
   { label: "Gemini Native", value: "gemini_native" },
 ];
 
+type SystemDefaultAiStatus = {
+  baseUrl: string | null;
+  configured: boolean;
+  enabled: boolean;
+  model: string | null;
+  providerType: ProviderType | null;
+  source: "system_default";
+};
+
 function formatValidationStatus(status: string) {
   if (status === "success") return "验证成功";
   if (status === "warning") return "验证警告";
@@ -28,6 +37,7 @@ function formatValidationStatus(status: string) {
 
 export function AISettingsView() {
   const [configs, setConfigs] = useState<AiConfig[]>([]);
+  const [systemDefault, setSystemDefault] = useState<SystemDefaultAiStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -56,13 +66,38 @@ export function AISettingsView() {
     }
   };
 
+  const loadSystemDefaultStatus = async (signal?: AbortSignal) => {
+    try {
+      const data = await fetchApi<SystemDefaultAiStatus>("/api/ai/system-default", { signal });
+      setSystemDefault(data);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setSystemDefault(null);
+    }
+  };
+
   useEffect(() => {
     const controller = new AbortController();
-    void Promise.resolve().then(() => loadConfigs(controller.signal));
+    void Promise.all([
+      loadConfigs(controller.signal),
+      loadSystemDefaultStatus(controller.signal),
+    ]);
     return () => controller.abort();
   }, []);
 
   const selected = configs.find((config) => config.id === selectedId) ?? null;
+  const userDefault = configs.find((config) => config.isDefault && config.enabled) ?? null;
+  const isUsingSystemDefault = !userDefault && Boolean(systemDefault?.configured && systemDefault.enabled);
+  const runtimeStatusTitle = userDefault
+    ? "当前使用：用户默认 Provider"
+    : isUsingSystemDefault
+      ? "当前使用：系统默认 AI"
+      : "当前没有默认 AI Provider";
+  const runtimeStatusDetail = userDefault
+    ? `${userDefault.displayName} · ${userDefault.providerType} · ${userDefault.model}`
+    : isUsingSystemDefault
+      ? `${systemDefault?.providerType ?? "openai_compatible"} · ${systemDefault?.model ?? "未设置模型"}`
+      : "创建并设为默认后，工作台 AI 问答会优先使用你的 Provider。";
 
   const updateForm = (updates: Partial<typeof form>) => {
     setForm((current) => ({ ...current, ...updates }));
@@ -134,6 +169,15 @@ export function AISettingsView() {
         <div className="mb-5 flex items-center gap-2 text-sm font-medium">
           <Bot className="h-4 w-4" />
           已保存 Provider
+        </div>
+        <div className="mb-4 rounded border border-[color:var(--line)] bg-[color:var(--surface-2)] p-3">
+          <div className="text-sm font-medium">{runtimeStatusTitle}</div>
+          <div className="mt-1 text-xs text-[color:var(--muted)]">{runtimeStatusDetail}</div>
+          {isUsingSystemDefault && systemDefault?.baseUrl ? (
+            <div className="mt-1 text-xs text-[color:var(--muted)]">
+              Base URL：{systemDefault.baseUrl}
+            </div>
+          ) : null}
         </div>
         {message ? <p className="mb-3 text-sm text-emerald-500">{message}</p> : null}
         {error ? (

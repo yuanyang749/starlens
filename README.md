@@ -110,9 +110,11 @@ AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
 DATABASE_URL=postgres://starlens:starlens@localhost:54329/starlens_dev
 TOKEN_ENCRYPTION_SECRET=
-OPENAI_API_KEY=
-OPENAI_BASE_URL=
-OPENAI_MODEL_KEY=
+SYSTEM_AI_API_KEY=
+SYSTEM_AI_BASE_URL=
+SYSTEM_AI_MODEL=
+SYSTEM_AI_PROVIDER_TYPE=openai_compatible
+SYSTEM_AI_ENABLED=true
 ```
 
 Run database migrations:
@@ -143,9 +145,13 @@ corepack pnpm dev:mobile
 | `AUTH_GITHUB_ID` | Yes | GitHub OAuth client ID. |
 | `AUTH_GITHUB_SECRET` | Yes | GitHub OAuth client secret. |
 | `TOKEN_ENCRYPTION_SECRET` | Yes | Secret used to encrypt provider keys and personal tokens. |
-| `OPENAI_API_KEY` | Optional | Environment fallback for AI ask. |
-| `OPENAI_BASE_URL` | Optional | OpenAI-compatible fallback base URL. |
-| `OPENAI_MODEL_KEY` | Optional | Fallback model name. |
+| `SYSTEM_AI_API_KEY` | Optional | System-level AI key used only when the user has no default provider. |
+| `SYSTEM_AI_BASE_URL` | Optional | System-level OpenAI-compatible fallback base URL. |
+| `SYSTEM_AI_MODEL` | Optional | System-level fallback model name. |
+| `SYSTEM_AI_PROVIDER_TYPE` | Optional | System-level provider type, defaults to `openai_compatible`. |
+| `SYSTEM_AI_ENABLED` | Optional | Set to `false` to disable the system-level fallback. |
+
+Legacy `OPENAI_*` keys are still read for migration compatibility, but new deployments should use `SYSTEM_AI_*`.
 
 For hosted Neon validation, copy `.env.neon.example` to `.env.neon` and use the Neon pooled connection string with `sslmode=require`.
 

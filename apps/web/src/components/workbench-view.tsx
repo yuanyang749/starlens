@@ -52,6 +52,7 @@ type AiAskResult = {
     source?: string;
   }>;
   providerConfigId: string | null;
+  providerConfigSource?: "user_default" | "system_default" | "none";
 };
 
 async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {

@@ -38,9 +38,9 @@ AUTH_GITHUB_ID="github-client-id"
 AUTH_GITHUB_SECRET="github-client-secret"
 DATABASE_URL="postgres://starlens:starlens@localhost:54329/starlens_dev"
 TOKEN_ENCRYPTION_SECRET="replace-with-random-32-byte-secret"
-OPENAI_API_KEY=""
-OPENAI_BASE_URL=""
-OPENAI_MODEL_KEY=""
+SYSTEM_AI_API_KEY=""
+SYSTEM_AI_BASE_URL=""
+SYSTEM_AI_MODEL=""
 ```
 
 本地 GitHub OAuth 回调地址应配置为：
@@ -63,9 +63,9 @@ Vercel 部署适合希望快速上线 Web 应用的场景。你需要在 Vercel 
 | `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID |
 | `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret |
 | `TOKEN_ENCRYPTION_SECRET` | 是 | 加密 GitHub token、AI key 和额外 header |
-| `OPENAI_API_KEY` | 否 | 默认 AI Provider 密钥 |
-| `OPENAI_BASE_URL` | 否 | 默认 OpenAI-compatible Base URL |
-| `OPENAI_MODEL_KEY` | 否 | 默认模型名称 |
+| `SYSTEM_AI_API_KEY` | 否 | 系统级默认 AI Provider 密钥，用户未配置默认 Provider 时回退使用 |
+| `SYSTEM_AI_BASE_URL` | 否 | 系统级默认 OpenAI-compatible Base URL |
+| `SYSTEM_AI_MODEL` | 否 | 系统级默认模型名称 |
 
 Vercel 上线流程：
 
@@ -193,7 +193,7 @@ corepack pnpm db:migrate:neon
 
 ## AI 功能启用
 
-AI 功能不是启动 Web 应用的硬依赖。上线后可以在设置页创建用户级 AI Provider，也可以通过环境变量提供默认 OpenAI-compatible 配置。
+AI 功能不是启动 Web 应用的硬依赖。上线后可以在设置页创建用户级 AI Provider，也可以通过环境变量提供系统级默认 Provider。
 
 启用前确认：
 

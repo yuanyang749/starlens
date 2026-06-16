@@ -208,14 +208,33 @@ describe("tokens settings interactions", () => {
 
 describe("AI settings interactions", () => {
   it("creates provider configs with entered connection details", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { id: "ai-1" } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })));
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url === "/api/ai/system-default") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: {
+            baseUrl: "https://newapi.example/v1",
+            configured: true,
+            enabled: true,
+            model: "gpt-4.1-mini",
+            providerType: "openai_compatible",
+            source: "system_default",
+          },
+        })));
+      }
+
+      if (url === "/api/ai/configs" && init?.method === "POST") {
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: { id: "ai-1" } })));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: [] })));
+    });
     vi.stubGlobal("fetch", fetchMock);
     const { el } = mount(<AISettingsView />);
     await act(async () => Promise.resolve());
 
+    expect(el.textContent).toContain("当前使用：系统默认 AI");
+    expect(el.textContent).toContain("gpt-4.1-mini");
     expect(el.querySelector("select")).toBeNull();
     expect(el.querySelector('button[aria-label="Provider 类型"]')).toBeTruthy();
 
@@ -268,10 +287,39 @@ describe("AI settings interactions", () => {
       lastValidationStatus: "warning",
       lastValidationError: null,
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [config] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { status: "error", message: "fetch failed" } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [{ ...config, lastValidationStatus: "error" }] })));
+    let configRequests = 0;
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url === "/api/ai/system-default") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: {
+            baseUrl: null,
+            configured: false,
+            enabled: true,
+            model: null,
+            providerType: "openai_compatible",
+            source: "system_default",
+          },
+        })));
+      }
+
+      if (url === "/api/ai/configs/ai-1/validate" && init?.method === "POST") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: { status: "error", message: "fetch failed" },
+        })));
+      }
+
+      if (url === "/api/ai/configs") {
+        configRequests += 1;
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: configRequests === 1 ? [config] : [{ ...config, lastValidationStatus: "error" }],
+        })));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: [] })));
+    });
     vi.stubGlobal("fetch", fetchMock);
     const { el } = mount(<AISettingsView />);
     await act(async () => Promise.resolve());

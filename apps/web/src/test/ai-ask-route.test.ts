@@ -1,8 +1,10 @@
+/** @vitest-environment node */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveSystemDefaultAiRuntimeConfig } from "@starlens/server/server/ai/runtime-resolver";
 
-const { getApiUserMock, getDefaultAiRuntimeConfigMock, searchReposMock } = vi.hoisted(() => ({
+const { getApiUserMock, resolveAiRuntimeConfigMock, searchReposMock } = vi.hoisted(() => ({
   getApiUserMock: vi.fn(),
-  getDefaultAiRuntimeConfigMock: vi.fn(),
+  resolveAiRuntimeConfigMock: vi.fn(),
   searchReposMock: vi.fn(),
 }));
 
@@ -15,7 +17,7 @@ vi.mock("@starlens/server/server/repos/repository", () => ({
 }));
 
 vi.mock("@starlens/server/server/ai/configs", () => ({
-  getDefaultAiRuntimeConfig: getDefaultAiRuntimeConfigMock,
+  resolveAiRuntimeConfig: resolveAiRuntimeConfigMock,
 }));
 
 function repo(id: string, fullName: string) {
@@ -40,7 +42,12 @@ describe("AI ask API route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getApiUserMock.mockResolvedValue({ id: "user-1" });
-    getDefaultAiRuntimeConfigMock.mockResolvedValue(null);
+    resolveAiRuntimeConfigMock.mockResolvedValue({ config: null, source: "none" });
+    delete process.env.SYSTEM_AI_ENABLED;
+    delete process.env.SYSTEM_AI_PROVIDER_TYPE;
+    delete process.env.SYSTEM_AI_BASE_URL;
+    delete process.env.SYSTEM_AI_API_KEY;
+    delete process.env.SYSTEM_AI_MODEL;
     delete process.env.OPENAI_BASE_URL;
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_MODEL_KEY;
@@ -105,6 +112,7 @@ describe("AI ask API route", () => {
           },
         ],
         providerConfigId: null,
+        providerConfigSource: "none",
       },
     });
   });
@@ -126,7 +134,40 @@ describe("AI ask API route", () => {
     });
   });
 
-  it("returns the newapi provider id when OpenAI-compatible env vars are enabled", async () => {
+  it("parses system default config from the new SYSTEM_AI_* env names", () => {
+    const config = resolveSystemDefaultAiRuntimeConfig({
+      SYSTEM_AI_PROVIDER_TYPE: "openai_compatible",
+      SYSTEM_AI_BASE_URL: "https://newapi.520ai.xin/v1",
+      SYSTEM_AI_API_KEY: "test-key",
+      SYSTEM_AI_MODEL: "gpt-5.4-mini",
+    } as NodeJS.ProcessEnv);
+
+    expect(config).toMatchObject({
+      id: "system:default",
+      providerType: "openai_compatible",
+      baseUrl: "https://newapi.520ai.xin/v1",
+      apiKey: "test-key",
+      model: "gpt-5.4-mini",
+    });
+  });
+
+  it("keeps compatibility with legacy OPENAI_* env names for system fallback", () => {
+    const config = resolveSystemDefaultAiRuntimeConfig({
+      OPENAI_BASE_URL: "https://newapi.520ai.xin/v1",
+      OPENAI_API_KEY: "test-key",
+      OPENAI_MODEL_KEY: "gpt-5.4-mini",
+    } as NodeJS.ProcessEnv);
+
+    expect(config).toMatchObject({
+      id: "system:default",
+      providerType: "openai_compatible",
+      baseUrl: "https://newapi.520ai.xin/v1",
+      apiKey: "test-key",
+      model: "gpt-5.4-mini",
+    });
+  });
+
+  it("returns the system default provider id when runtime fallback is enabled", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -139,9 +180,17 @@ describe("AI ask API route", () => {
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
-    process.env.OPENAI_BASE_URL = "https://newapi.520ai.xin/v1";
-    process.env.OPENAI_API_KEY = "test-key";
-    process.env.OPENAI_MODEL_KEY = "gpt-5.4-mini";
+    resolveAiRuntimeConfigMock.mockResolvedValue({
+      source: "system_default",
+      config: {
+        id: "system:default",
+        providerType: "openai_compatible",
+        baseUrl: "https://newapi.520ai.xin/v1",
+        apiKey: "test-key",
+        extraHeaders: {},
+        model: "gpt-5.4-mini",
+      },
+    });
 
     const { POST } = await import("@/app/api/ai/ask/route");
 
@@ -163,7 +212,8 @@ describe("AI ask API route", () => {
     await expect(json(response)).resolves.toMatchObject({
       ok: true,
       data: {
-        providerConfigId: "env:newapi-openai-compatible",
+        providerConfigId: "system:default",
+        providerConfigSource: "system_default",
       },
     });
 
@@ -183,13 +233,16 @@ describe("AI ask API route", () => {
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
-    getDefaultAiRuntimeConfigMock.mockResolvedValue({
-      id: "ai-default",
-      providerType: "openai_compatible",
-      baseUrl: "https://provider.test/v1",
-      apiKey: "user-key",
-      extraHeaders: { "x-provider": "custom" },
-      model: "gpt-user",
+    resolveAiRuntimeConfigMock.mockResolvedValue({
+      source: "user_default",
+      config: {
+        id: "ai-default",
+        providerType: "openai_compatible",
+        baseUrl: "https://provider.test/v1",
+        apiKey: "user-key",
+        extraHeaders: { "x-provider": "custom" },
+        model: "gpt-user",
+      },
     });
 
     const { POST } = await import("@/app/api/ai/ask/route");
@@ -223,6 +276,7 @@ describe("AI ask API route", () => {
       data: {
         answer: "默认配置回答",
         providerConfigId: "ai-default",
+        providerConfigSource: "user_default",
       },
     });
 

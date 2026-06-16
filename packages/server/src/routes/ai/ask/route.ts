@@ -1,7 +1,7 @@
 import { fail, ok, unauthorized } from "@starlens/server/lib/api-response";
 import {
-  getDefaultAiRuntimeConfig,
   type AiRuntimeConfig,
+  resolveAiRuntimeConfig,
 } from "@starlens/server/server/ai/configs";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { searchRepos } from "@starlens/server/server/repos/repository";
@@ -52,46 +52,15 @@ type ChatRuntimeConfig = Omit<Pick<
   "apiKey" | "baseUrl" | "extraHeaders" | "id" | "model" | "providerType"
 >, "baseUrl"> & { baseUrl: string };
 
-function resolveOpenAiEnv(): ChatRuntimeConfig | null {
-  const baseUrl = process.env.OPENAI_BASE_URL?.trim();
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const model = process.env.OPENAI_MODEL_KEY?.trim();
-
-  if (!baseUrl || !apiKey || !model) {
+function asChatRuntimeConfig(config: AiRuntimeConfig | null): ChatRuntimeConfig | null {
+  if (!config?.baseUrl?.trim()) {
     return null;
   }
 
   return {
-    id: "env:newapi-openai-compatible",
-    providerType: "openai_compatible",
-    baseUrl,
-    apiKey,
-    extraHeaders: {},
-    model,
+    ...config,
+    baseUrl: config.baseUrl,
   };
-}
-
-function supportsChatCompletions(config: AiRuntimeConfig | null): config is ChatRuntimeConfig {
-  return Boolean(
-    config
-      && config.apiKey.trim()
-      && config.baseUrl?.trim()
-      && (config.providerType === "openai_compatible" || config.providerType === "vercel_gateway"),
-  );
-}
-
-async function resolveChatRuntimeConfig(userId: string) {
-  try {
-    const defaultConfig = await getDefaultAiRuntimeConfig(userId);
-    if (supportsChatCompletions(defaultConfig)) {
-      return defaultConfig;
-    }
-  } catch {
-    // 中文注释：默认配置损坏时不阻断搜索体验，继续走环境变量或确定性本地回答。
-  }
-
-  // 中文注释：保留环境变量兜底，避免没有默认配置时破坏本地和部署环境的既有 AI 行为。
-  return resolveOpenAiEnv();
 }
 
 function resolveChatCompletionsUrl(baseUrl: string) {
@@ -449,7 +418,8 @@ export async function POST(request: Request) {
   }
 
   const question = body.question.trim();
-  const chatConfig = await resolveChatRuntimeConfig(user.id);
+  const runtimeResolution = await resolveAiRuntimeConfig(user.id, "chat_completions");
+  const chatConfig = asChatRuntimeConfig(runtimeResolution.config);
   const { candidates, queries } = await recallCandidates(user.id, question, chatConfig);
   const hasCandidates = candidates.length > 0;
 
@@ -478,5 +448,6 @@ export async function POST(request: Request) {
       source: item.source,
     })),
     providerConfigId: chatConfig?.id ?? null,
+    providerConfigSource: runtimeResolution.source,
   });
 }

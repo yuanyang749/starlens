@@ -45,6 +45,7 @@ export type AiAskResult = {
     source?: string;
   }>;
   providerConfigId: string | null;
+  providerConfigSource?: "user_default" | "system_default" | "none";
 };
 
 export type WorkbenchMode = "all" | "favorites" | "recent" | "settings";

@@ -110,9 +110,11 @@ AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
 DATABASE_URL=postgres://starlens:starlens@localhost:54329/starlens_dev
 TOKEN_ENCRYPTION_SECRET=
-OPENAI_API_KEY=
-OPENAI_BASE_URL=
-OPENAI_MODEL_KEY=
+SYSTEM_AI_API_KEY=
+SYSTEM_AI_BASE_URL=
+SYSTEM_AI_MODEL=
+SYSTEM_AI_PROVIDER_TYPE=openai_compatible
+SYSTEM_AI_ENABLED=true
 ```
 
 执行数据库迁移：
@@ -143,9 +145,13 @@ corepack pnpm dev:mobile
 | `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID。 |
 | `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret。 |
 | `TOKEN_ENCRYPTION_SECRET` | 是 | 用于加密 provider key 和个人 token。 |
-| `OPENAI_API_KEY` | 可选 | AI 问答的环境变量兜底。 |
-| `OPENAI_BASE_URL` | 可选 | OpenAI-compatible 的兜底 base URL。 |
-| `OPENAI_MODEL_KEY` | 可选 | 兜底模型名。 |
+| `SYSTEM_AI_API_KEY` | 可选 | 系统级默认 AI 密钥，仅在用户没有默认 Provider 时使用。 |
+| `SYSTEM_AI_BASE_URL` | 可选 | 系统级 OpenAI-compatible 兜底 Base URL。 |
+| `SYSTEM_AI_MODEL` | 可选 | 系统级兜底模型名。 |
+| `SYSTEM_AI_PROVIDER_TYPE` | 可选 | 系统级 Provider 类型，默认 `openai_compatible`。 |
+| `SYSTEM_AI_ENABLED` | 可选 | 设为 `false` 可关闭系统级兜底。 |
+
+旧的 `OPENAI_*` 变量仍会被读取以兼容迁移，但新部署应使用 `SYSTEM_AI_*`。
 
 如果是 Neon 验证环境，复制 `.env.neon.example` 为 `.env.neon`，并使用带 `sslmode=require` 的 pooled connection string。
 
@@ -274,4 +280,3 @@ corepack pnpm build
 ## 项目状态
 
 Starlens 还不是一个完成态产品。当前最值得继续推进的是生产验证、定时同步、部署文档完善，以及真实移动设备验收。
-

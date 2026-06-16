@@ -59,9 +59,9 @@ TOKEN_ENCRYPTION_SECRET="replace-with-random-32-byte-secret"
 可选 AI 默认配置：
 
 ```bash
-OPENAI_API_KEY="sk-..."
-OPENAI_BASE_URL="https://api.openai.com/v1"
-OPENAI_MODEL_KEY="gpt-4.1-mini"
+SYSTEM_AI_API_KEY="sk-..."
+SYSTEM_AI_BASE_URL="https://api.openai.com/v1"
+SYSTEM_AI_MODEL="gpt-4.1-mini"
 ```
 
 变量说明：
@@ -74,9 +74,9 @@ OPENAI_MODEL_KEY="gpt-4.1-mini"
 | `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID |
 | `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret |
 | `TOKEN_ENCRYPTION_SECRET` | 是 | 加密 GitHub token、AI key 和额外 header |
-| `OPENAI_API_KEY` | 否 | 默认 OpenAI-compatible 能力的密钥 |
-| `OPENAI_BASE_URL` | 否 | 默认 OpenAI-compatible Base URL |
-| `OPENAI_MODEL_KEY` | 否 | 默认模型名称 |
+| `SYSTEM_AI_API_KEY` | 否 | 系统级默认 OpenAI-compatible 能力的密钥 |
+| `SYSTEM_AI_BASE_URL` | 否 | 系统级默认 OpenAI-compatible Base URL |
+| `SYSTEM_AI_MODEL` | 否 | 系统级默认模型名称 |
 
 ## 个人 API Token
 
