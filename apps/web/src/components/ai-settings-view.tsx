@@ -19,6 +19,11 @@ const providerOptions: Array<{ label: string; value: ProviderType }> = [
   { label: "Gemini Native", value: "gemini_native" },
 ];
 
+const inputClass =
+  "h-10 w-full rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none transition focus:border-[color:rgba(37,99,235,0.48)] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.08)]";
+
+const labelClass = "block text-xs font-medium text-[color:var(--muted)]";
+
 type SystemDefaultAiStatus = {
   baseUrl: string | null;
   configured: boolean;
@@ -238,52 +243,98 @@ export function AISettingsView() {
       </section>
 
       <section className="app-panel rounded-[24px] p-5">
-        <div className="grid gap-3 md:grid-cols-2">
-          <input
-            value={form.displayName}
-            onChange={(event) => updateForm({ displayName: event.target.value })}
-            placeholder="显示名称"
-            className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
-          />
-          <Select
-            value={form.providerType}
-            onValueChange={(value) => updateForm({ providerType: value as ProviderType })}
-          >
-            <SelectTrigger
-              aria-label="Provider 类型"
-              className="ai-provider-select-trigger"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="ai-provider-select-content" position="popper">
-              {providerOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input
-            value={form.model}
-            onChange={(event) => updateForm({ model: event.target.value })}
-            placeholder="模型"
-            className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
-          />
-          <input
-            value={form.baseUrl}
-            onChange={(event) => updateForm({ baseUrl: event.target.value })}
-            placeholder="Base URL"
-            className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none"
-          />
-          <input
-            value={form.apiKey}
-            onChange={(event) => updateForm({ apiKey: event.target.value })}
-            placeholder="API Key"
-            type="password"
-            className="h-10 rounded-full border border-[color:var(--line)] bg-white px-4 text-sm outline-none md:col-span-2"
-          />
+        <div className="mb-5">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Plus className="h-4 w-4" />
+            新建 Provider
+          </div>
+          <p className="mt-1 text-xs text-[color:var(--muted)]">
+            填写下方信息接入新的 AI 服务商，创建后可随时验证或设为默认。
+          </p>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className={labelClass} htmlFor="ai-provider-type">
+              Provider 类型
+            </label>
+            <Select
+              value={form.providerType}
+              onValueChange={(value) => updateForm({ providerType: value as ProviderType })}
+            >
+              <SelectTrigger
+                id="ai-provider-type"
+                aria-label="Provider 类型"
+                className="ai-provider-select-trigger"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="ai-provider-select-content" position="popper">
+                {providerOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className={labelClass} htmlFor="ai-display-name">
+                显示名称
+              </label>
+              <input
+                id="ai-display-name"
+                value={form.displayName}
+                onChange={(event) => updateForm({ displayName: event.target.value })}
+                placeholder="例如：我的 OpenAI"
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelClass} htmlFor="ai-model">
+                模型
+              </label>
+              <input
+                id="ai-model"
+                value={form.model}
+                onChange={(event) => updateForm({ model: event.target.value })}
+                placeholder="例如：gpt-4o-mini"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass} htmlFor="ai-base-url">
+              Base URL
+            </label>
+            <input
+              id="ai-base-url"
+              value={form.baseUrl}
+              onChange={(event) => updateForm({ baseUrl: event.target.value })}
+              placeholder="https://api.openai.com/v1"
+              className={inputClass}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass} htmlFor="ai-api-key">
+              API Key
+            </label>
+            <input
+              id="ai-api-key"
+              value={form.apiKey}
+              onChange={(event) => updateForm({ apiKey: event.target.value })}
+              placeholder="sk-..."
+              type="password"
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-[color:var(--line)] pt-4">
           <label className="inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">
             <input
               checked={form.enabled}
@@ -298,11 +349,11 @@ export function AISettingsView() {
               onChange={(event) => updateForm({ isDefault: event.target.checked })}
               type="checkbox"
             />
-            默认
+            设为默认
           </label>
           <button
             onClick={createConfig}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-black px-4 text-sm font-medium text-white"
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-medium text-white"
           >
             <Plus className="h-4 w-4" />
             创建配置
