@@ -1151,7 +1151,9 @@ async function runInstallSkillWizard(args, env) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+import { realpathSync } from "node:fs";
+const _realArgv1 = (() => { try { return realpathSync(process.argv[1]); } catch { return process.argv[1]; } })();
+if (import.meta.url === `file://${_realArgv1}`) {
   main().catch((error) => {
     console.error(error instanceof CliError ? error.message : error.stack || error.message);
     process.exitCode = error.exitCode ?? 1;
