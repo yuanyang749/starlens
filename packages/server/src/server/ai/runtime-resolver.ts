@@ -27,6 +27,7 @@ export type SystemDefaultAiRuntimeStatus = {
 export const providerDefaults: Record<ProviderType, string | null> = {
   anthropic_native: "https://api.anthropic.com",
   gemini_native: "https://generativelanguage.googleapis.com",
+  deepseek_native: "https://api.deepseek.com",
   openai_compatible: null,
 };
 
@@ -34,6 +35,7 @@ const providerTypes = new Set<ProviderType>([
   "openai_compatible",
   "anthropic_native",
   "gemini_native",
+  "deepseek_native",
 ]);
 
 const chatCompletionProviderTypes = new Set<ProviderType>([

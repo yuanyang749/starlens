@@ -59,6 +59,7 @@ const providerOptions: Array<{ label: string; value: ProviderType }> = [
   { label: "OpenAI-compatible", value: "openai_compatible" },
   { label: "Anthropic Native", value: "anthropic_native" },
   { label: "Gemini Native", value: "gemini_native" },
+  { label: "DeepSeek Native", value: "deepseek_native" },
 ];
 
 const tabs: Array<{ mode: WorkbenchMode; label: string; icon: typeof Search }> = [

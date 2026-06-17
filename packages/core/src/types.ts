@@ -3,7 +3,8 @@ import type { RepoTextSource } from "./repo-text";
 export type ProviderType =
   | "openai_compatible"
   | "anthropic_native"
-  | "gemini_native";
+  | "gemini_native"
+  | "deepseek_native";
 
 export type RepoSummary = {
   id: string;

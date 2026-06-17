@@ -82,20 +82,26 @@ const providerCards = [
   {
     name: "OpenAI 兼容",
     body: "兼容 OpenAI API 协议，可接入各类 OpenAI 兼容服务。",
-    icon: "◎",
+    logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/openai.svg",
     chips: ["兼容广泛", "易于接入"],
   },
   {
     name: "Anthropic",
     body: "支持 Anthropic 原生协议，使用 Claude 系列模型。",
-    icon: "AI",
+    logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/anthropic.svg",
     chips: ["原生协议", "安全可靠"],
   },
   {
     name: "Gemini",
     body: "支持 Gemini 原生协议，使用 Google Gemini 模型。",
-    icon: "✦",
+    logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/googlegemini.svg",
     chips: ["原生协议", "多模态"],
+  },
+  {
+    name: "DeepSeek",
+    body: "支持 DeepSeek 原生协议，使用 DeepSeek 系列推理与对话模型。",
+    logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/deepseek.svg",
+    chips: ["原生协议", "高性价比"],
   },
 ];
 
@@ -487,7 +493,13 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             {providerCards.map((provider) => (
               <article className="landing-provider-card landing-hover-card" key={provider.name}>
                 <div>
-                  <span>{provider.icon}</span>
+                  <img
+                    src={provider.logoUrl}
+                    alt={provider.name}
+                    width={28}
+                    height={28}
+                    className="landing-provider-logo"
+                  />
                   <h3>{provider.name}</h3>
                 </div>
                 <p>{provider.body}</p>

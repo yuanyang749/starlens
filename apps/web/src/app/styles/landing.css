@@ -940,7 +940,8 @@ html {
   gap: 14px;
 }
 
-.landing-provider-card div:first-child span {
+.landing-provider-card div:first-child span,
+.landing-provider-logo {
   display: inline-flex;
   min-width: 38px;
   height: 38px;
@@ -949,6 +950,14 @@ html {
   color: #101827;
   font-size: 24px;
   font-weight: 850;
+}
+
+.landing-provider-logo {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  /* Simple Icons 为黑色 SVG，用 filter 适配深色背景时可翻白 */
 }
 
 .landing-provider-card h3 {
