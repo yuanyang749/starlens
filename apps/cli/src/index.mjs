@@ -715,6 +715,97 @@ function detectProjectRoot() {
   return new URL("../../..", import.meta.url).pathname.replace(/\/$/, "");
 }
 
+// Skill 源目录（npm 包内的 skills/ 目录）
+function getSkillSourceDir() {
+  return new URL("../../skills/starlens", import.meta.url).pathname;
+}
+
+// 各客户端全局 skill 目标路径
+const SKILL_TARGETS = {
+  claude:    { path: join(homedir(), ".claude", "skills", "starlens"),    label: "Claude Code" },
+  opencode:  { path: join(homedir(), ".opencode", "skills", "starlens"),  label: "OpenCode" },
+  codex:     { path: join(homedir(), ".codex", "skills", "starlens"),     label: "Codex CLI" },
+  openclaw:  { path: join(homedir(), ".openclaw", "skills", "starlens"),  label: "OpenClaw" },
+  hermes:    { path: join(homedir(), ".hermes", "skills", "starlens"),    label: "Hermes" },
+};
+
+async function copyDir(src, dest) {
+  const { readdir, copyFile } = await import("node:fs/promises");
+  await mkdir(dest, { recursive: true });
+  const entries = await readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      await copyDir(srcPath, destPath);
+    } else {
+      await copyFile(srcPath, destPath);
+    }
+  }
+}
+
+async function installSkillFiles(client, projectPath) {
+  const skillSrc = getSkillSourceDir();
+
+  // 检查 skill 源是否存在（全局安装时应该存在）
+  try {
+    await access(skillSrc);
+  } catch {
+    return { ok: false, reason: "skill 文件未找到（可能是旧版本，请更新：npm i -g @starlens-app/cli）" };
+  }
+
+  const results = [];
+
+  // 1. 全局路径（对应当前客户端）
+  const globalTarget = SKILL_TARGETS[client];
+  if (globalTarget) {
+    try {
+      await copyDir(skillSrc, globalTarget.path);
+      results.push({ path: globalTarget.path, ok: true });
+    } catch (e) {
+      results.push({ path: globalTarget.path, ok: false, reason: e.message });
+    }
+  }
+
+  // 2. Cursor 项目级：.cursor/rules/starlens.mdc
+  if (client === "cursor" && projectPath) {
+    const cursorRulesDir = join(projectPath, ".cursor", "rules");
+    const cursorTarget = join(cursorRulesDir, "starlens.mdc");
+    try {
+      await mkdir(cursorRulesDir, { recursive: true });
+      const skillContent = await readFile(join(skillSrc, "SKILL.md"), "utf8");
+      // 转换 SKILL.md → .mdc（保持内容不变，Cursor 兼容 markdown frontmatter）
+      await writeFile(cursorTarget, skillContent);
+      results.push({ path: cursorTarget, ok: true });
+    } catch (e) {
+      results.push({ path: cursorTarget, ok: false, reason: e.message });
+    }
+  }
+
+  // 3. VS Code 项目级：.github/copilot-instructions.md（追加）
+  if (client === "vscode" && projectPath) {
+    const githubDir = join(projectPath, ".github");
+    const vscodeTarget = join(githubDir, "copilot-instructions.md");
+    try {
+      await mkdir(githubDir, { recursive: true });
+      const skillContent = await readFile(join(skillSrc, "SKILL.md"), "utf8");
+      // 去掉 frontmatter，只保留正文
+      const body = skillContent.replace(/^---[\s\S]*?---\n/, "").trim();
+      let existing = "";
+      try { existing = await readFile(vscodeTarget, "utf8"); } catch { /* 不存在则新建 */ }
+      const marker = "<!-- starlens-skill -->";
+      if (!existing.includes(marker)) {
+        await writeFile(vscodeTarget, existing + (existing ? "\n\n" : "") + marker + "\n" + body + "\n" + marker);
+      }
+      results.push({ path: vscodeTarget, ok: true });
+    } catch (e) {
+      results.push({ path: vscodeTarget, ok: false, reason: e.message });
+    }
+  }
+
+  return { ok: results.some(r => r.ok), results };
+}
+
 function createReadlineInterface() {
   return createInterface({ input: process.stdin, output: process.stdout, terminal: false });
 }
@@ -959,8 +1050,8 @@ async function runInstallSkillWizard(args, env) {
 
     // Step 2: select client
     const clientMap = {
-      "1": "claude", "2": "cursor", "3": "codex", "4": "opencode", "5": "other",
-      "claude": "claude", "cursor": "cursor", "codex": "codex", "opencode": "opencode", "other": "other",
+      "1": "claude", "2": "cursor", "3": "vscode", "4": "codex", "5": "opencode", "6": "openclaw", "7": "hermes", "8": "other",
+      "claude": "claude", "cursor": "cursor", "vscode": "vscode", "codex": "codex", "opencode": "opencode", "openclaw": "openclaw", "hermes": "hermes", "other": "other",
     };
 
     let client = clientArg.value?.toLowerCase();
@@ -969,16 +1060,19 @@ async function runInstallSkillWizard(args, env) {
       console.log("请选择你的 AI 客户端：");
       console.log("  1) Claude Code");
       console.log("  2) Cursor");
-      console.log("  3) Codex");
-      console.log("  4) opencode");
-      console.log("  5) 其他（仅输出配置片段）");
+      console.log("  3) VS Code (Copilot)");
+      console.log("  4) Codex CLI");
+      console.log("  5) OpenCode");
+      console.log("  6) OpenClaw");
+      console.log("  7) Hermes");
+      console.log("  8) 其他（仅输出配置片段）");
       const clientChoice = await wizardPrompt(rl, "输入序号或名称", "1");
       client = clientMap[clientChoice.toLowerCase()] ?? "other";
     } else {
       client = clientMap[client];
     }
 
-    const clientLabels = { claude: "Claude Code", cursor: "Cursor", codex: "Codex", opencode: "opencode", other: "其他" };
+    const clientLabels = { claude: "Claude Code", cursor: "Cursor", vscode: "VS Code", codex: "Codex CLI", opencode: "OpenCode", openclaw: "OpenClaw", hermes: "Hermes", other: "其他" };
     console.log(`已选择客户端：${clientLabels[client]}`);
 
     // Step 3: token
@@ -1066,6 +1160,10 @@ async function runInstallSkillWizard(args, env) {
         console.log("将以下内容合并到 ~/.config/opencode/opencode.json：");
         console.log("");
         console.log(renderHostedOpencodeSnippet(apiBaseUrl, token));
+      } else if (client === "vscode" || client === "openclaw" || client === "hermes") {
+        console.log(`${clientLabels[client]} 不支持 HTTP MCP，Skill 文件已自动安装。`);
+        console.log("如需 HTTP API 直连，请参考文档：");
+        console.log(`  ${apiBaseUrl}/docs/integrations`);
       } else {
         console.log("HTTP MCP 端点信息：");
         console.log("");
@@ -1104,14 +1202,33 @@ async function runInstallSkillWizard(args, env) {
         console.log("");
         console.log(renderOpencodeSnippet(projectRoot));
       } else {
-        console.log("通用 Agent Skill 环境变量配置：");
+        console.log("通用 Agent Skill 环境变量配置（vscode/openclaw/hermes 等）：");
         console.log("");
         console.log(`  STARLENS_TOKEN="${token || "stl_xxx"}"`);
         console.log(`  STARLENS_API_BASE_URL="${apiBaseUrl}"`);
+        console.log("");
+        console.log("Skill 文件已自动安装到对应客户端目录，无需额外 MCP 配置。");
       }
     }
 
-    // Step 6: verify token (optional)
+    // Step 6: install skill files
+    console.log("");
+    console.log("─".repeat(40));
+    console.log("安装 Starlens Agent Skill...");
+    const skillResult = await installSkillFiles(client, projectRoot ?? process.cwd());
+    if (skillResult.results) {
+      for (const r of skillResult.results) {
+        if (r.ok) {
+          console.log(`✓ Skill 已安装：${r.path}`);
+        } else {
+          console.log(`⚠  Skill 安装失败：${r.path}（${r.reason}）`);
+        }
+      }
+    } else if (!skillResult.ok) {
+      console.log(`⚠  ${skillResult.reason}`);
+    }
+
+    // Step 7: verify token (optional)
     if (token) {
       console.log("");
       const doVerify = await wizardPrompt(rl, "是否验证 Token 可用性？(y/N)", "N");

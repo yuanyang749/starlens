@@ -1,6 +1,6 @@
 {
   "name": "@starlens-app/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Starlens CLI — manage your GitHub starred repositories from the terminal",
   "type": "module",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "files": [
     "src/index.mjs",
+    "skills/",
     "README.md"
   ],
   "engines": {
