@@ -11,35 +11,40 @@ server {
     }
 
     location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name starlens.example.com;
+
+    ssl_certificate /usr/local/openresty/nginx/conf/ssl/starlens.example.com/fullchain.pem;
+    ssl_certificate_key /usr/local/openresty/nginx/conf/ssl/starlens.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # 托管 MCP 端点兼容路径：将 /mcp 转发到 /api/mcp
+    location = /mcp {
+        proxy_pass http://127.0.0.1:3333/api/mcp;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location / {
         proxy_pass http://127.0.0.1:3333;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto https;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 }
-
-# 中文注释：证书路径生成后取消下面 server 块注释，并把 HTTP server 中的 location / 改为 301 跳转。
-# server {
-#     listen 443 ssl http2;
-#     listen [::]:443 ssl http2;
-#     server_name starlens.example.com;
-#
-#     ssl_certificate /usr/local/openresty/nginx/conf/ssl/starlens.example.com/fullchain.pem;
-#     ssl_certificate_key /usr/local/openresty/nginx/conf/ssl/starlens.example.com/privkey.pem;
-#     ssl_protocols TLSv1.2 TLSv1.3;
-#
-#     location / {
-#         proxy_pass http://127.0.0.1:3333;
-#         proxy_http_version 1.1;
-#         proxy_set_header Host $host;
-#         proxy_set_header X-Real-IP $remote_addr;
-#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-#         proxy_set_header X-Forwarded-Proto https;
-#         proxy_set_header Upgrade $http_upgrade;
-#         proxy_set_header Connection "upgrade";
-#     }
-# }
