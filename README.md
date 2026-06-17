@@ -256,7 +256,7 @@ The running Web app also exposes user-facing docs under `/docs`.
 
 ## Deployment Notes
 
-The intended default deployment path is Vercel plus PostgreSQL, with Neon Free as the recommended starting database option.
+The intended default deployment path is Docker self-hosting plus PostgreSQL, with Neon Free remaining a convenient hosted database option when needed.
 
 Before deploying:
 

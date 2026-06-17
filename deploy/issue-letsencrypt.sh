@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-starlens.520ai.xin}"
-PUBLIC_IP="${PUBLIC_IP:-140.238.61.108}"
+DOMAIN="${DOMAIN:-}"
+PUBLIC_IP="${PUBLIC_IP:-}"
+ACME_EMAIL="${ACME_EMAIL:-admin@example.com}"
 OPENRESTY_CONTAINER="${OPENRESTY_CONTAINER:-1Panel-openresty-oXOm}"
 OPENRESTY_ROOT="${OPENRESTY_ROOT:-/opt/1panel/apps/openresty/openresty/root}"
 OPENRESTY_SSL_DIR="${OPENRESTY_SSL_DIR:-/opt/1panel/apps/openresty/openresty/conf/ssl/${DOMAIN}}"
 ACME_HOME="${ACME_HOME:-$HOME/.acme.sh}"
+
+if [[ -z "${DOMAIN}" || -z "${PUBLIC_IP}" ]]; then
+  echo "用法：DOMAIN=starlens.example.com PUBLIC_IP=<SERVER_PUBLIC_IP> bash deploy/issue-letsencrypt.sh" >&2
+  echo "请显式传入 DOMAIN 和 PUBLIC_IP，避免示例值误用于真实环境。" >&2
+  exit 1
+fi
 
 resolved_ip="$(dig +short "${DOMAIN}" A @1.1.1.1 | tail -n 1 || true)"
 if [[ "${resolved_ip}" != "${PUBLIC_IP}" ]]; then
@@ -17,7 +24,7 @@ fi
 
 if [[ ! -x "${ACME_HOME}/acme.sh" ]]; then
   echo "未找到 acme.sh，正在安装。" >&2
-  curl -fsSL https://get.acme.sh | sh -s "email=admin@520ai.xin"
+  curl -fsSL https://get.acme.sh | sh -s "email=${ACME_EMAIL}"
 fi
 
 mkdir -p "${OPENRESTY_ROOT}/.well-known/acme-challenge" "${OPENRESTY_SSL_DIR}"

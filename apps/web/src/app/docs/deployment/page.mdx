@@ -1,17 +1,17 @@
 export const metadata = {
   title: "部署方式 | Starlens 文档",
-  description: "Starlens 的本地开发、Vercel 部署、自托管部署和上线检查说明。",
+  description: "Starlens 的本地开发、Docker 自托管、Node.js 自托管和上线检查说明。",
 };
 
 # 部署方式
 
-Starlens 可以在本地开发环境运行，也可以部署到 Vercel 或自托管环境。部署前需要准备 PostgreSQL 数据库、GitHub OAuth 应用和加密密钥。如果要启用 AI，还需要配置至少一个 AI Provider。
+Starlens 可以在本地开发环境运行，也可以部署到 Docker 或 Node.js 自托管环境。部署前需要准备 PostgreSQL 数据库、GitHub OAuth 应用和加密密钥。如果要启用 AI，还需要配置至少一个 AI Provider。
 
 <figure className="docs-figure">
   <div className="docs-figure__viewport">
-    <img src="/docs/deployment-topology.svg" alt="Starlens 部署方式图，展示本地开发、Vercel 部署和自托管运行时与共享依赖之间的关系。" />
+    <img src="/docs/deployment-topology.svg" alt="Starlens 部署方式图，展示本地开发、Docker 自托管和 Node.js 自托管运行时与共享依赖之间的关系。" />
   </div>
-  <figcaption>这张图强调三种部署路径复用同一套代码、数据库模式和认证配置，只是运行环境不同。</figcaption>
+  <figcaption>这张图强调三种运行路径复用同一套代码、数据库模式和认证配置，只是运行环境不同。</figcaption>
 </figure>
 
 ## 本地开发
@@ -49,39 +49,7 @@ SYSTEM_AI_MODEL=""
 http://localhost:3000/api/auth/callback/github
 ```
 
-## Vercel 部署
-
-Vercel 部署适合希望快速上线 Web 应用的场景。你需要在 Vercel 项目环境变量中配置数据库连接串、NextAuth 密钥和 GitHub OAuth 凭据。
-
-推荐变量：
-
-| 变量 | 必填 | 用途 |
-| --- | --- | --- |
-| `DATABASE_URL` | 是 | PostgreSQL 连接串，推荐使用托管 PostgreSQL 或 Neon |
-| `AUTH_SECRET` | 是 | NextAuth 会话密钥 |
-| `NEXTAUTH_URL` | 是 | 线上站点地址 |
-| `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID |
-| `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret |
-| `TOKEN_ENCRYPTION_SECRET` | 是 | 加密 GitHub token、AI key 和额外 header |
-| `SYSTEM_AI_API_KEY` | 否 | 系统级默认 AI Provider 密钥，用户未配置默认 Provider 时回退使用 |
-| `SYSTEM_AI_BASE_URL` | 否 | 系统级默认 OpenAI-compatible Base URL |
-| `SYSTEM_AI_MODEL` | 否 | 系统级默认模型名称 |
-
-Vercel 上线流程：
-
-1. 创建 Vercel 项目并指向仓库。
-2. 配置 Production、Preview 和 Development 环境变量。
-3. 在 GitHub OAuth App 中新增生产回调地址。
-4. 执行数据库迁移。
-5. 部署后访问 `/docs`、`/app` 和 `/api/search` 做基础检查。
-
-生产 GitHub OAuth 回调地址示例：
-
-```text
-https://your-vercel-domain.vercel.app/api/auth/callback/github
-```
-
-## 自托管部署
+## Node.js 自托管
 
 自托管适合希望完全控制运行环境和数据库的场景。你可以把 Web 应用部署到自己的服务器，并连接自管 PostgreSQL。
 
@@ -114,7 +82,7 @@ cp deploy/.env.production.example deploy/.env.production
 
 | 变量 | 说明 |
 | --- | --- |
-| `NEXTAUTH_URL` | 对外访问地址，例如 `http://your-server-ip:3333` 或正式 HTTPS 域名 |
+| `NEXTAUTH_URL` | 对外访问地址，例如 `https://starlens.example.com` |
 | `DATABASE_URL` | PostgreSQL 连接串；1Panel 同网络容器可使用 `1Panel-postgresql-xIiE:5432` |
 | `AUTH_SECRET` | NextAuth 会话密钥 |
 | `AUTH_GITHUB_ID` | GitHub OAuth Client ID |
@@ -150,7 +118,7 @@ http://服务器地址:3333
 1Panel/OpenResty 场景下可以复用仓库里的反代模板：
 
 ```bash
-cp deploy/openresty-starlens.conf.example /opt/1panel/www/conf.d/starlens.520ai.xin.conf
+cp deploy/openresty-starlens.conf.example /opt/1panel/www/conf.d/starlens.example.com.conf
 docker exec 1Panel-openresty-oXOm nginx -t
 docker exec 1Panel-openresty-oXOm nginx -s reload
 ```
@@ -158,13 +126,13 @@ docker exec 1Panel-openresty-oXOm nginx -s reload
 正式域名上线前，需要在 Cloudflare 创建 DNS 记录：
 
 ```text
-A  starlens  服务器公网 IP
+A  starlens  <SERVER_PUBLIC_IP>
 ```
 
 DNS 生效后，推荐用 Let’s Encrypt/acme.sh 签发免费证书并自动续期：
 
 ```bash
-DOMAIN=starlens.520ai.xin PUBLIC_IP=140.238.61.108 bash deploy/issue-letsencrypt.sh
+DOMAIN=starlens.example.com PUBLIC_IP=<SERVER_PUBLIC_IP> bash deploy/issue-letsencrypt.sh
 ```
 
 `acme.sh` 会安装 cron 任务自动续期。证书路径生成后，在 OpenResty 配置中启用 HTTPS server，并把 HTTP 站点的 `/` 访问改为 301 跳转到 HTTPS。

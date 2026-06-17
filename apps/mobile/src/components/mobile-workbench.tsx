@@ -57,7 +57,6 @@ type CreatedToken = TokenRecord & { token?: string };
 
 const providerOptions: Array<{ label: string; value: ProviderType }> = [
   { label: "OpenAI-compatible", value: "openai_compatible" },
-  { label: "Vercel AI Gateway", value: "vercel_gateway" },
   { label: "Anthropic Native", value: "anthropic_native" },
   { label: "Gemini Native", value: "gemini_native" },
 ];

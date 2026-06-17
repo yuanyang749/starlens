@@ -506,7 +506,6 @@ Authorization: Bearer <token>
 说明：
 
 - `providerType` 允许值：
-  - `vercel_gateway`
   - `openai_compatible`
   - `anthropic_native`
   - `gemini_native`

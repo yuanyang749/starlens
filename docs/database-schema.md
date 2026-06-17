@@ -267,7 +267,6 @@
 说明：
 
 - `provider_type` 允许值：
-  - `vercel_gateway`
   - `openai_compatible`
   - `anthropic_native`
   - `gemini_native`

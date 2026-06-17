@@ -2,7 +2,7 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name starlens.520ai.xin;
+    server_name starlens.example.com;
 
     location ^~ /.well-known/acme-challenge/ {
         root /usr/share/nginx/html;
@@ -26,10 +26,10 @@ server {
 # server {
 #     listen 443 ssl http2;
 #     listen [::]:443 ssl http2;
-#     server_name starlens.520ai.xin;
+#     server_name starlens.example.com;
 #
-#     ssl_certificate /usr/local/openresty/nginx/conf/ssl/starlens.520ai.xin/fullchain.pem;
-#     ssl_certificate_key /usr/local/openresty/nginx/conf/ssl/starlens.520ai.xin/privkey.pem;
+#     ssl_certificate /usr/local/openresty/nginx/conf/ssl/starlens.example.com/fullchain.pem;
+#     ssl_certificate_key /usr/local/openresty/nginx/conf/ssl/starlens.example.com/privkey.pem;
 #     ssl_protocols TLSv1.2 TLSv1.3;
 #
 #     location / {

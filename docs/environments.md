@@ -41,9 +41,9 @@ npm run db:check:neon
 
 Neon 建议使用 pooled connection string，并保留 `sslmode=require`。
 
-## Vercel 部署
+## 生产部署
 
-Vercel 环境变量使用 Neon 的连接串，不使用本地 Docker 连接串。
+生产环境使用托管 PostgreSQL 或自管 PostgreSQL 的连接串，不使用本地 Docker 连接串。
 
 关键变量：
 

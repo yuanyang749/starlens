@@ -80,12 +80,6 @@ const featureCards = [
 
 const providerCards = [
   {
-    name: "Vercel AI Gateway",
-    body: "内置支持 Vercel AI Gateway，享受统一计费与免费额度。",
-    icon: "▲",
-    chips: ["多模型", "统一网关"],
-  },
-  {
     name: "OpenAI 兼容",
     body: "兼容 OpenAI API 协议，可接入各类 OpenAI 兼容服务。",
     icon: "◎",
@@ -515,7 +509,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
           <div className="landing-section-heading">
             <p className="landing-pill">开源与自部署</p>
             <h2>开源、可自部署、数据可控</h2>
-            <p>Starlens 完全开源，你可以选择托管在 Vercel，也可以自部署在任何信任的环境中。</p>
+            <p>Starlens 完全开源，你可以部署在任何信任的 Docker 或 Node.js 运行环境中。</p>
           </div>
           <div className="landing-deploy-grid">
             <article>
@@ -537,7 +531,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             <article>
               <Cloud className="h-9 w-9" />
               <h3>灵活部署</h3>
-              <p>支持 Vercel 一键部署，或 Docker 自托管部署。</p>
+              <p>支持 Docker 自托管部署，也支持直接运行 Node.js 服务。</p>
               <a href="/docs/deployment">
                 查看部署文档 <ArrowRight className="h-4 w-4" />
               </a>

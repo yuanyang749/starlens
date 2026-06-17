@@ -154,7 +154,6 @@ Starlens 的落地页是公开可访问的产品入口页，路由为 `/`。
 
 说明 AI 兼容能力：
 
-- Vercel AI Gateway
 - OpenAI-compatible
 - Anthropic 官方协议
 - Gemini 官方协议
@@ -177,7 +176,7 @@ Starlens 的落地页是公开可访问的产品入口页，路由为 `/`。
 
 - 支持自部署
 - 支持 PostgreSQL
-- 支持 Vercel 起步部署
+- 支持 Docker 自托管部署
 - 适合作为个人工具，也适合作为开源项目演进
 
 ### 6.6 页脚

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700" width="960" height="700" role="img" aria-labelledby="deployTitle deployDesc">
   <title id="deployTitle">Starlens deployment topology</title>
-  <desc id="deployDesc">Deployment diagram showing shared dependencies and three runtime targets: local development, Vercel, and self-hosted.</desc>
+  <desc id="deployDesc">Deployment diagram showing shared dependencies and three runtime targets: local development, Docker self-hosted, and Node.js self-hosted.</desc>
   <style>
     text {
       font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Microsoft JhengHei", "SimHei", sans-serif;
@@ -48,7 +48,7 @@
 
   <rect width="960" height="620" fill="#ffffff" />
   <text x="40" y="48" class="title">Deployment Paths</text>
-  <text x="40" y="74" class="subtitle">Shared prerequisites with three supported runtime targets</text>
+  <text x="40" y="74" class="subtitle">Shared prerequisites with local, Docker and Node.js runtime targets</text>
 
   <rect x="40" y="106" width="880" height="132" rx="10" fill="#fafcff" stroke="#d1d5db" stroke-width="1.2" stroke-dasharray="6,4" />
   <text x="56" y="126" class="group-label">SHARED PREREQUISITES</text>
@@ -99,19 +99,19 @@
   <text x="174" y="465" text-anchor="middle" class="small">localhost:3000</text>
 
   <rect x="356" y="316" width="248" height="176" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
-  <text x="378" y="344" class="node-title">Vercel Deployment</text>
+  <text x="378" y="344" class="node-title">Docker Self-hosted</text>
   <text x="378" y="363" class="node-subtitle">
-    <tspan x="378" dy="0">Managed web runtime with</tspan>
-    <tspan x="378" dy="13">project environment variables</tspan>
+    <tspan x="378" dy="0">Containerized runtime with</tspan>
+    <tspan x="378" dy="13">compose-managed environment</tspan>
   </text>
-  <text x="378" y="398" class="small">1. Connect repository</text>
-  <text x="378" y="418" class="small">2. Add DATABASE_URL and auth secrets</text>
-  <text x="378" y="438" class="small">3. Build and publish on each push</text>
+  <text x="378" y="398" class="small">1. Prepare deploy/.env.production</text>
+  <text x="378" y="418" class="small">2. Run migrate profile</text>
+  <text x="378" y="438" class="small">3. docker compose up -d --build</text>
   <rect x="378" y="452" width="170" height="18" rx="9" fill="#ffffff" stroke="#d1d5db" stroke-width="1" />
-  <text x="463" y="465" text-anchor="middle" class="small">NEXTAUTH_URL points to prod domain</text>
+  <text x="463" y="465" text-anchor="middle" class="small">Reverse proxy targets port 3333</text>
 
   <rect x="636" y="316" width="248" height="176" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" />
-  <text x="658" y="344" class="node-title">Self-hosted Runtime</text>
+  <text x="658" y="344" class="node-title">Node.js Self-hosted</text>
   <text x="658" y="363" class="node-subtitle">
     <tspan x="658" dy="0">Node.js service behind your own</tspan>
     <tspan x="658" dy="13">reverse proxy and HTTPS</tspan>

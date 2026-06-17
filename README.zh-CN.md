@@ -256,7 +256,7 @@ Web 运行后也会提供 `/docs` 下的用户文档。
 
 ## 部署说明
 
-默认部署路径是 Vercel + PostgreSQL，数据库优先推荐 Neon Free。
+默认部署路径是 Docker 自托管 + PostgreSQL；如果需要托管数据库，Neon Free 仍然是一个方便的起步选项。
 
 部署前建议执行：
 

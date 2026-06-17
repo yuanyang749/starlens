@@ -19,7 +19,6 @@ type AiConfigInput = {
 };
 
 const providerTypes = new Set<ProviderType>([
-  "vercel_gateway",
   "openai_compatible",
   "anthropic_native",
   "gemini_native",
@@ -29,7 +28,6 @@ const providerDefaults: Record<ProviderType, string | null> = {
   anthropic_native: "https://api.anthropic.com",
   gemini_native: "https://generativelanguage.googleapis.com",
   openai_compatible: null,
-  vercel_gateway: "https://ai-gateway.vercel.sh/v1",
 };
 
 function toApiConfig(config: AiConfigRow): AiConfig {

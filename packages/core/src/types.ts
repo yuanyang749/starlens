@@ -1,7 +1,6 @@
 import type { RepoTextSource } from "./repo-text";
 
 export type ProviderType =
-  | "vercel_gateway"
   | "openai_compatible"
   | "anthropic_native"
   | "gemini_native";

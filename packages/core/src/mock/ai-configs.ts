@@ -3,10 +3,10 @@ import type { AiConfig } from "../types";
 export const mockAiConfigs: AiConfig[] = [
   {
     id: "ai-1",
-    displayName: "Vercel Gateway Primary",
-    providerType: "vercel_gateway",
-    model: "openai/gpt-5.4",
-    baseUrl: null,
+    displayName: "OpenAI-compatible Primary",
+    providerType: "openai_compatible",
+    model: "gemini-3-flash",
+    baseUrl: "https://newapi.520ai.xin/v1",
     enabled: true,
     isDefault: true,
     lastValidatedAt: "2026-05-05T09:10:00.000Z",
