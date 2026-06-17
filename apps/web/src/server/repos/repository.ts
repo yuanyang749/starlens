@@ -8,7 +8,7 @@ import {
   MAX_SEARCH_PAGE_SIZE,
   type RepoSummary,
   type SearchReposInput,
-} from "@starlens/core";
+} from "@starlens-app/core";
 import { getDb } from "@/db/client";
 import { repoNotes, repoTags, starredRepos } from "@/db/schema";
 import {

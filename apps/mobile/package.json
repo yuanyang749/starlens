@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@starlens/core": "workspace:*",
+    "@starlens-app/core": "workspace:*",
     "@starlens/server": "workspace:*",
     "@starlens/workbench": "workspace:*",
     "drizzle-orm": "^0.45.2",

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, or } from "drizzle-orm";
-import type { TokenRecord } from "@starlens/core";
+import type { TokenRecord } from "@starlens-app/core";
 import { getDb } from "@/db/client";
 import { personalApiTokens } from "@/db/schema";
 

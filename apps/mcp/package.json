@@ -1,14 +1,35 @@
 {
-  "name": "@starlens/mcp",
+  "name": "@starlens-app/mcp",
   "version": "0.1.0",
-  "private": true,
+  "description": "Starlens MCP server — expose Starlens tools via Model Context Protocol",
   "type": "module",
+  "bin": {
+    "starlens-mcp": "src/index.mjs"
+  },
+  "files": [
+    "src/index.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "keywords": [
+    "starlens",
+    "mcp",
+    "github",
+    "stars"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "start": "tsx src/index.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@starlens/agent-tools": "workspace:*",
+    "@starlens-app/agent-tools": "workspace:*",
     "tsx": "^4.21.0"
   }
 }

@@ -9,7 +9,7 @@ import {
   listAllStarredRepos,
   summarizeSyncedRepo,
 } from "./client";
-import { buildSearchDocument } from "@starlens/core";
+import { buildSearchDocument } from "@starlens-app/core";
 import { findUnstarredRepoIds } from "./sync-utils";
 import type { NormalizedGitHubStarredRepo } from "./normalize";
 

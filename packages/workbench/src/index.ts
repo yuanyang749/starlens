@@ -8,7 +8,7 @@ import {
   type RepoSummary,
   type SearchSort,
   type TokenRecord,
-} from "@starlens/core";
+} from "@starlens-app/core";
 
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = { ok: false; error: { code: string; message: string } };

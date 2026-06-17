@@ -6,7 +6,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { agentTools, callAgentTool } from "@starlens/agent-tools";
+import { agentTools, callAgentTool } from "@starlens-app/agent-tools";
 
 const DEFAULT_API_BASE_URL = "http://localhost:3000";
 

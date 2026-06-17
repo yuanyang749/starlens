@@ -6,7 +6,7 @@ import {
   SEARCH_SORTS,
   type SearchReposInput,
   type SearchSort,
-} from "@starlens/core";
+} from "@starlens-app/core";
 import { ok, unauthorized } from "@starlens/server/lib/api-response";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { searchRepos } from "@starlens/server/server/repos/repository";

@@ -1,9 +1,36 @@
 {
-  "name": "@starlens/core",
+  "name": "@starlens-app/core",
   "version": "0.1.0",
-  "private": true,
+  "description": "Starlens core types and constants",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/public.js",
+      "types": "./dist/public.d.ts",
+      "development": "./src/index.ts"
+    }
+  },
+  "main": "./dist/public.js",
+  "types": "./dist/public.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "keywords": [
+    "starlens"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "typescript": "^5"
   }
 }

@@ -12,7 +12,7 @@
     "./server/*": "./src/server/*.ts"
   },
   "dependencies": {
-    "@starlens/core": "workspace:*",
+    "@starlens-app/core": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.4",
     "next-auth": "^4.24.14",

@@ -5,4 +5,4 @@ export {
   buildSearchDocument,
   cleanMarkdown,
   extractReadmeExcerpt,
-} from "@starlens/core";
+} from "@starlens-app/core";

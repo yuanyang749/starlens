@@ -11,7 +11,7 @@
     "./formatters": "./src/formatters.ts"
   },
   "dependencies": {
-    "@starlens/core": "workspace:*",
+    "@starlens-app/core": "workspace:*",
     "react": "19.2.4"
   },
   "devDependencies": {

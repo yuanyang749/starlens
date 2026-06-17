@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SearchReposInput } from "@starlens/core";
+import type { SearchReposInput } from "@starlens-app/core";
 
 const { searchReposMock, getApiUserMock } = vi.hoisted(() => ({
   searchReposMock: vi.fn(),

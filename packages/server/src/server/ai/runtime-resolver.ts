@@ -1,4 +1,4 @@
-import type { ProviderType } from "@starlens/core";
+import type { ProviderType } from "@starlens-app/core";
 
 export type AiRuntimeConfig = {
   id: string;

@@ -1,4 +1,4 @@
-import type { RepoTextSource } from "./repo-text";
+import type { RepoTextSource } from "./repo-text.js";
 
 export type ProviderType =
   | "openai_compatible"

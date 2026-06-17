@@ -1,4 +1,4 @@
-import type { RepoTextSource } from "@starlens/core";
+import type { RepoTextSource } from "@starlens-app/core";
 
 export const SOURCE_LABELS: Record<RepoTextSource, string> = {
   curation_metadata: "备注与标签",

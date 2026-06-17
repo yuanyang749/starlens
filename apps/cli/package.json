@@ -1,10 +1,28 @@
 {
-  "name": "@starlens/cli",
+  "name": "@starlens-app/cli",
   "version": "0.1.0",
-  "private": true,
+  "description": "Starlens CLI — manage your GitHub starred repositories from the terminal",
   "type": "module",
   "bin": {
     "stars": "src/index.mjs"
+  },
+  "files": [
+    "src/index.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "keywords": [
+    "github",
+    "stars",
+    "cli",
+    "starlens"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "start": "node src/index.mjs",

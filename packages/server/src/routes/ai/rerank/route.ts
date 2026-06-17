@@ -1,4 +1,4 @@
-import { searchMockRepos } from "@starlens/core";
+import { searchMockRepos } from "@starlens-app/core";
 import { fail, ok, unauthorized } from "@starlens/server/lib/api-response";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 

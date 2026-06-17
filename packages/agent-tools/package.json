@@ -1,16 +1,40 @@
 {
-  "name": "@starlens/agent-tools",
+  "name": "@starlens-app/agent-tools",
   "version": "0.1.0",
-  "private": true,
+  "description": "Starlens agent tools — MCP tool definitions and HTTP client for Starlens API",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "keywords": [
+    "starlens",
+    "mcp",
+    "agent"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@starlens/core": "workspace:*"
+    "@starlens-app/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5",

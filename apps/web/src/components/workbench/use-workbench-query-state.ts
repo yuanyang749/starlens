@@ -7,7 +7,7 @@ import {
   DEFAULT_SEARCH_SORT,
   SEARCH_SORTS,
   type SearchSort,
-} from "@starlens/core";
+} from "@starlens-app/core";
 
 const SEARCH_SORT_SET = new Set<SearchSort>(SEARCH_SORTS);
 

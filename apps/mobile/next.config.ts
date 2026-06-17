@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const workspaceRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@starlens/core", "@starlens/server", "@starlens/workbench"],
+  transpilePackages: ["@starlens-app/core", "@starlens/server", "@starlens/workbench"],
   turbopack: {
     root: workspaceRoot,
   },

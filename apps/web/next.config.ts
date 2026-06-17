@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
   // 中文注释：自托管 Docker 部署只复制独立运行产物，减少镜像体积和运行时依赖。
   output: "standalone",
   outputFileTracingRoot: workspaceRoot,
-  transpilePackages: ["@starlens/core", "@starlens/mobile", "@starlens/server", "@starlens/workbench"],
+  transpilePackages: ["@starlens-app/core", "@starlens/mobile", "@starlens/server", "@starlens/workbench"],
   turbopack: {
     root: workspaceRoot,
   },

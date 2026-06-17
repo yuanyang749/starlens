@@ -1,6 +1,6 @@
 import "server-only";
 
-import { buildRepoSummary, extractReadmeExcerpt } from "@starlens/core";
+import { buildRepoSummary, extractReadmeExcerpt } from "@starlens-app/core";
 import {
   normalizeGitHubStarredRepo,
   type GitHubStarredPayload,

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { and, eq } from "drizzle-orm";
-import type { AiConfig, ProviderType } from "@starlens/core";
+import type { AiConfig, ProviderType } from "@starlens-app/core";
 import { getDb } from "../../db/client";
 import { userAiConfigs } from "../../db/schema";
 import { decryptSecret, encryptSecret } from "../crypto/secrets";
