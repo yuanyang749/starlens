@@ -500,8 +500,7 @@
 }
 
 .repo-detail-panel__header,
-.repo-detail-section__header,
-.repo-actions {
+.repo-detail-section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { TokenRecord } from "@starlens/core";
-import { Copy, KeyRound, Plus, ShieldCheck, TerminalSquare } from "lucide-react";
+import { Copy, FileText, KeyRound, Plus, ShieldCheck, TerminalSquare } from "lucide-react";
 import { ApiClientError, fetchApi } from "@/lib/api-client";
 
 type CreatedToken = TokenRecord & { token?: string };
@@ -31,10 +31,15 @@ function buildCliSetupSnippet(rawToken: string) {
   return `printf '%s\\n' ${shellQuote(rawToken)} | corepack pnpm --filter @starlens/cli start -- login --token-stdin`;
 }
 
-function buildAgentHttpSnippet(rawToken: string) {
+function buildAgentSkillSnippet(rawToken: string) {
   return [
+    "STARLENS_SKILL_FILE=/path/to/starlens/agent-skills/starlens/SKILL.md",
     `STARLENS_TOKEN=${shellQuote(rawToken)}`,
     `STARLENS_API_BASE_URL=${shellQuote(currentApiBaseUrl())}`,
+    "",
+    "# Hermes/OpenClaw:",
+    "# Load $STARLENS_SKILL_FILE as the agent instruction/skill file.",
+    "# Keep STARLENS_TOKEN in the runtime secret store or environment.",
     "",
     'curl "$STARLENS_API_BASE_URL/api/search?q=react&pageSize=10" \\',
     '  -H "Authorization: Bearer $STARLENS_TOKEN"',
@@ -155,7 +160,7 @@ export function TokensSettingsView() {
         kind === "cli"
           ? "CLI 配置已复制。"
           : kind === "agent"
-            ? "Agent HTTP 配置已复制。"
+            ? "Agent Skill 配置已复制。"
             : "MCP 配置已复制。",
       );
     } catch {
@@ -210,7 +215,8 @@ export function TokensSettingsView() {
             const rawToken = copyableTokens[token.id];
             const maskedToken = maskToken(token, rawToken);
             const cliSnippet = rawToken ? buildCliSetupSnippet(rawToken) : "";
-            const agentSnippet = rawToken ? buildAgentHttpSnippet(rawToken) : "";
+            // 中文注释：Agent runtime 需要可维护的 skill 文件入口，不能只依赖一次性 curl 示例。
+            const agentSnippet = rawToken ? buildAgentSkillSnippet(rawToken) : "";
             const mcpSnippet = rawToken ? buildMcpConfigSnippet(rawToken) : "";
 
             return (
@@ -255,14 +261,14 @@ export function TokensSettingsView() {
                     </div>
                     <div className="rounded-[16px] bg-white p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-[color:var(--foreground)]">Agent HTTP 配置</span>
+                        <span className="text-sm font-medium text-[color:var(--foreground)]">Agent Skill 配置</span>
                         <button
                           type="button"
                           onClick={() => void copySnippet(token.id, "agent", agentSnippet)}
                           className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                          {copiedSnippetId === `${token.id}:agent` ? "已复制" : "复制 Agent 配置"}
+                          {copiedSnippetId === `${token.id}:agent` ? "已复制" : "复制 Agent Skill"}
                         </button>
                       </div>
                       <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
@@ -301,6 +307,10 @@ export function TokensSettingsView() {
         <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)]">
           <ShieldCheck className="h-4 w-4 text-[color:var(--accent)]" />
           正式实现规则
+        </div>
+        <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)] md:col-span-2">
+          <FileText className="h-4 w-4 text-[color:var(--accent)]" />
+          Agent Skill 文件：agent-skills/starlens/SKILL.md
         </div>
       </div>
     </section>

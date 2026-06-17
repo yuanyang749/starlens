@@ -216,7 +216,6 @@ export function RepoTablePane({
             repo={repo}
             selected={repo.id === selectedId}
             onSelect={() => onSelect(repo.id)}
-            onOpenDetails={() => onSelect(repo.id)}
             onToggleFavorite={onFavoriteToggleRepo}
             favoriteUpdating={favoriteUpdatingId === repo.id}
           />

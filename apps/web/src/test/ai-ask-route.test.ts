@@ -139,7 +139,7 @@ describe("AI ask API route", () => {
       SYSTEM_AI_PROVIDER_TYPE: "openai_compatible",
       SYSTEM_AI_BASE_URL: "https://newapi.520ai.xin/v1",
       SYSTEM_AI_API_KEY: "test-key",
-      SYSTEM_AI_MODEL: "gpt-5.4-mini",
+      SYSTEM_AI_MODEL: "gemini-3-flash",
     } as NodeJS.ProcessEnv);
 
     expect(config).toMatchObject({
@@ -147,7 +147,7 @@ describe("AI ask API route", () => {
       providerType: "openai_compatible",
       baseUrl: "https://newapi.520ai.xin/v1",
       apiKey: "test-key",
-      model: "gpt-5.4-mini",
+      model: "gemini-3-flash",
     });
   });
 
@@ -155,7 +155,7 @@ describe("AI ask API route", () => {
     const config = resolveSystemDefaultAiRuntimeConfig({
       OPENAI_BASE_URL: "https://newapi.520ai.xin/v1",
       OPENAI_API_KEY: "test-key",
-      OPENAI_MODEL_KEY: "gpt-5.4-mini",
+      OPENAI_MODEL_KEY: "gemini-3-flash",
     } as NodeJS.ProcessEnv);
 
     expect(config).toMatchObject({
@@ -163,7 +163,7 @@ describe("AI ask API route", () => {
       providerType: "openai_compatible",
       baseUrl: "https://newapi.520ai.xin/v1",
       apiKey: "test-key",
-      model: "gpt-5.4-mini",
+      model: "gemini-3-flash",
     });
   });
 
@@ -188,7 +188,7 @@ describe("AI ask API route", () => {
         baseUrl: "https://newapi.520ai.xin/v1",
         apiKey: "test-key",
         extraHeaders: {},
-        model: "gpt-5.4-mini",
+        model: "gemini-3-flash",
       },
     });
 

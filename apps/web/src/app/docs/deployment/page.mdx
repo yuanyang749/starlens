@@ -205,11 +205,12 @@ AI 功能不是启动 Web 应用的硬依赖。上线后可以在设置页创建
 
 ## CLI / Agent / MCP 接入
 
-CLI、Agent HTTP tools 和 MCP 不需要单独部署公网服务。它们通过个人 API Token 调用当前 Starlens 站点。
+CLI、Agent Skill、HTTP tools 和 MCP 不需要单独部署公网服务。它们通过个人 API Token 调用当前 Starlens 站点。
 
 Agent runtime 示例：
 
 ```bash
+STARLENS_SKILL_FILE="/path/to/starlens/agent-skills/starlens/SKILL.md"
 STARLENS_TOKEN="stl_xxx"
 STARLENS_API_BASE_URL="https://your-starlens.example.com"
 ```

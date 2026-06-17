@@ -223,6 +223,7 @@ export function RepoDetailPanel({
           </button>
           {githubUrl ? (
             <a href={githubUrl} target="_blank" rel="noopener noreferrer" className="workbench-button workbench-button--ghost">
+              <ExternalLink className="h-4 w-4" />
               在 GitHub 打开
             </a>
           ) : null}
@@ -237,6 +238,7 @@ export function RepoDetailPanel({
 
       <div className="repo-detail-footer">
         <span>摘要来源：{SOURCE_LABELS[repo.repoSummarySource] ?? repo.repoSummarySource}</span>
+        <span aria-hidden="true">·</span>
         <span>更新 {formatDateTime(repo.repoSummaryUpdatedAt)}</span>
       </div>
     </aside>

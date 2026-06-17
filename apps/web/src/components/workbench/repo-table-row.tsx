@@ -2,7 +2,7 @@
 
 import type { RepoSummary } from "@starlens/core";
 import { KeyboardEvent } from "react";
-import { FolderGit2, Heart, Pin, Star } from "lucide-react";
+import { FolderGit2, Heart, Star } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -14,7 +14,6 @@ type RepoTableRowProps = {
   repo: RepoSummary;
   selected: boolean;
   onSelect: () => void;
-  onOpenDetails: () => void;
   onToggleFavorite: (repo: RepoSummary) => Promise<void>;
   favoriteUpdating: boolean;
 };
@@ -23,7 +22,6 @@ export function RepoTableRow({
   repo,
   selected,
   onSelect,
-  onOpenDetails,
   onToggleFavorite,
   favoriteUpdating,
 }: RepoTableRowProps) {
@@ -83,24 +81,6 @@ export function RepoTableRow({
           </TooltipTrigger>
           <TooltipContent>
             <span>{favoriteTitle}</span>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="查看详情"
-              className="repo-table-row__action-button repo-table-row__pin"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenDetails();
-              }}
-            >
-              <Pin className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <span>查看详情</span>
           </TooltipContent>
         </Tooltip>
       </span>

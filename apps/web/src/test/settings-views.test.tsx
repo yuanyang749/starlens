@@ -116,7 +116,7 @@ describe("tokens settings interactions", () => {
     expect(el.textContent).toContain("已复制");
   });
 
-  it("shows copyable CLI, agent HTTP, and MCP setup snippets after token creation without rendering the raw token", async () => {
+  it("shows copyable CLI, agent skill, and MCP setup snippets after token creation without rendering the raw token", async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
     const token = { id: "x", name: "T", note: "Cursor MCP", tokenPrefix: "stl_secret", tokenSuffix: "_token", createdAt: new Date().toISOString(), lastUsedAt: null };
@@ -137,14 +137,15 @@ describe("tokens settings interactions", () => {
     await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
     expect(el.textContent).toContain("CLI 配置");
-    expect(el.textContent).toContain("Agent HTTP 配置");
+    expect(el.textContent).toContain("Agent Skill 配置");
     expect(el.textContent).toContain("Cursor MCP 配置");
     expect(el.textContent).toContain("STARLENS_TOKEN");
+    expect(el.textContent).toContain("agent-skills/starlens/SKILL.md");
     expect(el.textContent).not.toContain("stl_secret_token");
     expect(el.textContent).toContain("stl_secret********_token");
 
     const copyCli = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 CLI 配置"));
-    const copyAgent = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 Agent 配置"));
+    const copyAgent = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 Agent Skill"));
     const copyMcp = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 MCP 配置"));
     await act(async () => copyCli?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => copyAgent?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
@@ -153,6 +154,8 @@ describe("tokens settings interactions", () => {
     expect(writeTextMock).toHaveBeenNthCalledWith(1, expect.stringContaining("stl_secret_token"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_TOKEN"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("stl_secret_token"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_SKILL_FILE"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("agent-skills/starlens/SKILL.md"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("/api/search"));
     expect(writeTextMock).toHaveBeenNthCalledWith(3, expect.stringContaining("STARLENS_TOKEN"));
     expect(writeTextMock).toHaveBeenNthCalledWith(3, expect.stringContaining("stl_secret_token"));
@@ -253,10 +256,10 @@ describe("AI settings interactions", () => {
       });
     };
 
-    setInput("显示名称", "DeepSeek");
-    setInput("模型", "deepseek-chat");
-    setInput("Base URL", "https://api.deepseek.com");
-    setInput("API Key", "sk-test");
+    setInput("例如：我的 OpenAI", "DeepSeek");
+    setInput("例如：gpt-4o-mini", "deepseek-chat");
+    setInput("https://api.openai.com/v1", "https://api.deepseek.com");
+    setInput("sk-...", "sk-test");
 
     const button = Array.from(el.querySelectorAll("button")).find((item) =>
       item.textContent?.includes("创建配置"),

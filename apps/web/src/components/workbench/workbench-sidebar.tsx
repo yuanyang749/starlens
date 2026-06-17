@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Star } from "lucide-react";
+import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Star } from "lucide-react";
 
 type WorkbenchSidebarProps = {
   contentMode: "repos" | "general" | "providers" | "tokens";
@@ -99,7 +99,7 @@ export function WorkbenchSidebar({
           {/* 中文注释：工作台直接补充文档入口，方便用户从操作界面跳回功能和配置说明。 */}
           <Link href="/docs" className="workbench-nav-item" aria-label="使用文档">
             <span className="workbench-nav-item__leading">
-              <Search className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" />
               <span className="workbench-nav-item__label">使用文档</span>
             </span>
           </Link>

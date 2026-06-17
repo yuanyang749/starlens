@@ -61,7 +61,7 @@ TOKEN_ENCRYPTION_SECRET="replace-with-random-32-byte-secret"
 ```bash
 SYSTEM_AI_API_KEY="sk-..."
 SYSTEM_AI_BASE_URL="https://api.openai.com/v1"
-SYSTEM_AI_MODEL="gpt-4.1-mini"
+SYSTEM_AI_MODEL="gemini-3-flash"
 ```
 
 变量说明：
@@ -101,6 +101,48 @@ Token 适合调用：
 | AI 问答 | `POST /api/ai/ask` |
 
 Token 管理接口只允许浏览器会话访问。Bearer Token 不能继续创建新的 Token。
+
+## Agent Skill
+
+Hermes、OpenClaw 和自定义 agent runtime 推荐通过仓库内的 StarLens skill 接入，而不是只复制 HTTP curl 示例。Skill 是 agent 的配置载体，负责声明何时调用 StarLens、用哪个端点、如何处理 Token、失败和返回值。
+
+Skill 文件位置：
+
+```text
+agent-skills/starlens/SKILL.md
+```
+
+详细 HTTP 契约：
+
+```text
+agent-skills/starlens/references/http-api.md
+```
+
+Agent 运行时至少需要三个配置值：
+
+```bash
+STARLENS_SKILL_FILE="/path/to/starlens/agent-skills/starlens/SKILL.md"
+STARLENS_TOKEN="stl_xxx"
+STARLENS_API_BASE_URL="https://your-starlens.example.com"
+```
+
+接入原则：
+
+- 如果 Agent 支持 skill/instruction 文件，直接指向 `STARLENS_SKILL_FILE`。
+- 如果 Agent 只支持 system prompt，把 `SKILL.md` 内容粘贴到该 Agent 的长期指令里。
+- Token 放在 Agent 的 secret/env 配置里，不要写进 prompt 或仓库文件。
+- Hermes、OpenClaw 这类服务端/远程 runtime 默认使用 HTTP API，不优先接 MCP。
+
+通用配置形态：
+
+```yaml
+skills:
+  - path: /path/to/starlens/agent-skills/starlens/SKILL.md
+env:
+  STARLENS_API_BASE_URL: https://your-starlens.example.com
+secrets:
+  STARLENS_TOKEN: stl_xxx
+```
 
 ## HTTP API 示例
 

@@ -4,15 +4,16 @@
 
 Starlens 对 agent 和 IDE 的支持分为两条明确路径：
 
-- HTTP API
+- Agent Skill + HTTP API
   - Hermes、OpenClaw 或自定义 agent runtime 的默认接入方式
+  - 先加载 `agent-skills/starlens/SKILL.md` 作为行为协议
   - 使用 `Authorization: Bearer <token>` 直接调用 `/api/*`
   - 适合服务端、容器、远程 worker 和需要审计/重试/限流的运行时
 - MCP server
   - 本地 stdio server，位于 `apps/mcp`
   - 只推荐给 Codex、opencode、Claude Code、Cursor、支持 MCP 的 IDE 和桌面 MCP 客户端
 
-MCP 层不重新实现业务逻辑，只复用 `packages/agent-tools`，再由该包调用现有 HTTP API。对 Hermes、OpenClaw 这类 agent runtime，优先保持最短链路：`agent runtime -> Starlens HTTP API`。
+MCP 层不重新实现业务逻辑，只复用 `packages/agent-tools`，再由该包调用现有 HTTP API。对 Hermes、OpenClaw 这类 agent runtime，优先保持最短链路：`agent runtime -> Starlens Skill -> Starlens HTTP API`。
 
 ## 2. 前置条件
 
@@ -28,14 +29,31 @@ http://localhost:3000
 
 生产或自部署时将 `STARLENS_API_BASE_URL` 改为对应站点地址。
 
-## 3. Agent HTTP 接入
+## 3. Agent Skill 接入
 
-Hermes、OpenClaw 和自定义 agent runtime 直接配置 HTTP tool。基础配置如下：
+Hermes、OpenClaw 和自定义 agent runtime 应先加载仓库内 skill，再按 skill 中的规则调用 HTTP API。Skill 是 agent 的配置载体，负责说明调用时机、端点选择、Token 处理、错误恢复和返回值解释。
+
+Skill 文件：
+
+```text
+agent-skills/starlens/SKILL.md
+```
+
+HTTP 参考：
+
+```text
+agent-skills/starlens/references/http-api.md
+```
+
+基础配置如下：
 
 ```bash
+STARLENS_SKILL_FILE="/path/to/starlens/agent-skills/starlens/SKILL.md"
 STARLENS_TOKEN="stl_xxx"
 STARLENS_API_BASE_URL="https://your-starlens.example.com"
 ```
+
+如果 Agent 支持 skill/instruction 文件，直接指向 `STARLENS_SKILL_FILE`。如果 Agent 只支持 system prompt，把 `SKILL.md` 内容放入长期指令，把 Token 放在 secret/env 配置里。
 
 统一请求头：
 
@@ -206,7 +224,7 @@ Use the starlens MCP tool to search my starred repositories for react with pageS
 - `ask_stars`
   - 调用 Starlens AI 问答
 
-Hermes、OpenClaw 不需要通过 MCP 使用这些能力。它们应按第 3 节把同名能力映射为 HTTP tools。
+Hermes、OpenClaw 不需要通过 MCP 使用这些能力。它们应按第 3 节加载 StarLens skill，并把同名能力映射为 HTTP tools。
 
 ## 8. 安全边界
 
