@@ -1,4 +1,4 @@
-import type { AiConfig } from "../types";
+import type { AiConfig } from "../types.js";
 
 export const mockAiConfigs: AiConfig[] = [
   {

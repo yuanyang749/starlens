@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RepoSummary } from "@starlens/core";
+import type { RepoSummary } from "@starlens-app/core";
 import { Bot, Check, ExternalLink, Globe, Plus, Star, X } from "lucide-react";
 import {
   SOURCE_LABELS,

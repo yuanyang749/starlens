@@ -1,4 +1,4 @@
-import type { RepoSummary } from "../types";
+import type { RepoSummary } from "../types.js";
 
 export const mockRepoDetails: RepoSummary[] = [
   {

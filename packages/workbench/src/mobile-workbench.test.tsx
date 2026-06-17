@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AiConfig, PaginatedResult, RepoSummary, TokenRecord } from "@starlens/core";
+import type { AiConfig, PaginatedResult, RepoSummary, TokenRecord } from "@starlens-app/core";
 import { useMobileWorkbench, type AiAskResult, type SyncResult } from "./index";
 
 function repoFixture(overrides: Partial<RepoSummary> = {}): RepoSummary {

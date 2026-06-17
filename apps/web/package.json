@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@starlens-app/agent-tools": "workspace:*",
     "@starlens-app/core": "workspace:*",
     "@starlens/mobile": "workspace:*",
     "@starlens/server": "workspace:*",

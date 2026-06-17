@@ -1,4 +1,4 @@
-import type { RepoSummary } from "@starlens/core";
+import type { RepoSummary } from "@starlens-app/core";
 import { CalendarPlus, Code, Eye, GitBranch, GitCommitHorizontal, RefreshCw, Scale, Star } from "lucide-react";
 import { formatCompactNumber, formatDateTime } from "./workbench-formatters";
 

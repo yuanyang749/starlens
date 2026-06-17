@@ -1,6 +1,6 @@
 "use client";
 
-import type { RepoSummary, SearchSort } from "@starlens/core";
+import type { RepoSummary, SearchSort } from "@starlens-app/core";
 import { ArrowDownUp, Star, X } from "lucide-react";
 import {
   Select,

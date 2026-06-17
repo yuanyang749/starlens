@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AiConfig, ProviderType } from "@starlens/core";
+import type { AiConfig, ProviderType } from "@starlens-app/core";
 import { Bot, Plus } from "lucide-react";
 import {
   Select,

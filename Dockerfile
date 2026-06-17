@@ -19,6 +19,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
+RUN pnpm --filter @starlens-app/core build && pnpm --filter @starlens-app/agent-tools build
 RUN pnpm --filter @starlens/web build
 
 FROM deps AS migrator

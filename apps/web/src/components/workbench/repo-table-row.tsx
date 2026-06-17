@@ -1,6 +1,6 @@
 "use client";
 
-import type { RepoSummary } from "@starlens/core";
+import type { RepoSummary } from "@starlens-app/core";
 import { KeyboardEvent } from "react";
 import { FolderGit2, Heart, Star } from "lucide-react";
 import {

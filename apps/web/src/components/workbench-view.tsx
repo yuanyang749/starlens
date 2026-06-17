@@ -5,7 +5,7 @@ import {
   DEFAULT_SEARCH_SORT,
   type PaginatedResult,
   type RepoSummary,
-} from "@starlens/core";
+} from "@starlens-app/core";
 import { X } from "lucide-react";
 import { AISettingsView } from "./ai-settings-view";
 import { GeneralSettingsView } from "./general-settings-view";

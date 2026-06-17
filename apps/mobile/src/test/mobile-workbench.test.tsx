@@ -1,7 +1,7 @@
 import { act, type ImgHTMLAttributes } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AiConfig, RepoSummary, TokenRecord } from "@starlens/core";
+import type { AiConfig, RepoSummary, TokenRecord } from "@starlens-app/core";
 import type { useMobileWorkbench } from "@starlens/workbench";
 import { MobileWorkbench } from "../components/mobile-workbench";
 

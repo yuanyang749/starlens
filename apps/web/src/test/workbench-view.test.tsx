@@ -2,8 +2,8 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PaginatedResult, RepoSummary } from "@starlens/core";
-import { mockRepoDetails } from "@starlens/core";
+import type { PaginatedResult, RepoSummary } from "@starlens-app/core";
+import { mockRepoDetails } from "@starlens-app/core";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkbenchView } from "@/components/workbench-view";
 

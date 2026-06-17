@@ -7,6 +7,6 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/public.ts", "src/types.ts", "src/repo-text.ts"],
+  "include": ["src/public.ts", "src/types.ts", "src/repo-text.ts", "src/mock/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

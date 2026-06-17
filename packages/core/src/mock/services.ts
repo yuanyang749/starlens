@@ -1,13 +1,13 @@
-import { mockAiConfigs } from "./ai-configs";
-import { mockRepoDetails } from "./repos";
-import { mockTokens } from "./tokens";
+import { mockAiConfigs } from "./ai-configs.js";
+import { mockRepoDetails } from "./repos.js";
+import { mockTokens } from "./tokens.js";
 import type {
   AiConfig,
   PaginatedResult,
   RepoSummary,
   SearchReposInput,
   TokenRecord,
-} from "../types";
+} from "../types.js";
 
 function normalize(value: string) {
   return value.trim().toLowerCase();

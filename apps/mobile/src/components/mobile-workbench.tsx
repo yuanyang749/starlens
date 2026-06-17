@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import type { AiConfig, ProviderType, RepoSummary, TokenRecord } from "@starlens/core";
+import type { AiConfig, ProviderType, RepoSummary, TokenRecord } from "@starlens-app/core";
 import {
   Bot,
   Check,

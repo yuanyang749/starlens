@@ -1,4 +1,4 @@
-import type { TokenRecord } from "../types";
+import type { TokenRecord } from "../types.js";
 
 export const mockTokens: TokenRecord[] = [
   {

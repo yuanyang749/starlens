@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { TokenRecord } from "@starlens/core";
+import type { TokenRecord } from "@starlens-app/core";
 import { Copy, FileText, KeyRound, Plus, ShieldCheck, TerminalSquare } from "lucide-react";
 import { ApiClientError, fetchApi } from "@/lib/api-client";
 
