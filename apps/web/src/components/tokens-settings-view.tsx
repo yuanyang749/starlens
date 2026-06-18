@@ -78,6 +78,7 @@ export function TokensSettingsView() {
   const [copyableTokens, setCopyableTokens] = useState<Record<string, string>>({});
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
   const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
+  const [activeSnippetTab, setActiveSnippetTab] = useState<Record<string, "cli" | "agent" | "mcp">>({});
   const [noteDraft, setNoteDraft] = useState("");
   const canCreateToken = noteDraft.trim().length > 0;
 
@@ -215,9 +216,10 @@ export function TokensSettingsView() {
             const rawToken = copyableTokens[token.id];
             const maskedToken = maskToken(token, rawToken);
             const cliSnippet = rawToken ? buildCliSetupSnippet(rawToken) : "";
-            // 中文注释：Agent runtime 需要可维护的 skill 文件入口，不能只依赖一次性 curl 示例。
             const agentSnippet = rawToken ? buildAgentSkillSnippet(rawToken) : "";
             const mcpSnippet = rawToken ? buildMcpConfigSnippet(rawToken) : "";
+            const activeTab = activeSnippetTab[token.id] ?? "cli";
+            const activeSnippet = activeTab === "cli" ? cliSnippet : activeTab === "agent" ? agentSnippet : mcpSnippet;
 
             return (
               <article key={token.id} className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
@@ -242,53 +244,44 @@ export function TokensSettingsView() {
                   </div>
                 </div>
                 {rawToken ? (
-                  <div className="mt-4 grid gap-3 border-t border-[color:var(--line)] pt-4 xl:grid-cols-3">
-                    <div className="rounded-[16px] bg-white p-3">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-[color:var(--foreground)]">CLI 配置</span>
-                        <button
-                          type="button"
-                          onClick={() => void copySnippet(token.id, "cli", cliSnippet)}
-                          className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          {copiedSnippetId === `${token.id}:cli` ? "已复制" : "复制 CLI 配置"}
-                        </button>
+                  <div className="mt-4 border-t border-[color:var(--line)] pt-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex gap-1 rounded-full bg-[color:var(--surface-2)] p-1">
+                        {(["cli", "agent", "mcp"] as const).map((tab) => {
+                          const labels = { cli: "CLI", agent: "Agent Skill", mcp: "Cursor MCP" };
+                          return (
+                            <button
+                              key={tab}
+                              type="button"
+                              onClick={() => setActiveSnippetTab((s) => ({ ...s, [token.id]: tab }))}
+                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                                activeTab === tab
+                                  ? "bg-[color:var(--foreground)] text-white shadow-sm"
+                                  : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                              }`}
+                            >
+                              {labels[tab]}
+                            </button>
+                          );
+                        })}
                       </div>
-                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
-                        {maskSnippet(cliSnippet, rawToken, maskedToken)}
-                      </pre>
+                      <button
+                        type="button"
+                        onClick={() => void copySnippet(token.id, activeTab, activeSnippet)}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--surface-2)] px-3 py-1.5 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:bg-[color:var(--line)]"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {copiedSnippetId === `${token.id}:${activeTab}` ? "已复制" : "复制"}
+                      </button>
                     </div>
-                    <div className="rounded-[16px] bg-white p-3">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-[color:var(--foreground)]">Agent Skill 配置</span>
-                        <button
-                          type="button"
-                          onClick={() => void copySnippet(token.id, "agent", agentSnippet)}
-                          className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          {copiedSnippetId === `${token.id}:agent` ? "已复制" : "复制 Agent Skill"}
-                        </button>
+                    <div className="relative rounded-[14px] bg-[#0f1117] overflow-hidden">
+                      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-white/[0.06]">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
                       </div>
-                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
-                        {maskSnippet(agentSnippet, rawToken, maskedToken)}
-                      </pre>
-                    </div>
-                    <div className="rounded-[16px] bg-white p-3">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-[color:var(--foreground)]">Cursor MCP 配置</span>
-                        <button
-                          type="button"
-                          onClick={() => void copySnippet(token.id, "mcp", mcpSnippet)}
-                          className="inline-flex items-center gap-1 text-xs text-[color:var(--accent)] underline"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          {copiedSnippetId === `${token.id}:mcp` ? "已复制" : "复制 MCP 配置"}
-                        </button>
-                      </div>
-                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-[color:var(--muted)]">
-                        {maskSnippet(mcpSnippet, rawToken, maskedToken)}
+                      <pre className="overflow-x-auto p-4 font-mono text-xs leading-6 text-[#c9d1d9] scrollbar-thin">
+                        <code>{maskSnippet(activeSnippet, rawToken, maskedToken)}</code>
                       </pre>
                     </div>
                   </div>
