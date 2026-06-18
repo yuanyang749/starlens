@@ -23,7 +23,8 @@
     "db:migrate:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web db:migrate",
     "db:migrate:neon": "node scripts/with-env.mjs .env.neon -- corepack pnpm --filter @starlens/web db:migrate",
     "db:check:local": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env",
-    "db:check:neon": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env.neon"
+    "db:check:neon": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env.neon",
+    "deploy": "node scripts/deploy.mjs"
   },
   "devDependencies": {
     "playwright": "^1.59.1"
