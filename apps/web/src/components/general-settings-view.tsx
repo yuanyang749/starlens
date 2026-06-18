@@ -1,7 +1,15 @@
 "use client";
 
-import { Globe2, Info } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Globe2, Info, RefreshCw } from "lucide-react";
 import webPackage from "../../package.json";
+
+type VersionInfo = {
+  current: string;
+  latest: string | null;
+  hasUpdate: boolean;
+  releaseUrl: string | null;
+};
 
 type GeneralSettingsViewProps = {
   appVersion?: string;
@@ -10,6 +18,30 @@ type GeneralSettingsViewProps = {
 export function GeneralSettingsView({
   appVersion = webPackage.version,
 }: GeneralSettingsViewProps) {
+  const [versionInfo, setVersionInfo] = useState<VersionInfo>({
+    current: appVersion,
+    latest: null,
+    hasUpdate: false,
+    releaseUrl: null,
+  });
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/version")
+      .then((r) => r.json())
+      .then((data: VersionInfo) => setVersionInfo(data))
+      .catch(() => {})
+      .finally(() => setChecking(false));
+  }, []);
+
+  function handleUpdate() {
+    if (versionInfo.releaseUrl) {
+      window.open(versionInfo.releaseUrl, "_blank", "noopener,noreferrer");
+    } else {
+      window.location.reload();
+    }
+  }
+
   return (
     <div
       data-testid="general-settings-view"
@@ -43,9 +75,45 @@ export function GeneralSettingsView({
             <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">
               版本
             </p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
-              {appVersion}
-            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
+                {appVersion}
+              </p>
+              {checking && (
+                <span
+                  data-testid="version-checking"
+                  className="text-xs text-[color:var(--muted)]"
+                >
+                  检查中…
+                </span>
+              )}
+              {!checking && !versionInfo.hasUpdate && versionInfo.latest && (
+                <span
+                  data-testid="version-up-to-date"
+                  className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600 dark:text-green-400"
+                >
+                  已是最新
+                </span>
+              )}
+            </div>
+            {!checking && versionInfo.hasUpdate && versionInfo.latest && (
+              <div className="mt-3 flex items-center gap-3">
+                <span
+                  data-testid="version-update-badge"
+                  className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+                >
+                  发现新版本 v{versionInfo.latest}
+                </span>
+                <button
+                  data-testid="version-update-btn"
+                  onClick={handleUpdate}
+                  className="flex items-center gap-1.5 rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-80"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  立即更新
+                </button>
+              </div>
+            )}
           </div>
           <p className="text-sm leading-7 text-[color:var(--muted)]">
             这里保留运行时和发布信息，让系统级元数据与 Provider、Token 配置分开管理。

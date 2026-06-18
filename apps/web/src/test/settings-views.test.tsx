@@ -29,8 +29,10 @@ afterEach(() => {
 });
 
 describe("general settings layout", () => {
-  it("renders Simplified Chinese as the current interface language", () => {
+  it("renders Simplified Chinese as the current interface language", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ current: "0.1.0-test", latest: null, hasUpdate: false, releaseUrl: null }))));
     const { el } = mount(<GeneralSettingsView appVersion="0.1.0-test" />);
+    await act(async () => Promise.resolve());
 
     expect(el.querySelector('[data-testid="general-settings-view"]')).toBeTruthy();
     expect(el.textContent).toContain("界面语言");
@@ -40,6 +42,28 @@ describe("general settings layout", () => {
     expect(el.querySelector("select")).toBeNull();
     expect(el.textContent).not.toContain("Configuration domain");
     expect(el.textContent).not.toContain("English");
+  });
+
+  it("shows update badge and button when a newer version is available", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ current: "0.1.0", latest: "0.2.0", hasUpdate: true, releaseUrl: "https://github.com/yuanyang749/starlens/releases/tag/v0.2.0" }))));
+    const { el } = mount(<GeneralSettingsView appVersion="0.1.0" />);
+    await act(async () => Promise.resolve());
+
+    expect(el.querySelector('[data-testid="version-update-badge"]')).toBeTruthy();
+    expect(el.textContent).toContain("发现新版本");
+    expect(el.textContent).toContain("0.2.0");
+    expect(el.querySelector('[data-testid="version-update-btn"]')).toBeTruthy();
+    expect(el.textContent).toContain("立即更新");
+  });
+
+  it("shows up-to-date badge when current version matches latest", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ current: "0.1.0", latest: "0.1.0", hasUpdate: false, releaseUrl: null }))));
+    const { el } = mount(<GeneralSettingsView appVersion="0.1.0" />);
+    await act(async () => Promise.resolve());
+
+    expect(el.querySelector('[data-testid="version-up-to-date"]')).toBeTruthy();
+    expect(el.textContent).toContain("已是最新");
+    expect(el.querySelector('[data-testid="version-update-badge"]')).toBeNull();
   });
 });
 
