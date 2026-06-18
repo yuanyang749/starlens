@@ -3,7 +3,7 @@ import webPackage from "../../../../package.json";
 
 const GITHUB_REPO = "yuanyang749/starlens";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const current = webPackage.version;
