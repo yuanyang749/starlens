@@ -13,4 +13,5 @@ coverage
 !.env.*.example
 .deploy.env
 !.deploy.env.example
+.claude/settings.local.json
 node_modules

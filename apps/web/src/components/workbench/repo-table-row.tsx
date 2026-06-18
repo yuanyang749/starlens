@@ -2,7 +2,7 @@
 
 import type { RepoSummary } from "@starlens-app/core";
 import { KeyboardEvent } from "react";
-import { FolderGit2, Heart, Star } from "lucide-react";
+import { FolderGit2, Star } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -76,7 +76,7 @@ export function RepoTableRow({
                 void onToggleFavorite(repo);
               }}
             >
-              {repo.isFavorite ? <Star className="h-4 w-4 fill-current" /> : <Heart className="h-4 w-4" />}
+              <Star className={repo.isFavorite ? "h-4 w-4 fill-current" : "h-4 w-4"} />
             </button>
           </TooltipTrigger>
           <TooltipContent>

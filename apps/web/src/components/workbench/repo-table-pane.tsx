@@ -229,6 +229,13 @@ export function RepoTablePane({
                   换一个更具体的问题，再用 AI 搜索查看按相关度排序的仓库。
                 </p>
               </>
+            ) : favoritesOnly ? (
+              <>
+                <p className="repo-table-empty__title">还没有重点收藏。</p>
+                <p className="repo-table-empty__body">
+                  在仓库列表中点击 ☆ 收藏按钮，即可将仓库加入重点收藏。
+                </p>
+              </>
             ) : (
               <>
                 <p className="repo-table-empty__title">还没有同步仓库。</p>
