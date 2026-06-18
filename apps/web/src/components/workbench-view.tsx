@@ -109,6 +109,7 @@ export function WorkbenchView({
   } = useWorkbenchQueryState();
 
   const [repos, setRepos] = useState<RepoSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [allStarsTotal, setAllStarsTotal] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -141,6 +142,7 @@ export function WorkbenchView({
 
   const refreshList = useCallback(() => {
     const controller = new AbortController();
+    setLoading(true);
 
     apiJson<PaginatedResult<RepoSummary>>(`/api/search?${searchParams.toString()}`, {
       signal: controller.signal,
@@ -163,6 +165,7 @@ export function WorkbenchView({
           setSelectedRepo(null);
           setNoteDraft("");
         }
+        setLoading(false);
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === "AbortError") {
@@ -174,6 +177,7 @@ export function WorkbenchView({
             ? `列表请求失败：${caught.message}`
             : "列表请求失败：搜索失败。",
         );
+        setLoading(false);
       });
 
     return controller;
@@ -694,6 +698,8 @@ export function WorkbenchView({
             <RepoTablePane
               repos={displayedRepos}
               total={displayedTotal}
+              allStarsTotal={allStarsTotal}
+              loading={loading}
               mode={aiSearchMode ? "ai_search" : "default"}
               page={page}
               pageSize={aiSearchMode ? aiSearchPageSize : pageSize}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { RepoSummary, SearchSort } from "@starlens-app/core";
-import { ArrowDownUp, Star, X } from "lucide-react";
+import { ArrowDownUp, Loader2, Star, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,8 @@ import { RepoTableRow } from "./repo-table-row";
 type RepoTablePaneProps = {
   repos: RepoSummary[];
   total: number;
+  allStarsTotal: number;
+  loading: boolean;
   mode: "default" | "ai_search";
   page: number;
   pageSize: number;
@@ -65,6 +67,8 @@ function buildPaginationItems(currentPage: number, totalPages: number) {
 export function RepoTablePane({
   repos,
   total,
+  allStarsTotal,
+  loading,
   mode,
   page,
   pageSize,
@@ -220,7 +224,12 @@ export function RepoTablePane({
             favoriteUpdating={favoriteUpdatingId === repo.id}
           />
         ))}
-        {repos.length === 0 ? (
+        {loading && repos.length === 0 ? (
+          <div className="repo-table-empty">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <p className="repo-table-empty__body mt-2">正在加载仓库列表...</p>
+          </div>
+        ) : repos.length === 0 ? (
           <div className="repo-table-empty">
             {isAiSearchMode ? (
               <>
@@ -235,6 +244,20 @@ export function RepoTablePane({
                 <p className="repo-table-empty__body">
                   在仓库列表中点击 ☆ 收藏按钮，即可将仓库加入重点收藏。
                 </p>
+              </>
+            ) : allStarsTotal > 0 ? (
+              <>
+                <p className="repo-table-empty__title">没有找到匹配的仓库。</p>
+                <p className="repo-table-empty__body">
+                  当前筛选条件下未找到任何仓库，请尝试调整筛选条件或清空筛选。
+                </p>
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="workbench-button workbench-button--ghost mt-2"
+                >
+                  清空筛选条件
+                </button>
               </>
             ) : (
               <>
