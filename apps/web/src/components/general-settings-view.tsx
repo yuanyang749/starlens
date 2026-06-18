@@ -35,11 +35,7 @@ export function GeneralSettingsView({
   }, []);
 
   function handleUpdate() {
-    if (versionInfo.releaseUrl) {
-      window.open(versionInfo.releaseUrl, "_blank", "noopener,noreferrer");
-    } else {
-      window.location.reload();
-    }
+    window.location.reload();
   }
 
   return (
@@ -97,7 +93,7 @@ export function GeneralSettingsView({
               )}
             </div>
             {!checking && versionInfo.hasUpdate && versionInfo.latest && (
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
                 <span
                   data-testid="version-update-badge"
                   className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
@@ -112,6 +108,16 @@ export function GeneralSettingsView({
                   <RefreshCw className="h-3 w-3" />
                   立即更新
                 </button>
+                {versionInfo.releaseUrl && (
+                  <a
+                    href={versionInfo.releaseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
+                  >
+                    查看更新说明
+                  </a>
+                )}
               </div>
             )}
           </div>
