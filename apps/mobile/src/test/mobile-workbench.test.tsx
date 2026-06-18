@@ -240,11 +240,11 @@ describe("MobileWorkbench", () => {
     click(favoritesTab!);
     expect(mocks.workbench?.actions.setMode).toHaveBeenCalledWith("favorites");
 
-    const detailsButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "详情",
+    const repoCardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("acme/starlens"),
     );
-    expect(detailsButton).toBeTruthy();
-    click(detailsButton!);
+    expect(repoCardButton).toBeTruthy();
+    click(repoCardButton!);
     expect(mocks.push).toHaveBeenCalledWith("/?repo=repo-1", { scroll: false });
   });
 
