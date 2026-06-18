@@ -78,12 +78,13 @@ AI Provider 密钥会加密保存，API 响应不会返回明文。验证 Provid
 
 Starlens 支持个人 API Token，外部 CLI 或开发 Agent 可以通过 API 查询你的 Stars。这样收藏过的项目可以进入本地开发工作流，而不是只停留在浏览器收藏页里。
 
-工具接入分为两层：
+工具接入分为三层：
 
 | 方式 | 适用场景 |
 | --- | --- |
+| Agent Skill | Claude Code、Cursor、VS Code、OpenClaw、Hermes 等支持 Skill 文件的客户端，通过 `stars install-skill` 一键安装，无需额外 MCP 配置 |
 | HTTP API | 自定义脚本、CLI、Agent runtime 直接调用 `/api/*` |
-| MCP server | Codex、opencode、Claude Code、Cursor、支持 MCP 的 IDE 和桌面 MCP 客户端通过 stdio 调用 |
+| MCP server | Codex、opencode、Claude Code、Cursor 等通过 HTTP MCP（托管）或 stdio MCP（自部署）调用 |
 
 Token 明文只在创建时展示一次，服务端只保存哈希、前缀和后缀。Token 被调用时会更新 `lastUsedAt`，撤销后立即失效。
 

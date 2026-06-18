@@ -31,7 +31,7 @@ const helpText = [
   "  stars note <repo-id|owner/repo> (--set <text>|--clear) [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag add <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag remove <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
-  "  stars install-skill [--api-base-url <url>] [--token <token>] [--client claude|cursor|codex|opencode|other]",
+  "  stars install-skill [--api-base-url <url>] [--token <token>] [--client claude,cursor,...]  (多客户端逗号分隔)",
   "  stars version",
   "",
   "Configuration:",
@@ -861,6 +861,109 @@ async function wizardPromptSecret(question) {
   });
 }
 
+function maskToken(token) {
+  if (!token || token.length < 8) return "***";
+  return token.slice(0, 4) + "..." + token.slice(-3);
+}
+
+async function readExistingToken() {
+  const agentEnvPath = join(homedir(), ".starlens", "agent.env");
+  try {
+    const content = await readFile(agentEnvPath, "utf8");
+    const match = content.match(/^export STARLENS_TOKEN="([^"]+)"/m);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function wizardCheckbox(items) {
+  const isTTY = typeof process.stdin.setRawMode === "function";
+
+  if (!isTTY) {
+    // Non-TTY fallback: comma-separated input
+    const labels = items.map((it, i) => `  ${i + 1}) ${it.label}${it.skillOnly ? " [仅 Skill]" : ""}`).join("\n");
+    console.log(labels);
+    const rl = createReadlineInterface();
+    return new Promise((resolve) => {
+      rl.question("输入序号（逗号分隔，如 1,2）: ", (answer) => {
+        rl.close();
+        const selected = answer.trim().split(",").map(s => {
+          const n = parseInt(s.trim(), 10);
+          return items[n - 1]?.value ?? null;
+        }).filter(Boolean);
+        resolve(selected.length > 0 ? selected : [items[0].value]);
+      });
+    });
+  }
+
+  return new Promise((resolve) => {
+    let cursor = 0;
+    const selected = new Set([items[0].value]); // 默认选中第一项
+
+    const RESET = "\x1b[0m";
+    const BOLD = "\x1b[1m";
+    const CYAN = "\x1b[36m";
+    const DIM = "\x1b[2m";
+
+    function render() {
+      // 清除之前的输出行
+      process.stdout.write("\x1b[" + items.length + "A\x1b[0J");
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const isActive = i === cursor;
+        const isSelected = selected.has(item.value);
+        const icon = isSelected ? "◉" : "◯";
+        const label = item.label + (item.skillOnly ? `  ${DIM}[仅 Skill]${RESET}` : "");
+        const line = isActive
+          ? `${BOLD}${CYAN}> ${icon} ${label}${RESET}`
+          : `  ${icon} ${label}`;
+        process.stdout.write(line + "\n");
+      }
+    }
+
+    // 初次渲染
+    console.log(`请选择 AI 客户端（${BOLD}↑↓${RESET} 移动，${BOLD}空格${RESET} 选中/取消，${BOLD}回车${RESET} 确认）：\n`);
+    for (let i = 0; i < items.length; i++) {
+      process.stdout.write("\n");
+    }
+    render();
+
+    const stdin = process.stdin;
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+
+    const onData = (chunk) => {
+      if (chunk === "\x1b[A") { // 上箭头
+        cursor = (cursor - 1 + items.length) % items.length;
+        render();
+      } else if (chunk === "\x1b[B") { // 下箭头
+        cursor = (cursor + 1) % items.length;
+        render();
+      } else if (chunk === " ") { // 空格
+        const val = items[cursor].value;
+        if (selected.has(val)) selected.delete(val);
+        else selected.add(val);
+        render();
+      } else if (chunk === "\r" || chunk === "\n") { // 回车
+        stdin.setRawMode(false);
+        stdin.removeListener("data", onData);
+        stdin.pause();
+        process.stdout.write("\n");
+        const result = items.map(it => it.value).filter(v => selected.has(v));
+        resolve(result.length > 0 ? result : [items[0].value]);
+      } else if (chunk === "\x03") { // Ctrl+C
+        stdin.setRawMode(false);
+        process.stdout.write("\n");
+        process.exit(1);
+      }
+    };
+
+    stdin.on("data", onData);
+  });
+}
+
 function buildMcpArgs(projectRoot) {
   return ["-lc", `source "$HOME/.starlens/agent.env" && cd "${projectRoot}" && corepack pnpm mcp:start`];
 }
@@ -922,6 +1025,70 @@ function renderOpencodeSnippet(projectRoot) {
     null,
     2,
   );
+}
+
+async function mergeJson(filePath, mergeFn) {
+  let existing = {};
+  try {
+    const raw = await readFile(filePath, "utf8");
+    existing = JSON.parse(raw);
+  } catch { /* 文件不存在或格式错误则从空对象开始 */ }
+  const merged = mergeFn(existing);
+  await mkdir(filePath.replace(/\/[^/]+$/, ""), { recursive: true });
+  await writeFile(filePath, JSON.stringify(merged, null, 2) + "\n");
+}
+
+async function appendTomlSection(filePath, sectionKey, content) {
+  let existing = "";
+  try { existing = await readFile(filePath, "utf8"); } catch { /* 新建 */ }
+  if (existing.includes(`[${sectionKey}]`)) {
+    return { ok: false, reason: `[${sectionKey}] 节点已存在，跳过写入` };
+  }
+  await mkdir(filePath.replace(/\/[^/]+$/, ""), { recursive: true });
+  await writeFile(filePath, existing + (existing && !existing.endsWith("\n") ? "\n" : "") + "\n" + content + "\n");
+  return { ok: true };
+}
+
+async function writeMcpConfig(client, { apiBaseUrl, token, projectRoot, hosted }) {
+  const home = homedir();
+  try {
+    if (client === "cursor") {
+      const cursorMcpPath = join(home, ".cursor", "mcp.json");
+      const starlensEntry = hosted
+        ? { url: `${apiBaseUrl}/mcp`, headers: { Authorization: `Bearer ${token || "stl_xxx"}` } }
+        : { command: "corepack", args: ["pnpm", "mcp:start"], cwd: projectRoot, env: { STARLENS_TOKEN: "（从 ~/.starlens/agent.env 读取）", STARLENS_API_BASE_URL: "（从 ~/.starlens/agent.env 读取）" } };
+      await mergeJson(cursorMcpPath, (obj) => ({
+        ...obj,
+        mcpServers: { ...(obj.mcpServers ?? {}), starlens: starlensEntry },
+      }));
+      return { ok: true, path: cursorMcpPath };
+    }
+
+    if (client === "opencode") {
+      const opencodePath = join(home, ".config", "opencode", "opencode.json");
+      const starlensEntry = hosted
+        ? { type: "http", url: `${apiBaseUrl}/mcp`, headers: { Authorization: `Bearer ${token || "stl_xxx"}` }, enabled: true }
+        : { type: "local", command: ["zsh", "-lc", `source "$HOME/.starlens/agent.env" && cd "${projectRoot}" && corepack pnpm mcp:start`], enabled: true, timeout: 10000 };
+      await mergeJson(opencodePath, (obj) => ({
+        ...obj,
+        mcp: { ...(obj.mcp ?? {}), starlens: starlensEntry },
+      }));
+      return { ok: true, path: opencodePath };
+    }
+
+    if (client === "codex") {
+      const codexPath = join(home, ".codex", "config.toml");
+      const content = hosted
+        ? `[mcp_servers.starlens]\ntype = "http"\nurl = "${apiBaseUrl}/mcp"\n\n[mcp_servers.starlens.headers]\nAuthorization = "Bearer ${token || "stl_xxx"}"\nstartup_timeout_sec = 30\ndefault_tools_approval_mode = "approve"`
+        : `[mcp_servers.starlens]\ntype = "stdio"\ncommand = "zsh"\nargs = ["-lc", "source \\"$HOME/.starlens/agent.env\\" && cd \\"${projectRoot}\\" && corepack pnpm mcp:start"]\nstartup_timeout_sec = 30\ndefault_tools_approval_mode = "approve"`;
+      const result = await appendTomlSection(codexPath, "mcp_servers.starlens", content);
+      return result.ok ? { ok: true, path: codexPath } : { ok: false, reason: result.reason };
+    }
+
+    return { ok: false, reason: `${client} 不支持自动写入，请手动配置` };
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  }
 }
 
 async function spawnCommand(command, args) {
@@ -1004,263 +1171,221 @@ async function runInstallSkillWizard(args, env) {
   const clientArg = readOption(rest, "--client");
   rest = clientArg.rest;
 
+  const clientLabels = {
+    claude: "Claude Code", cursor: "Cursor", vscode: "VS Code (Copilot)",
+    codex: "Codex CLI", opencode: "OpenCode", openclaw: "OpenClaw", hermes: "Hermes", other: "其他",
+  };
+  const MCP_SUPPORTED = new Set(["claude", "cursor", "codex", "opencode"]);
+
+  const CLIENT_ITEMS = [
+    { value: "claude",   label: "Claude Code" },
+    { value: "cursor",   label: "Cursor" },
+    { value: "vscode",   label: "VS Code (Copilot)",  skillOnly: true },
+    { value: "codex",    label: "Codex CLI" },
+    { value: "opencode", label: "OpenCode" },
+    { value: "openclaw", label: "OpenClaw",            skillOnly: true },
+    { value: "hermes",   label: "Hermes",              skillOnly: true },
+    { value: "other",    label: "其他（仅输出配置片段）", skillOnly: true },
+  ];
+
   console.log("");
-  console.log("Starlens MCP 安装向导");
+  console.log("Starlens 安装向导");
   console.log("═".repeat(40));
-  console.log("本向导将引导你完成 MCP Server 接入配置。");
+  console.log("本向导将引导你完成 Skill 安装及可选的 MCP Server 配置。");
   console.log("");
 
   // Step 0: check global install
   const isGlobalInstall = !process.argv[1]?.includes("apps/cli");
   if (!isGlobalInstall) {
     console.log("提示：你正在从源码运行。如需让其他工具通过 `stars` 命令使用，");
-    console.log("      请先全局安装：npm install -g starlens");
+    console.log("      请先全局安装：npm install -g @starlens-app/cli");
     console.log("");
   }
 
   const rl = createReadlineInterface();
 
   try {
-    // Step 1: select deployment mode
-    const defaultUrl = apiBaseUrlArg.value ?? env.STARLENS_API_BASE_URL ?? HOSTED_MCP_BASE_URL;
-    console.log("部署模式：");
-    console.log("  1) 托管服务（推荐）— 使用 starlens.520ai.xin，无需本地启动服务");
-    console.log("  2) 自部署 — 使用你自己的服务器或本地开发环境");
-    const modeChoice = await wizardPrompt(rl, "选择模式", "1");
-    const isSelfHosted = modeChoice.trim() === "2";
-
-    let apiBaseUrl;
-    let projectRoot;
-
-    if (isSelfHosted) {
+    // Step 1: 多选客户端
+    let clients;
+    const clientArgRaw = clientArg.value?.toLowerCase();
+    if (clientArgRaw) {
+      // --client 参数：逗号分隔
+      const nameMap = Object.fromEntries(CLIENT_ITEMS.map(it => [it.value, it.value]));
+      clients = clientArgRaw.split(",").map(s => nameMap[s.trim()]).filter(Boolean);
+      if (clients.length === 0) clients = ["claude"];
+      console.log(`已选择客户端：${clients.map(c => clientLabels[c]).join("、")}`);
+    } else {
       console.log("");
-      apiBaseUrl = (await wizardPrompt(rl, "Starlens API base URL", defaultUrl === HOSTED_MCP_BASE_URL ? DEFAULT_API_BASE_URL : defaultUrl)).replace(/\/+$/, "");
-      // only ask for project root in self-hosted stdio mode
-      if (!isHostedUrl(apiBaseUrl)) {
-        const detectedRoot = detectProjectRoot();
-        console.log(`检测到项目根目录：${detectedRoot}`);
-        projectRoot = (await wizardPrompt(rl, "项目路径（回车确认）", detectedRoot)).replace(/\/$/, "");
+      clients = await wizardCheckbox(CLIENT_ITEMS);
+      console.log(`已选择：${clients.map(c => clientLabels[c]).join("、")}`);
+    }
+
+    const cwd = process.cwd();
+
+    // Step 2: 安装 Skill（默认是）
+    console.log("");
+    console.log("─".repeat(40));
+    const installSkill = await wizardPrompt(rl, "是否安装 Starlens Skill 文件？(Y/n)", "Y");
+    if (!/^n$/i.test(installSkill)) {
+      console.log("");
+      console.log("安装 Starlens Agent Skill...");
+      for (const client of clients) {
+        const skillResult = await installSkillFiles(client, cwd);
+        if (skillResult.results) {
+          for (const r of skillResult.results) {
+            if (r.ok) {
+              console.log(`✓ Skill 已安装：${r.path}`);
+            } else {
+              console.log(`⚠  Skill 安装失败：${r.path}（${r.reason}）`);
+            }
+          }
+        } else if (!skillResult.ok) {
+          console.log(`⚠  ${clientLabels[client]}：${skillResult.reason}`);
+        }
       }
     } else {
-      apiBaseUrl = HOSTED_MCP_BASE_URL;
-      console.log(`✓ 使用托管服务：${HOSTED_MCP_BASE_URL}`);
+      console.log("跳过 Skill 安装。");
     }
 
-    const hosted = isHostedUrl(apiBaseUrl);
-
-    // Step 2: select client
-    const clientMap = {
-      "1": "claude", "2": "cursor", "3": "vscode", "4": "codex", "5": "opencode", "6": "openclaw", "7": "hermes", "8": "other",
-      "claude": "claude", "cursor": "cursor", "vscode": "vscode", "codex": "codex", "opencode": "opencode", "openclaw": "openclaw", "hermes": "hermes", "other": "other",
-    };
-
-    let client = clientArg.value?.toLowerCase();
-    if (!clientMap[client]) {
-      console.log("");
-      console.log("请选择你的 AI 客户端：");
-      console.log("  1) Claude Code");
-      console.log("  2) Cursor");
-      console.log("  3) VS Code (Copilot)");
-      console.log("  4) Codex CLI");
-      console.log("  5) OpenCode");
-      console.log("  6) OpenClaw");
-      console.log("  7) Hermes");
-      console.log("  8) 其他（仅输出配置片段）");
-      const clientChoice = await wizardPrompt(rl, "输入序号或名称", "1");
-      client = clientMap[clientChoice.toLowerCase()] ?? "other";
-    } else {
-      client = clientMap[client];
-    }
-
-    const clientLabels = { claude: "Claude Code", cursor: "Cursor", vscode: "VS Code", codex: "Codex CLI", opencode: "OpenCode", openclaw: "OpenClaw", hermes: "Hermes", other: "其他" };
-    console.log(`已选择客户端：${clientLabels[client]}`);
-
-    // Step 3: token
+    // Step 3: 配置 MCP（可选，默认否）
     console.log("");
-    console.log("在 Starlens 设置页创建 API Token（stl_xxx），然后粘贴到这里。");
+    console.log("─".repeat(40));
+    const mcpClients = clients.filter(c => MCP_SUPPORTED.has(c));
     let token = tokenArg.value ?? "";
-    if (!token) {
-      token = await wizardPromptSecret("API Token（输入不可见）");
-    }
-    if (!token) {
-      console.log("⚠  未输入 Token，配置片段中将显示占位符 stl_xxx，请事后手动替换。");
-    }
+    let apiBaseUrl = "";
 
-    // Step 4: for self-hosted + non-hosted URL, write ~/.starlens/agent.env
-    if (!hosted && token) {
-      const agentEnvDir = join(homedir(), ".starlens");
-      const agentEnvPath = join(agentEnvDir, "agent.env");
-      let skipEnvWrite = false;
-
-      let envExists = false;
-      try {
-        await access(agentEnvPath);
-        envExists = true;
-      } catch {
-        // doesn't exist
-      }
-
-      if (envExists) {
-        console.log("");
-        const overwrite = await wizardPrompt(rl, "~/.starlens/agent.env 已存在，是否覆盖？(y/N)", "N");
-        skipEnvWrite = !/^y$/i.test(overwrite);
-      }
-
-      if (!skipEnvWrite) {
-        await mkdir(agentEnvDir, { recursive: true });
-        await chmod(agentEnvDir, 0o700);
-        const envContent = [
-          `export STARLENS_TOKEN="${token}"`,
-          `export STARLENS_API_BASE_URL="${apiBaseUrl}"`,
-          "",
-        ].join("\n");
-        await writeFile(agentEnvPath, envContent, { mode: 0o600 });
-        console.log(`✓ 已写入 ${agentEnvPath}`);
-      } else {
-        console.log("跳过写入 agent.env。");
-      }
-    }
-
-    // Step 5: output config snippet
-    console.log("");
-    console.log("─".repeat(40));
-
-    if (hosted) {
-      // ── Hosted mode: HTTP MCP ──
-      if (client === "claude") {
-        const snippet = renderHostedClaudeSnippet(apiBaseUrl, token);
-        console.log("Claude Code 配置命令：");
-        console.log("");
-        console.log(snippet);
-        console.log("");
-        const autoRun = await wizardPrompt(rl, "是否立即执行上述命令？(y/N)", "N");
-        if (/^y$/i.test(autoRun)) {
-          const mcpJson = JSON.stringify({
-            type: "http",
-            url: `${apiBaseUrl}/mcp`,
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          console.log("正在注册 MCP server...");
-          const ok = await spawnCommand("claude", ["mcp", "add-json", "starlens", mcpJson]);
-          if (ok) {
-            console.log("✓ MCP server 已注册到 Claude Code。");
-          } else {
-            console.log("✗ 注册失败，请手动执行上方命令。");
-          }
-        }
-      } else if (client === "cursor") {
-        console.log("将以下内容写入 .cursor/mcp.json（合并到 mcpServers 节点）：");
-        console.log("");
-        console.log(renderHostedCursorSnippet(apiBaseUrl, token));
-      } else if (client === "codex") {
-        console.log("将以下内容追加到 ~/.codex/config.toml：");
-        console.log("");
-        console.log(renderHostedCodexSnippet(apiBaseUrl, token));
-      } else if (client === "opencode") {
-        console.log("将以下内容合并到 ~/.config/opencode/opencode.json：");
-        console.log("");
-        console.log(renderHostedOpencodeSnippet(apiBaseUrl, token));
-      } else if (client === "vscode" || client === "openclaw" || client === "hermes") {
-        console.log(`${clientLabels[client]} 不支持 HTTP MCP，Skill 文件已自动安装。`);
-        console.log("如需 HTTP API 直连，请参考文档：");
-        console.log(`  ${apiBaseUrl}/docs/integrations`);
-      } else {
-        console.log("HTTP MCP 端点信息：");
-        console.log("");
-        console.log(`  URL:           ${apiBaseUrl}/mcp`);
-        console.log(`  Authorization: Bearer ${token || "stl_xxx"}`);
-      }
+    if (mcpClients.length === 0) {
+      console.log("所选客户端均不支持 MCP，跳过 MCP 配置。");
     } else {
-      // ── Self-hosted mode: stdio MCP ──
-      if (client === "claude") {
-        const snippet = renderClaudeCodeSnippet(projectRoot);
-        console.log("Claude Code 配置命令：");
+      const doMcp = await wizardPrompt(rl, `是否配置 MCP Server？（支持：${mcpClients.map(c => clientLabels[c]).join("、")}）(y/N)`, "N");
+      if (/^y$/i.test(doMcp)) {
+        // 部署模式
         console.log("");
-        console.log(snippet);
-        console.log("");
-        const autoRun = await wizardPrompt(rl, "是否立即执行上述命令？(y/N)", "N");
-        if (/^y$/i.test(autoRun)) {
-          const mcpJson = JSON.stringify({ type: "stdio", command: "zsh", args: buildMcpArgs(projectRoot) });
-          console.log("正在注册 MCP server...");
-          const ok = await spawnCommand("claude", ["mcp", "add-json", "starlens", mcpJson]);
-          if (ok) {
-            console.log("✓ MCP server 已注册到 Claude Code。");
-          } else {
-            console.log("✗ 注册失败，请手动执行上方命令。");
-          }
-        }
-      } else if (client === "cursor") {
-        console.log("将以下内容写入 .cursor/mcp.json（合并到 mcpServers 节点）：");
-        console.log("");
-        console.log(renderCursorSnippet(projectRoot));
-      } else if (client === "codex") {
-        console.log("将以下内容追加到 ~/.codex/config.toml：");
-        console.log("");
-        console.log(renderCodexSnippet(projectRoot));
-      } else if (client === "opencode") {
-        console.log("将以下内容合并到 ~/.config/opencode/opencode.json：");
-        console.log("");
-        console.log(renderOpencodeSnippet(projectRoot));
-      } else {
-        console.log("通用 Agent Skill 环境变量配置（vscode/openclaw/hermes 等）：");
-        console.log("");
-        console.log(`  STARLENS_TOKEN="${token || "stl_xxx"}"`);
-        console.log(`  STARLENS_API_BASE_URL="${apiBaseUrl}"`);
-        console.log("");
-        console.log("Skill 文件已自动安装到对应客户端目录，无需额外 MCP 配置。");
-      }
-    }
+        const defaultUrl = apiBaseUrlArg.value ?? env.STARLENS_API_BASE_URL ?? HOSTED_MCP_BASE_URL;
+        console.log("部署模式：");
+        console.log("  1) 托管服务（推荐）— 使用 starlens.520ai.xin，无需本地启动服务");
+        console.log("  2) 自部署 — 使用你自己的服务器或本地开发环境");
+        const modeChoice = await wizardPrompt(rl, "选择模式", "1");
+        const isSelfHosted = modeChoice.trim() === "2";
 
-    // Step 6: install skill files
-    console.log("");
-    console.log("─".repeat(40));
-    console.log("安装 Starlens Agent Skill...");
-    const skillResult = await installSkillFiles(client, projectRoot ?? process.cwd());
-    if (skillResult.results) {
-      for (const r of skillResult.results) {
-        if (r.ok) {
-          console.log(`✓ Skill 已安装：${r.path}`);
+        let projectRoot;
+        if (isSelfHosted) {
+          console.log("");
+          apiBaseUrl = (await wizardPrompt(rl, "Starlens API base URL", defaultUrl === HOSTED_MCP_BASE_URL ? DEFAULT_API_BASE_URL : defaultUrl)).replace(/\/+$/, "");
+          if (!isHostedUrl(apiBaseUrl)) {
+            const detectedRoot = detectProjectRoot();
+            console.log(`检测到项目根目录：${detectedRoot}`);
+            projectRoot = (await wizardPrompt(rl, "项目路径（回车确认）", detectedRoot)).replace(/\/$/, "");
+          }
         } else {
-          console.log(`⚠  Skill 安装失败：${r.path}（${r.reason}）`);
+          apiBaseUrl = HOSTED_MCP_BASE_URL;
+          console.log(`✓ 使用托管服务：${HOSTED_MCP_BASE_URL}`);
         }
-      }
-    } else if (!skillResult.ok) {
-      console.log(`⚠  ${skillResult.reason}`);
-    }
 
-    // Step 7: verify token (optional)
-    if (token) {
-      console.log("");
-      const doVerify = await wizardPrompt(rl, "是否验证 Token 可用性？(y/N)", "N");
-      if (/^y$/i.test(doVerify)) {
-        console.log("验证中...");
-        try {
-          const res = await fetchWithTimeout(
-            `${apiBaseUrl}/api/search?q=test&pageSize=1`,
-            { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } },
-            8_000,
-          );
-          if (res.ok) {
-            console.log("✓ Token 验证成功，API 连接正常。");
-          } else if (res.status === 401 || res.status === 403) {
-            console.log(`✗ Token 无效（HTTP ${res.status}）。请检查 Token 是否正确。`);
-          } else {
-            console.log(`⚠  服务器返回 HTTP ${res.status}，请检查 API base URL 是否正确。`);
+        const hosted = isHostedUrl(apiBaseUrl);
+
+        // Token（支持历史复用，脱敏展示）
+        console.log("");
+        console.log("在 Starlens 设置页创建 API Token（stl_xxx），然后粘贴到这里。");
+        if (!token) {
+          const existingToken = await readExistingToken();
+          const tokenHint = existingToken ? `回车复用已有 token: ${maskToken(existingToken)}，或输入新值` : "输入不可见";
+          const inputToken = await wizardPromptSecret(`API Token（${tokenHint}）`);
+          token = inputToken || existingToken || "";
+        }
+        if (!token) {
+          console.log("⚠  未输入 Token，配置片段中将显示占位符 stl_xxx，请事后手动替换。");
+        }
+
+        // 写入 agent.env（自部署非托管模式）
+        if (!hosted && token) {
+          const agentEnvDir = join(homedir(), ".starlens");
+          const agentEnvPath = join(agentEnvDir, "agent.env");
+          let envExists = false;
+          try { await access(agentEnvPath); envExists = true; } catch { /* 不存在 */ }
+
+          let skipEnvWrite = false;
+          if (envExists) {
+            console.log("");
+            const overwrite = await wizardPrompt(rl, "~/.starlens/agent.env 已存在，是否覆盖？(y/N)", "N");
+            skipEnvWrite = !/^y$/i.test(overwrite);
           }
-        } catch {
-          console.log(`✗ 无法连接到 ${apiBaseUrl}，请检查服务是否启动。`);
+
+          if (!skipEnvWrite) {
+            await mkdir(agentEnvDir, { recursive: true });
+            await chmod(agentEnvDir, 0o700);
+            const envContent = [`export STARLENS_TOKEN="${token}"`, `export STARLENS_API_BASE_URL="${apiBaseUrl}"`, ""].join("\n");
+            await writeFile(agentEnvPath, envContent, { mode: 0o600 });
+            console.log(`✓ 已写入 ${agentEnvPath}`);
+          } else {
+            console.log("跳过写入 agent.env。");
+          }
         }
+
+        // 对每个支持 MCP 的客户端自动写入配置
+        console.log("");
+        console.log("─".repeat(40));
+        console.log("配置 MCP Server...");
+        for (const client of mcpClients) {
+          if (client === "claude") {
+            const mcpJson = hosted
+              ? JSON.stringify({ type: "http", url: `${apiBaseUrl}/mcp`, headers: { Authorization: `Bearer ${token || "stl_xxx"}` } })
+              : JSON.stringify({ type: "stdio", command: "zsh", args: buildMcpArgs(projectRoot) });
+            console.log(`\n  ${clientLabels.claude} 配置命令：`);
+            console.log(`  claude mcp add-json starlens '${mcpJson}'`);
+            console.log("");
+            const autoRun = await wizardPrompt(rl, "  是否立即执行？(y/N)", "N");
+            if (/^y$/i.test(autoRun)) {
+              const ok = await spawnCommand("claude", ["mcp", "add-json", "starlens", mcpJson]);
+              console.log(ok ? "  ✓ MCP server 已注册到 Claude Code。" : "  ✗ 注册失败，请手动执行上方命令。");
+            }
+          } else {
+            const result = await writeMcpConfig(client, { apiBaseUrl, token, projectRoot, hosted });
+            if (result.ok) {
+              console.log(`✓ MCP 配置已写入：${result.path}`);
+            } else {
+              console.log(`⚠  ${clientLabels[client]}：${result.reason}`);
+            }
+          }
+        }
+
+        // 验证 Token（可选）
+        if (token) {
+          console.log("");
+          const doVerify = await wizardPrompt(rl, "是否验证 Token 可用性？(y/N)", "N");
+          if (/^y$/i.test(doVerify)) {
+            console.log("验证中...");
+            try {
+              const res = await fetchWithTimeout(
+                `${apiBaseUrl}/api/search?q=test&pageSize=1`,
+                { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } },
+                8_000,
+              );
+              if (res.ok) {
+                console.log("✓ Token 验证成功，API 连接正常。");
+              } else if (res.status === 401 || res.status === 403) {
+                console.log(`✗ Token 无效（HTTP ${res.status}）。请检查 Token 是否正确。`);
+              } else {
+                console.log(`⚠  服务器返回 HTTP ${res.status}，请检查 API base URL 是否正确。`);
+              }
+            } catch {
+              console.log(`✗ 无法连接到 ${apiBaseUrl}，请检查服务是否启动。`);
+            }
+          }
+        }
+      } else {
+        console.log("跳过 MCP 配置。");
       }
     }
 
-    // Step 7: done
+    // 完成
     console.log("");
     console.log("─".repeat(40));
     console.log("✓ 配置完成！");
     console.log("");
     console.log("下一步：");
-    console.log("  1. 重启你的 AI 客户端，使 MCP server 生效。");
-    console.log("  2. 在客户端中输入「搜索我收藏的关于 React 的仓库」测试工具是否可用。");
+    console.log("  1. 重启你的 AI 客户端，使配置生效。");
+    console.log("  2. 在客户端中输入「搜索我收藏的关于 React 的仓库」测试是否可用。");
     console.log(`  3. 完整文档：${HOSTED_MCP_BASE_URL}/docs/integrations`);
     console.log("");
   } finally {
