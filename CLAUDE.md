@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development
+
 - Run Web app: `corepack pnpm dev` (Uses `.env`)
 - Run Mobile app: `corepack pnpm dev:mobile` (Uses `.env`)
 - Run MCP Stdio server: `corepack pnpm mcp:start` (Requires `STARLENS_TOKEN` and `STARLENS_API_BASE_URL`)
@@ -12,11 +13,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - CLI status: `corepack pnpm --filter @starlens/cli start -- status`
 
 ### Build
+
 - Build internal packages: `corepack pnpm build:packages` (Always build packages first if there are type/resolution errors)
 - Build Web app: `corepack pnpm build`
 - Build Mobile app: `corepack pnpm build:mobile`
 
 ### Tests
+
 - Run Web tests: `corepack pnpm test`
 - Run Mobile tests: `corepack pnpm test:mobile`
 - Run Workbench package tests: `corepack pnpm --filter @starlens/workbench test`
@@ -25,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run a single test file (inside web): `cd apps/web && npx vitest run src/test/<test-file-name>`
 
 ### Database
+
 - Generate migrations: `corepack pnpm db:generate`
 - Run local migrations: `corepack pnpm db:migrate:local` (Uses `.env`)
 - Run Neon migrations: `corepack pnpm db:migrate:neon` (Uses `.env.neon`)
@@ -32,12 +36,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Check Neon DB connection: `corepack pnpm db:check:neon`
 
 ### Linting
+
 - Lint Web app: `corepack pnpm lint`
 - Lint Mobile app: `corepack pnpm lint:mobile`
 
 ## High-Level Architecture
 
 ### Repository Layout
+
 Starlens is structured as a monorepo workspace managed by `pnpm`.
 
 - **`apps/`**: Applications
@@ -52,6 +58,7 @@ Starlens is structured as a monorepo workspace managed by `pnpm`.
   - `agent-tools/`: Decoupled MCP tool schema definitions and API client logic (`callAgentTool`) shared by CLI, MCP, and Web app.
 
 ### Data Flow & Execution Pathways
+
 1. **API Router Mapping**:
    Instead of duplicating endpoints, Next.js routes under `apps/web/src/app/api/*` dynamically re-export endpoint handlers from `packages/server/src/routes/*`.
 2. **Curation & Sync Pipeline**:
