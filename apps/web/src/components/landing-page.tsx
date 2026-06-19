@@ -338,7 +338,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             </a>
             <GitHubSignInButton
               githubAuthEnabled={githubAuthEnabled}
-              className="landing-button landing-button--primary h-11 px-4 text-xs font-semibold"
+              className="landing-button landing-button--header h-11 px-4 text-xs font-semibold"
             >
               <Github className="h-4 w-4" />
               使用 GitHub 登录
