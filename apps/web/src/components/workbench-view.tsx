@@ -666,7 +666,7 @@ export function WorkbenchView({
   if (contentMode === "general") {
     settingsPanelContent = <GeneralSettingsView />;
   } else if (contentMode === "providers") {
-    settingsPanelContent = <AISettingsView />;
+    settingsPanelContent = <AISettingsView isAdmin={isAdmin} />;
   } else if (contentMode === "tokens") {
     settingsPanelContent = <TokensSettingsView />;
   } else if (contentMode === "admin") {

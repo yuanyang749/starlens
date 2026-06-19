@@ -154,7 +154,36 @@ describe("AI config API routes", () => {
     });
   });
 
-  it("returns redacted system default AI runtime status", async () => {
+  it("returns redacted system default AI runtime status for non-admin user", async () => {
+    const { GET } = await import("@/app/api/ai/system-default/route");
+    getSystemDefaultAiRuntimeStatusMock.mockReturnValue({
+      baseUrl: "https://newapi.example/v1",
+      configured: true,
+      enabled: true,
+      model: "gpt-4.1-mini",
+      providerType: "openai_compatible",
+      source: "system_default",
+    });
+
+    const response = await GET(new Request("https://starlens.test/api/ai/system-default"));
+
+    expect(getSystemDefaultAiRuntimeStatusMock).toHaveBeenCalledWith();
+    await expect(json(response)).resolves.toMatchObject({
+      ok: true,
+      data: {
+        baseUrl: null,
+        configured: true,
+        model: null,
+        providerType: null,
+      },
+    });
+  });
+
+  it("returns full system default AI runtime status for admin user", async () => {
+    const originalAdminEmails = process.env.ADMIN_EMAILS;
+    process.env.ADMIN_EMAILS = "admin@starlens.test";
+    getApiUserMock.mockResolvedValue({ id: "admin-1", email: "admin@starlens.test" });
+
     const { GET } = await import("@/app/api/ai/system-default/route");
     getSystemDefaultAiRuntimeStatusMock.mockReturnValue({
       baseUrl: "https://newapi.example/v1",
@@ -177,5 +206,7 @@ describe("AI config API routes", () => {
         providerType: "openai_compatible",
       },
     });
+
+    process.env.ADMIN_EMAILS = originalAdminEmails;
   });
 });

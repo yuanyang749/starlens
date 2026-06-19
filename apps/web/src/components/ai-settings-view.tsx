@@ -40,7 +40,7 @@ function formatValidationStatus(status: string) {
   return status;
 }
 
-export function AISettingsView() {
+export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
   const [configs, setConfigs] = useState<AiConfig[]>([]);
   const [systemDefault, setSystemDefault] = useState<SystemDefaultAiStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,7 +101,9 @@ export function AISettingsView() {
   const runtimeStatusDetail = userDefault
     ? `${userDefault.displayName} · ${userDefault.providerType} · ${userDefault.model}`
     : isUsingSystemDefault
-      ? `${systemDefault?.providerType ?? "openai_compatible"} · ${systemDefault?.model ?? "未设置模型"}`
+      ? isAdmin
+        ? `${systemDefault?.providerType ?? "openai_compatible"} · ${systemDefault?.model ?? "未设置模型"}`
+        : "系统默认 AI 已启用"
       : "创建并设为默认后，工作台 AI 问答会优先使用你的 Provider。";
 
   const updateForm = (updates: Partial<typeof form>) => {
@@ -178,7 +180,7 @@ export function AISettingsView() {
         <div className="mb-4 rounded border border-[color:var(--line)] bg-[color:var(--surface-2)] p-3">
           <div className="text-sm font-medium">{runtimeStatusTitle}</div>
           <div className="mt-1 text-xs text-[color:var(--muted)]">{runtimeStatusDetail}</div>
-          {isUsingSystemDefault && systemDefault?.baseUrl ? (
+          {isUsingSystemDefault && systemDefault?.baseUrl && isAdmin ? (
             <div className="mt-1 text-xs text-[color:var(--muted)]">
               Base URL：{systemDefault.baseUrl}
             </div>

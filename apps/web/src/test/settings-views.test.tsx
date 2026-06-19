@@ -372,4 +372,32 @@ describe("AI settings interactions", () => {
     expect(el.textContent).toContain("fetch failed");
     expect(el.querySelector(".text-red-500")?.textContent).toContain("fetch failed");
   });
+
+  it("hides system default connection details for non-admin users", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url === "/api/ai/system-default") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: {
+            baseUrl: "https://newapi.example/v1",
+            configured: true,
+            enabled: true,
+            model: "gpt-4.1-mini",
+            providerType: "openai_compatible",
+            source: "system_default",
+          },
+        })));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: [] })));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    
+    const { el } = mount(<AISettingsView isAdmin={false} />);
+    await act(async () => Promise.resolve());
+
+    expect(el.textContent).toContain("当前使用：系统默认 AI");
+    expect(el.textContent).toContain("系统默认 AI 已启用");
+    expect(el.textContent).not.toContain("gpt-4.1-mini");
+    expect(el.textContent).not.toContain("https://newapi.example/v1");
+  });
 });
