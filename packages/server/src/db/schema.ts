@@ -198,3 +198,20 @@ export type RepoTag = typeof repoTags.$inferSelect;
 export type RepoNote = typeof repoNotes.$inferSelect;
 export type PersonalApiToken = typeof personalApiTokens.$inferSelect;
 export type UserAiConfig = typeof userAiConfigs.$inferSelect;
+
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull(),
+  model: text("model").notNull(),
+  promptTokens: integer("prompt_tokens").notNull().default(0),
+  completionTokens: integer("completion_tokens").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIndex: index("ai_usage_logs_user_idx").on(table.userId),
+  createdAtIndex: index("ai_usage_logs_created_at_idx").on(table.createdAt),
+}));
+
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;

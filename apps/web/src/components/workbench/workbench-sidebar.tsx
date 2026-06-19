@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Star } from "lucide-react";
+import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Shield, Star } from "lucide-react";
 
 type WorkbenchSidebarProps = {
-  contentMode: "repos" | "general" | "providers" | "tokens";
+  contentMode: "repos" | "general" | "providers" | "tokens" | "admin";
   favoritesOnly: boolean;
   aiSearchActive: boolean;
   onFavoritesClick: () => void;
@@ -13,6 +13,8 @@ type WorkbenchSidebarProps = {
   onOpenGeneral: () => void;
   onOpenProviders: () => void;
   onOpenTokens: () => void;
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
   recentActive: boolean;
   total: number;
   favoriteCount: number;
@@ -32,6 +34,8 @@ export function WorkbenchSidebar({
   onOpenGeneral,
   onOpenProviders,
   onOpenTokens,
+  isAdmin,
+  onOpenAdmin,
   recentActive,
   total,
   favoriteCount,
@@ -140,6 +144,19 @@ export function WorkbenchSidebar({
               <span className="workbench-nav-item__label">通用设置</span>
             </span>
           </button>
+          {isAdmin && onOpenAdmin ? (
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              className={contentMode === "admin" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+              aria-label="用户管理"
+            >
+              <span className="workbench-nav-item__leading">
+                <Shield className="h-4 w-4" />
+                <span className="workbench-nav-item__label">用户管理</span>
+              </span>
+            </button>
+          ) : null}
         </section>
       </div>
 

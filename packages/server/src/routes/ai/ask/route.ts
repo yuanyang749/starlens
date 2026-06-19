@@ -4,6 +4,7 @@ import {
   resolveAiRuntimeConfig,
 } from "@starlens/server/server/ai/configs";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
+import { trackAiUsage } from "@starlens/server/server/ai/usage-buffer";
 import { searchRepos } from "@starlens/server/server/repos/repository";
 
 type Candidate = {
@@ -44,6 +45,11 @@ type OpenAiCompatibleResponse = {
       content?: string;
     };
   }>;
+  // 中文注释：部分第三方端点可能不返回 usage，全部字段做容错处理。
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 };
 
 type SearchRepoItem = Awaited<ReturnType<typeof searchRepos>>["items"][number];
@@ -197,7 +203,7 @@ function mergeCandidate(
   }
 }
 
-async function expandQuestionTermsWithProvider(question: string, config: ChatRuntimeConfig | null) {
+async function expandQuestionTermsWithProvider(question: string, config: ChatRuntimeConfig | null, userId?: string) {
   if (!config) return [];
 
   const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
@@ -225,6 +231,9 @@ async function expandQuestionTermsWithProvider(question: string, config: ChatRun
   if (!response.ok) return [];
 
   const payload = (await response.json()) as OpenAiCompatibleResponse;
+  if (userId) {
+    trackAiUsage({ userId, endpoint: "ask/expand", model: config.model, promptTokens: payload.usage?.prompt_tokens ?? 0, completionTokens: payload.usage?.completion_tokens ?? 0 });
+  }
   const raw = stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null);
   if (!raw) return [];
 
@@ -235,7 +244,7 @@ async function expandQuestionTermsWithProvider(question: string, config: ChatRun
     .slice(0, 6);
 }
 
-async function pickCandidatesWithProvider(question: string, pool: Candidate[], config: ChatRuntimeConfig | null) {
+async function pickCandidatesWithProvider(question: string, pool: Candidate[], config: ChatRuntimeConfig | null, userId?: string) {
   if (!config || pool.length === 0) return [];
 
   const compactPool = pool.slice(0, 30).map((item, index) => ({
@@ -275,6 +284,9 @@ async function pickCandidatesWithProvider(question: string, pool: Candidate[], c
   if (!response.ok) return [];
 
   const payload = (await response.json()) as OpenAiCompatibleResponse;
+  if (userId) {
+    trackAiUsage({ userId, endpoint: "ask/pick", model: config.model, promptTokens: payload.usage?.prompt_tokens ?? 0, completionTokens: payload.usage?.completion_tokens ?? 0 });
+  }
   const raw = stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null);
   if (!raw) return [];
 
@@ -308,7 +320,7 @@ async function recallCandidates(userId: string, question: string, config: ChatRu
   const querySpecs = uniqueQuerySpecs([
     { query: question, kind: "question" },
     ...buildHeuristicTerms(question).map((query) => ({ query, kind: "heuristic" as const })),
-    ...(await expandQuestionTermsWithProvider(question, config)).map((query) => ({ query, kind: "expanded" as const })),
+    ...(await expandQuestionTermsWithProvider(question, config, userId)).map((query) => ({ query, kind: "expanded" as const })),
   ]).slice(0, 8);
 
   const merged = new Map<string, RecalledCandidate>();
@@ -351,7 +363,7 @@ async function recallCandidates(userId: string, question: string, config: ChatRu
       score: 250 - index * 10,
     }));
     if (candidates.length === 0) {
-      candidates = (await pickCandidatesWithProvider(question, broadPool, config)).map((candidate, index) => ({
+      candidates = (await pickCandidatesWithProvider(question, broadPool, config, userId)).map((candidate, index) => ({
         ...candidate,
         source: "ai_pool_pick" as const,
         reason: "Selected by AI fallback from recent repository candidates.",
@@ -366,7 +378,7 @@ async function recallCandidates(userId: string, question: string, config: ChatRu
   };
 }
 
-async function askProvider(question: string, candidates: Candidate[], config: ChatRuntimeConfig | null) {
+async function askProvider(question: string, candidates: Candidate[], config: ChatRuntimeConfig | null, userId?: string) {
   if (!config) {
     return null;
   }
@@ -401,6 +413,9 @@ async function askProvider(question: string, candidates: Candidate[], config: Ch
   }
 
   const payload = (await response.json()) as OpenAiCompatibleResponse;
+  if (userId) {
+    trackAiUsage({ userId, endpoint: "ask/answer", model: config.model, promptTokens: payload.usage?.prompt_tokens ?? 0, completionTokens: payload.usage?.completion_tokens ?? 0 });
+  }
   const content = stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null)
     .replace(/\s+/g, " ")
     .trim();
@@ -430,7 +445,7 @@ export async function POST(request: Request) {
 
   if (hasCandidates) {
     try {
-      const aiAnswer = await askProvider(question, candidates, chatConfig);
+      const aiAnswer = await askProvider(question, candidates, chatConfig, user.id);
       if (aiAnswer) {
         answer = aiAnswer;
       }

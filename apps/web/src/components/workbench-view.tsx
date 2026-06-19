@@ -16,6 +16,7 @@ import { WorkbenchSidebar } from "./workbench/workbench-sidebar";
 import { formatDateTime } from "./workbench/workbench-formatters";
 import { WorkbenchTopbar } from "./workbench/workbench-topbar";
 import { TokensSettingsView } from "./tokens-settings-view";
+import { AdminUsersView } from "./admin-users-view";
 
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = { ok: false; error: { code: string; message: string } };
@@ -86,9 +87,11 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
 export function WorkbenchView({
   userName = "GitHub 用户",
   userAvatarUrl = null,
+  isAdmin = false,
 }: {
   userName?: string;
   userAvatarUrl?: string | null;
+  isAdmin?: boolean;
 }) {
   const {
     query,
@@ -131,7 +134,7 @@ export function WorkbenchView({
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
-  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens">("repos");
+  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin">("repos");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
@@ -598,6 +601,8 @@ export function WorkbenchView({
     settingsPanelContent = <AISettingsView />;
   } else if (contentMode === "tokens") {
     settingsPanelContent = <TokensSettingsView />;
+  } else if (contentMode === "admin") {
+    settingsPanelContent = <AdminUsersView />;
   }
 
   return (
@@ -694,6 +699,8 @@ export function WorkbenchView({
           onOpenGeneral={() => setContentMode("general")}
           onOpenProviders={() => setContentMode("providers")}
           onOpenTokens={() => setContentMode("tokens")}
+          isAdmin={isAdmin}
+          onOpenAdmin={() => setContentMode("admin")}
           recentActive={recentMode}
           total={allStarsTotal}
           favoriteCount={favoriteCount}

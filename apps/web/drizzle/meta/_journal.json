@@ -36,6 +36,13 @@
       "when": 1778563200000,
       "tag": "0004_token_suffix",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781860799428,
+      "tag": "0005_perfect_titanium_man",
+      "breakpoints": true
     }
   ]
 }
