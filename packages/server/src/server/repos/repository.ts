@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, ilike, inArray, or, sql } from "drizzle-orm";
 import {
   DEFAULT_SEARCH_PAGE,
   DEFAULT_SEARCH_PAGE_SIZE,
@@ -217,6 +217,40 @@ export async function searchRepos(userId: string, input: SearchReposInput = {}) 
     total,
     hasMore: offset + pageSize < total,
   };
+}
+
+// 中文注释：带 ts_rank 置信度分数的搜索，供 AI 问答召回层使用。
+// 仅在传入 q 时 ts_rank 有意义；ilike-only 命中的 ts_rank 为 0，可用于低置信度过滤。
+export async function searchReposRanked(userId: string, q: string, pageSize: number) {
+  const db = getDb();
+  const clampedSize = Math.min(Math.max(pageSize, 1), MAX_SEARCH_PAGE_SIZE);
+  const tsExpr = sql<number>`ts_rank(to_tsvector('simple', ${starredRepos.searchDocument}), plainto_tsquery('simple', ${q}))`;
+
+  const rows = await db
+    .select({
+      ...getTableColumns(starredRepos),
+      tsRank: tsExpr,
+    })
+    .from(starredRepos)
+    .where(
+      and(
+        eq(starredRepos.userId, userId),
+        eq(starredRepos.isStarred, true),
+        or(
+          sql`to_tsvector('simple', ${starredRepos.searchDocument}) @@ plainto_tsquery('simple', ${q})`,
+          ilike(starredRepos.searchDocument, `%${q}%`),
+        )!,
+      ),
+    )
+    .orderBy(desc(tsExpr), desc(starredRepos.id))
+    .limit(clampedSize);
+
+  const decorations = await getRepoDecorations(userId, rows.map((r) => r.id));
+
+  return rows.map((repo) => ({
+    ...toApiRepo(repo, decorations.tagsByRepo.get(repo.id) ?? [], decorations.notesByRepo.get(repo.id)),
+    tsRank: Number(repo.tsRank ?? 0),
+  }));
 }
 
 export async function getRepoDetail(userId: string, id: string) {

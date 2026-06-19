@@ -5,18 +5,30 @@ import {
 } from "@starlens/server/server/ai/configs";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { trackAiUsage } from "@starlens/server/server/ai/usage-buffer";
-import { searchRepos } from "@starlens/server/server/repos/repository";
+import { searchRepos, searchReposRanked } from "@starlens/server/server/repos/repository";
 
+// ─── 常量 ────────────────────────────────────────────────────────────────────
+// P0: 候选上限 8→15；P1: 召回量 8→20；P2: broadPool 80→100 / pick 池 30→50
+const RECALL_PER_KEYWORD = 20;
+const CANDIDATE_LIMIT = 20;
+const BROAD_POOL_SIZE = 100;
+const PICK_POOL_LIMIT = 50;
+const ANSWER_CANDIDATE_LIMIT = 15;
+const TS_RANK_THRESHOLD = 0.01; // 低于此分数视为低置信度，不进候选池
+
+// ─── 类型 ────────────────────────────────────────────────────────────────────
 type Candidate = {
   id: string;
   fullName: string;
   description: string;
+  aiSummary: string | undefined;
   repoSummary: string;
+  userNote: string;
   topics: string[];
   tags: string[];
   language: string;
   stargazersCount: number;
-  starredAtGithub: string;
+  tsRank: number;
 };
 
 type CandidateSource =
@@ -53,20 +65,18 @@ type OpenAiCompatibleResponse = {
 };
 
 type SearchRepoItem = Awaited<ReturnType<typeof searchRepos>>["items"][number];
+type RankedRepoItem = Awaited<ReturnType<typeof searchReposRanked>>[number];
+
 type ChatRuntimeConfig = Omit<Pick<
   AiRuntimeConfig,
   "apiKey" | "baseUrl" | "extraHeaders" | "id" | "model" | "providerType"
 >, "baseUrl"> & { baseUrl: string };
 
-function asChatRuntimeConfig(config: AiRuntimeConfig | null): ChatRuntimeConfig | null {
-  if (!config?.baseUrl?.trim()) {
-    return null;
-  }
+// ─── 工具函数 ─────────────────────────────────────────────────────────────────
 
-  return {
-    ...config,
-    baseUrl: config.baseUrl,
-  };
+function asChatRuntimeConfig(config: AiRuntimeConfig | null): ChatRuntimeConfig | null {
+  if (!config?.baseUrl?.trim()) return null;
+  return { ...config, baseUrl: config.baseUrl };
 }
 
 function resolveChatCompletionsUrl(baseUrl: string) {
@@ -83,19 +93,31 @@ function stripThinkBlocks(text: string | null) {
   return text.replace(/<think[\s\S]*?<\/think>/gi, " ").trim();
 }
 
+// 中文注释：富文本候选上下文，优先展示 aiSummary / 用户备注 / 自定义标签，去掉对语义无用的 stars 数和日期。
 function buildCandidateContext(candidates: Candidate[]) {
   return candidates
     .map((item, index) => {
-      const displayTags = item.tags.length > 0 ? item.tags : item.topics;
-      return [
+      const summary = item.aiSummary?.trim() || item.repoSummary?.trim() || item.description?.trim() || "无";
+      const userTags = item.tags.length > 0 ? item.tags : [];
+      const githubTopics = item.topics.length > 0 ? item.topics : [];
+      const lines = [
         `#${index + 1} ${item.fullName}`,
         `语言: ${item.language || "unknown"}`,
-        `Stars: ${item.stargazersCount}`,
-        `Star时间: ${item.starredAtGithub}`,
-        `描述: ${item.description || "无"}`,
-        `摘要: ${item.repoSummary || "无"}`,
-        `标签: ${displayTags.join(", ") || "无"}`,
-      ].join("\n");
+        `摘要: ${summary}`,
+      ];
+      if (item.description?.trim() && item.description !== summary) {
+        lines.push(`描述: ${item.description}`);
+      }
+      if (item.userNote?.trim()) {
+        lines.push(`用户备注: ${item.userNote}`);
+      }
+      if (userTags.length > 0) {
+        lines.push(`用户标签: ${userTags.join(", ")}`);
+      }
+      if (githubTopics.length > 0) {
+        lines.push(`GitHub 话题: ${githubTopics.slice(0, 5).join(", ")}`);
+      }
+      return lines.join("\n");
     })
     .join("\n\n");
 }
@@ -111,27 +133,21 @@ function buildHeuristicTerms(question: string) {
     { pattern: /(检索|搜索|向量|rag)/i, terms: ["search", "retrieval", "rag"] },
     { pattern: /(代理|智能体|agent)/i, terms: ["ai agent", "agent framework", "automation"] },
   ];
-
   for (const entry of mapping) {
-    if (entry.pattern.test(question)) {
-      terms.push(...entry.terms);
-    }
+    if (entry.pattern.test(question)) terms.push(...entry.terms);
   }
-
   return Array.from(new Set(terms));
 }
 
 function uniqueQuerySpecs(specs: QuerySpec[]) {
   const seen = new Set<string>();
   const unique: QuerySpec[] = [];
-
   for (const spec of specs) {
     const normalized = spec.query.trim().toLowerCase();
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     unique.push({ ...spec, query: spec.query.trim() });
   }
-
   return unique;
 }
 
@@ -142,14 +158,8 @@ function sourceForQueryKind(kind: QueryKind): CandidateSource {
 }
 
 function reasonForQuerySpec(spec: QuerySpec) {
-  if (spec.kind === "question") {
-    return `Matched your question directly: "${spec.query}".`;
-  }
-
-  if (spec.kind === "heuristic") {
-    return `Matched heuristic term: "${spec.query}".`;
-  }
-
+  if (spec.kind === "question") return `Matched your question directly: "${spec.query}".`;
+  if (spec.kind === "heuristic") return `Matched heuristic term: "${spec.query}".`;
   return `Matched expanded term: "${spec.query}".`;
 }
 
@@ -169,23 +179,12 @@ function splitSearchTerms(terms: string[]) {
 function heuristicPickFromPool(question: string, pool: Candidate[]) {
   const mappedTerms = splitSearchTerms(buildHeuristicTerms(question));
   if (mappedTerms.length === 0) return [];
-
   const picked = pool.filter((item) => {
-    const haystack = [
-      item.fullName,
-      item.description,
-      item.repoSummary,
-      item.tags.join(" "),
-      item.topics.join(" "),
-      item.language,
-    ]
-      .join(" ")
-      .toLowerCase();
-
+    const haystack = [item.fullName, item.description, item.repoSummary, item.aiSummary ?? "", item.tags.join(" "), item.topics.join(" "), item.userNote, item.language]
+      .join(" ").toLowerCase();
     return mappedTerms.some((term) => haystack.includes(term));
   });
-
-  return picked.slice(0, 6);
+  return picked.slice(0, 8);
 }
 
 function mergeCandidate(
@@ -197,31 +196,45 @@ function mergeCandidate(
   if (
     !existing
     || metadata.score > existing.score
-    || (metadata.score === existing.score && candidate.stargazersCount > existing.stargazersCount)
+    || (metadata.score === existing.score && candidate.tsRank > existing.tsRank)
   ) {
     merged.set(candidate.id, { ...candidate, ...metadata });
   }
 }
+
+function toCandidate(item: SearchRepoItem | RankedRepoItem): Candidate {
+  const tsRank = "tsRank" in item ? (item.tsRank as number) : 0;
+  return {
+    id: item.id,
+    fullName: item.fullName,
+    description: item.description,
+    aiSummary: item.aiSummary,
+    repoSummary: item.repoSummary,
+    userNote: item.note ?? "",
+    topics: item.topics,
+    tags: item.tags,
+    language: item.language,
+    stargazersCount: item.stargazersCount,
+    tsRank,
+  };
+}
+
+// ─── AI 调用 ──────────────────────────────────────────────────────────────────
 
 async function expandQuestionTermsWithProvider(question: string, config: ChatRuntimeConfig | null, userId?: string) {
   if (!config) return [];
 
   const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
-    headers: {
-      ...config.extraHeaders,
-      "content-type": "application/json",
-      authorization: `Bearer ${config.apiKey}`,
-    },
+    headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
       model: config.model,
       temperature: 0,
-      max_tokens: 120,
+      max_tokens: 150,
       messages: [
         {
           role: "system",
-          content:
-            "把用户检索意图转成最多6个技术关键词或短语，偏英文，逗号分隔，只输出关键词，不要解释。",
+          content: "把用户检索意图转成最多8个技术关键词或短语，偏英文，逗号分隔，只输出关键词，不要解释。",
         },
         { role: "user", content: question },
       ],
@@ -241,42 +254,36 @@ async function expandQuestionTermsWithProvider(question: string, config: ChatRun
     .split(/[,\n，、;；]/g)
     .map((item) => item.trim())
     .filter((item) => item.length >= 2 && item.length <= 40)
-    .slice(0, 6);
+    .slice(0, 8);
 }
 
+// 中文注释：P2 — pick 池从 30 扩至 50，compact 数据加入 aiSummary 和用户标签，提升精排准确度。
 async function pickCandidatesWithProvider(question: string, pool: Candidate[], config: ChatRuntimeConfig | null, userId?: string) {
   if (!config || pool.length === 0) return [];
 
-  const compactPool = pool.slice(0, 30).map((item, index) => ({
+  const compactPool = pool.slice(0, PICK_POOL_LIMIT).map((item, index) => ({
     idx: index + 1,
     id: item.id,
     fullName: item.fullName,
     language: item.language,
-    summary: item.repoSummary,
-    tags: item.tags.length > 0 ? item.tags : item.topics,
+    summary: item.aiSummary?.trim() || item.repoSummary?.trim() || item.description?.trim() || "",
+    tags: item.tags.length > 0 ? item.tags : item.topics.slice(0, 5),
+    note: item.userNote || undefined,
   }));
 
   const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
-    headers: {
-      ...config.extraHeaders,
-      "content-type": "application/json",
-      authorization: `Bearer ${config.apiKey}`,
-    },
+    headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
       model: config.model,
       temperature: 0,
-      max_tokens: 180,
+      max_tokens: 280,
       messages: [
         {
           role: "system",
-          content:
-            "你是仓库筛选助手。根据用户问题，从候选仓库里选最相关的1到5个，输出JSON：{\"ids\":[\"id1\",\"id2\"]}。只输出JSON。",
+          content: "你是仓库筛选助手。根据用户问题，从候选仓库里选最相关的1到10个，输出JSON：{\"ids\":[\"id1\",\"id2\"]}。只输出JSON。",
         },
-        {
-          role: "user",
-          content: `问题：${question}\n候选池：${JSON.stringify(compactPool)}`,
-        },
+        { role: "user", content: `问题：${question}\n候选池：${JSON.stringify(compactPool)}` },
       ],
     }),
   });
@@ -292,66 +299,51 @@ async function pickCandidatesWithProvider(question: string, pool: Candidate[], c
 
   const idsMatch = raw.match(/"ids"\s*:\s*\[([^\]]*)]/);
   if (!idsMatch) return [];
-  const ids = idsMatch[1]
-    .split(",")
-    .map((item) => item.replace(/["'\s]/g, ""))
-    .filter(Boolean);
+  const ids = idsMatch[1].split(",").map((item) => item.replace(/["'\s]/g, "")).filter(Boolean);
   if (ids.length === 0) return [];
 
   const byId = new Map(pool.map((item) => [item.id, item]));
   return ids.map((id) => byId.get(id)).filter(Boolean) as Candidate[];
 }
 
-function toCandidate(item: SearchRepoItem): Candidate {
-  return {
-    id: item.id,
-    fullName: item.fullName,
-    description: item.description,
-    repoSummary: item.repoSummary,
-    topics: item.topics,
-    tags: item.tags,
-    language: item.language,
-    stargazersCount: item.stargazersCount,
-    starredAtGithub: item.starredAtGithub,
-  };
-}
-
+// 中文注释：召回层 — 每个关键词取 20 条，过滤 ts_rank < 阈值的低置信度结果，候选上限 20。
 async function recallCandidates(userId: string, question: string, config: ChatRuntimeConfig | null) {
   const querySpecs = uniqueQuerySpecs([
     { query: question, kind: "question" },
     ...buildHeuristicTerms(question).map((query) => ({ query, kind: "heuristic" as const })),
     ...(await expandQuestionTermsWithProvider(question, config, userId)).map((query) => ({ query, kind: "expanded" as const })),
-  ]).slice(0, 8);
+  ]).slice(0, 10);
 
   const merged = new Map<string, RecalledCandidate>();
 
   for (const spec of querySpecs) {
-    const result = await searchRepos(userId, {
-      q: spec.query,
-      sort: "relevance",
-      page: 1,
-      pageSize: 8,
-    });
+    const items = await searchReposRanked(userId, spec.query, RECALL_PER_KEYWORD);
 
-    for (const [index, item] of result.items.entries()) {
-      mergeCandidate(merged, toCandidate(item), {
+    for (const [index, item] of items.entries()) {
+      const candidate = toCandidate(item);
+      // 中文注释：ts_rank < 阈值说明仅靠 ilike 模糊匹配命中，置信度低，过滤掉。
+      if (candidate.tsRank < TS_RANK_THRESHOLD) continue;
+
+      const tsBonus = Math.round(candidate.tsRank * 200);
+      mergeCandidate(merged, candidate, {
         source: sourceForQueryKind(spec.kind),
         reason: reasonForQuerySpec(spec),
-        score: baseScoreForQueryKind(spec.kind) - index * 10,
+        score: baseScoreForQueryKind(spec.kind) - index * 8 + tsBonus,
       });
     }
 
-    if (merged.size >= 10) break;
+    if (merged.size >= CANDIDATE_LIMIT) break;
   }
 
   let candidates = Array.from(merged.values())
-    .sort((left, right) => right.score - left.score || right.stargazersCount - left.stargazersCount)
-    .slice(0, 8);
+    .sort((left, right) => right.score - left.score || right.tsRank - left.tsRank)
+    .slice(0, CANDIDATE_LIMIT);
 
   if (candidates.length === 0) {
+    // 中文注释：P2 — broadPool 扩至 100 条，给 pick 和 heuristic 更大搜索空间。
     const broadPoolResult = await searchRepos(userId, {
       page: 1,
-      pageSize: 80,
+      pageSize: BROAD_POOL_SIZE,
       sort: "recent",
     });
     const broadPool = broadPoolResult.items.map(toCandidate);
@@ -362,6 +354,7 @@ async function recallCandidates(userId: string, question: string, config: ChatRu
       reason: "Matched heuristic terms against recent repository metadata.",
       score: 250 - index * 10,
     }));
+
     if (candidates.length === 0) {
       candidates = (await pickCandidatesWithProvider(question, broadPool, config, userId)).map((candidate, index) => ({
         ...candidate,
@@ -378,31 +371,28 @@ async function recallCandidates(userId: string, question: string, config: ChatRu
   };
 }
 
+// 中文注释：精排层 — 最多 15 条富文本候选，增大 max_tokens 以支持更多候选的详细回答。
 async function askProvider(question: string, candidates: Candidate[], config: ChatRuntimeConfig | null, userId?: string) {
-  if (!config) {
-    return null;
-  }
+  if (!config) return null;
+
+  const topCandidates = candidates.slice(0, ANSWER_CANDIDATE_LIMIT);
 
   const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
-    headers: {
-      ...config.extraHeaders,
-      "content-type": "application/json",
-      authorization: `Bearer ${config.apiKey}`,
-    },
+    headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
       model: config.model,
       temperature: 0.2,
-      max_tokens: 220,
+      max_tokens: 400,
       messages: [
         {
           role: "system",
           content:
-            "你是仓库检索助手。基于候选仓库给出精炼中文结论：1) 最匹配仓库；2) 一句话理由；3) 若无明显匹配则明确说明。",
+            "你是仓库检索助手。基于候选仓库给出精炼中文结论：1) 列出最匹配的1到3个仓库及一句话理由；2) 若候选中有用户自己备注或标签过的仓库，优先推荐；3) 若无明显匹配则明确说明。",
         },
         {
           role: "user",
-          content: `用户问题：${question}\n\n候选仓库：\n${buildCandidateContext(candidates)}`,
+          content: `用户问题：${question}\n\n候选仓库：\n${buildCandidateContext(topCandidates)}`,
         },
       ],
     }),
@@ -421,6 +411,8 @@ async function askProvider(question: string, candidates: Candidate[], config: Ch
     .trim();
   return content || null;
 }
+
+// ─── 路由入口 ─────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   const user = await getApiUser(request);
@@ -446,9 +438,7 @@ export async function POST(request: Request) {
   if (hasCandidates) {
     try {
       const aiAnswer = await askProvider(question, candidates, chatConfig, user.id);
-      if (aiAnswer) {
-        answer = aiAnswer;
-      }
+      if (aiAnswer) answer = aiAnswer;
     } catch {
       // Ignore provider failures and fall back to deterministic local answer.
     }
