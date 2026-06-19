@@ -133,17 +133,6 @@ export function WorkbenchSidebar({
 
         <section className="workbench-nav-section" aria-label="系统">
           <p className="workbench-nav-section__title">系统</p>
-          <button
-            type="button"
-            onClick={onOpenGeneral}
-            className={contentMode === "general" ? "workbench-nav-item is-active" : "workbench-nav-item"}
-            aria-label="通用设置"
-          >
-            <span className="workbench-nav-item__leading">
-              <Settings2 className="h-4 w-4" />
-              <span className="workbench-nav-item__label">通用设置</span>
-            </span>
-          </button>
           {isAdmin && onOpenAdmin ? (
             <button
               type="button"
@@ -157,6 +146,17 @@ export function WorkbenchSidebar({
               </span>
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={onOpenGeneral}
+            className={contentMode === "general" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="通用设置"
+          >
+            <span className="workbench-nav-item__leading">
+              <Settings2 className="h-4 w-4" />
+              <span className="workbench-nav-item__label">通用设置</span>
+            </span>
+          </button>
         </section>
       </div>
 
