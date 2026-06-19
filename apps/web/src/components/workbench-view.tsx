@@ -6,7 +6,7 @@ import {
   type PaginatedResult,
   type RepoSummary,
 } from "@starlens-app/core";
-import { X } from "lucide-react";
+import { X, Star } from "lucide-react";
 import { AISettingsView } from "./ai-settings-view";
 import { GeneralSettingsView } from "./general-settings-view";
 import { RepoDetailPanel } from "./workbench/repo-detail-panel";
@@ -51,6 +51,7 @@ type AiAskResult = {
     fullName: string;
     reason?: string;
     source?: string;
+    score?: number;
   }>;
   providerConfigId: string | null;
   providerConfigSource?: "user_default" | "system_default" | "none";
@@ -124,7 +125,7 @@ export function WorkbenchView({
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [aiSearchInsights, setAiSearchInsights] = useState<
-    Array<{ id: string; fullName: string; reason: string; source: string | null }>
+    Array<{ id: string; fullName: string; reason: string; source: string | null; score?: number }>
   >([]);
   const [lastSync, setLastSync] = useState<SyncResult | null>(null);
   const [noteSaveFeedback, setNoteSaveFeedback] = useState<string | null>(null);
@@ -469,7 +470,7 @@ export function WorkbenchView({
       setAiSearchInsights(
         result.candidates
           .filter(
-            (item): item is { id: string; fullName: string; reason: string; source?: string } =>
+            (item): item is { id: string; fullName: string; reason: string; source?: string; score?: number } =>
               typeof item.reason === "string" && item.reason.trim().length > 0,
           )
           .slice(0, 3)
@@ -478,6 +479,7 @@ export function WorkbenchView({
             fullName: item.fullName,
             reason: item.reason,
             source: item.source ?? null,
+            score: item.score,
           })),
       );
     } catch (caught) {
@@ -634,32 +636,88 @@ export function WorkbenchView({
         </div>
       ) : null}
       {syncMessage ? (
-        <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
-          <div className="workbench-banner__content">
-            <span>{syncMessage}</span>
-            {aiSearchInsights.length > 0 ? (
-              <div className="workbench-banner__details">
-                {aiSearchInsights.map((item) => (
-                  <div key={item.id} className="workbench-banner__detail">
-                    <strong>{item.fullName}</strong>
-                    <span>{item.reason}</span>
-                  </div>
-                ))}
+        aiSearchInsights.length > 0 ? (
+          <div className="ai-search-report" role="status" aria-live="polite">
+            <div className="ai-search-report__header">
+              <div className="ai-search-report__title-wrap">
+                <span className="ai-search-report__icon-spark">✦</span>
+                <h3 className="ai-search-report__title">AI 智能检索报告</h3>
               </div>
-            ) : null}
+              <button
+                type="button"
+                className="ai-search-report__close"
+                aria-label="关闭报告"
+                onClick={() => {
+                  setSyncMessage(null);
+                  setAiSearchInsights([]);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="ai-search-report__summary">
+              {syncMessage.replace(/^AI 搜索：/, "")}
+            </p>
+
+            <div className="ai-search-report__grid">
+              {aiSearchInsights.map((item) => {
+                const score = item.score ?? 0;
+                let starsCount = 1;
+                if (score >= 900) starsCount = 5;
+                else if (score >= 700) starsCount = 4;
+                else if (score >= 500) starsCount = 3;
+                else if (score >= 300) starsCount = 2;
+
+                const isSelected = item.id === selectedId;
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`ai-search-card ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => {
+                      setSelectedId(item.id);
+                    }}
+                  >
+                    <div className="ai-search-card__header">
+                      <span className="ai-search-card__name" title={item.fullName}>
+                        {item.fullName}
+                      </span>
+                      <div className="ai-search-card__stars">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`ai-search-card__star ${
+                              i < starsCount ? "is-filled" : ""
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="ai-search-card__reason">{item.reason}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <button
-            type="button"
-            className="workbench-banner__close"
-            aria-label="关闭提示"
-            onClick={() => {
-              setSyncMessage(null);
-              setAiSearchInsights([]);
-            }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        ) : (
+          <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
+            <div className="workbench-banner__content">
+              <span>{syncMessage}</span>
+            </div>
+            <button
+              type="button"
+              className="workbench-banner__close"
+              aria-label="关闭提示"
+              onClick={() => {
+                setSyncMessage(null);
+                setAiSearchInsights([]);
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )
       ) : null}
 
       <div

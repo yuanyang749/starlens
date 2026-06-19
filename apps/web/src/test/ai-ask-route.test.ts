@@ -2,10 +2,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveSystemDefaultAiRuntimeConfig } from "@starlens/server/server/ai/runtime-resolver";
 
-const { getApiUserMock, resolveAiRuntimeConfigMock, searchReposMock } = vi.hoisted(() => ({
+const { getApiUserMock, resolveAiRuntimeConfigMock, searchReposMock, searchReposRankedMock } = vi.hoisted(() => ({
   getApiUserMock: vi.fn(),
   resolveAiRuntimeConfigMock: vi.fn(),
   searchReposMock: vi.fn(),
+  searchReposRankedMock: vi.fn(),
 }));
 
 vi.mock("@starlens/server/server/auth/api-user", () => ({
@@ -14,6 +15,7 @@ vi.mock("@starlens/server/server/auth/api-user", () => ({
 
 vi.mock("@starlens/server/server/repos/repository", () => ({
   searchRepos: searchReposMock,
+  searchReposRanked: searchReposRankedMock,
 }));
 
 vi.mock("@starlens/server/server/ai/configs", () => ({
@@ -43,6 +45,8 @@ describe("AI ask API route", () => {
     vi.clearAllMocks();
     getApiUserMock.mockResolvedValue({ id: "user-1" });
     resolveAiRuntimeConfigMock.mockResolvedValue({ config: null, source: "none" });
+    searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 8, total: 0, hasMore: false });
+    searchReposRankedMock.mockResolvedValue([]);
     delete process.env.SYSTEM_AI_ENABLED;
     delete process.env.SYSTEM_AI_PROVIDER_TYPE;
     delete process.env.SYSTEM_AI_BASE_URL;
@@ -56,34 +60,26 @@ describe("AI ask API route", () => {
   it("returns explained candidates and keeps direct question hits ahead of heuristic hits", async () => {
     const { POST } = await import("@/app/api/ai/ask/route");
 
-    searchReposMock.mockImplementation(async (_userId: string, input: { q?: string }) => {
-      if (input.q === "agent repo") {
-        return {
-          items: [repo("repo-direct", "owner/direct-hit")],
-          page: 1,
-          pageSize: 8,
-          total: 1,
-          hasMore: false,
-        };
+    searchReposRankedMock.mockImplementation(async (_userId: string, query: string) => {
+      if (query === "agent repo") {
+        return [
+          {
+            ...repo("repo-direct", "owner/direct-hit"),
+            tsRank: 0.8, // Need positive tsRank for recall threshold
+          },
+        ];
       }
 
-      if (input.q === "ai agent") {
-        return {
-          items: [repo("repo-heuristic", "owner/heuristic-hit")],
-          page: 1,
-          pageSize: 8,
-          total: 1,
-          hasMore: false,
-        };
+      if (query === "ai agent") {
+        return [
+          {
+            ...repo("repo-heuristic", "owner/heuristic-hit"),
+            tsRank: 0.6,
+          },
+        ];
       }
 
-      return {
-        items: [],
-        page: 1,
-        pageSize: 8,
-        total: 0,
-        hasMore: false,
-      };
+      return [];
     });
 
     const response = await POST(
@@ -254,6 +250,12 @@ describe("AI ask API route", () => {
       total: 1,
       hasMore: false,
     });
+    searchReposRankedMock.mockResolvedValue([
+      {
+        ...repo("repo-1", "owner/repo"),
+        tsRank: 0.8,
+      },
+    ]);
 
     const response = await POST(
       new Request("https://starlens.test/api/ai/ask", {

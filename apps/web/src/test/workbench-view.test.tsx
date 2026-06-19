@@ -282,7 +282,8 @@ describe("workbench view", () => {
     });
 
     await flushWorkbench();
-    expect(el.textContent).toContain("AI 搜索：Matched repo-1");
+    expect(el.textContent).toContain("AI 智能检索报告");
+    expect(el.textContent).toContain("Matched repo-1");
     expect(el.textContent).toContain("Matched your question directly: \"repo-1\".");
   });
 
@@ -561,10 +562,9 @@ describe("workbench view", () => {
 
     const rows = Array.from(el.querySelectorAll(".repo-table-row"));
     const firstRowFavorite = rows[0]?.querySelector('button[aria-label*="收藏"]') as HTMLButtonElement | null;
-    const secondRowDetails = rows[1]?.querySelector('button[aria-label="查看详情"]') as HTMLButtonElement | null;
+    const secondRow = rows[1] as HTMLDivElement | null;
 
     expect(firstRowFavorite?.getAttribute("title")).toBeNull();
-    expect(secondRowDetails?.getAttribute("title")).toBeNull();
 
     await act(async () => {
       firstRowFavorite?.focus();
@@ -590,15 +590,7 @@ describe("workbench view", () => {
     expect(document.body.textContent).toContain("加入收藏");
 
     await act(async () => {
-      secondRowDetails?.focus();
-      secondRowDetails?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(document.body.textContent).toContain("查看详情");
-
-    await act(async () => {
-      secondRowDetails?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      secondRow?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
     });
 

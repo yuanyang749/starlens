@@ -451,6 +451,7 @@ export async function POST(request: Request) {
       fullName: item.fullName,
       reason: item.reason,
       source: item.source,
+      score: item.score,
     })),
     providerConfigId: chatConfig?.id ?? null,
     providerConfigSource: runtimeResolution.source,

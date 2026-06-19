@@ -149,6 +149,7 @@ describe("tokens settings interactions", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: { ...token, token: "stl_secret_token" } })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [token] })));
     vi.stubGlobal("fetch", fetchMock);
+    writeTextMock.mockClear();
 
     const { el } = mount(<TokensSettingsView />);
     await act(async () => Promise.resolve());
@@ -160,19 +161,33 @@ describe("tokens settings interactions", () => {
     act(() => setInputValue(noteInput!, "Cursor MCP"));
     await act(async () => create?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
-    expect(el.textContent).toContain("CLI 配置");
-    expect(el.textContent).toContain("Agent Skill 配置");
-    expect(el.textContent).toContain("Cursor MCP 配置");
+    expect(el.textContent).toContain("CLI");
+    expect(el.textContent).toContain("Agent Skill");
+    expect(el.textContent).toContain("Cursor MCP");
+
+    const getCopyBtn = () => Array.from(el.querySelectorAll("button")).find((b) => (b.textContent === "复制" || b.textContent === "已复制") && !b.className.includes("underline"));
+
+    // 1. 默认在 CLI tab 下，复制 CLI 配置
+    const copyCli = getCopyBtn();
+    await act(async () => copyCli?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    // 2. 切换至 Agent Skill tab，验证内容并复制
+    const agentTabBtn = Array.from(el.querySelectorAll("button")).find((b) => b.textContent === "Agent Skill");
+    await act(async () => agentTabBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
     expect(el.textContent).toContain("STARLENS_TOKEN");
     expect(el.textContent).toContain("agent-skills/starlens/SKILL.md");
     expect(el.textContent).not.toContain("stl_secret_token");
     expect(el.textContent).toContain("stl_secret********_token");
 
-    const copyCli = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 CLI 配置"));
-    const copyAgent = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 Agent Skill"));
-    const copyMcp = Array.from(el.querySelectorAll("button")).find((b) => b.textContent?.includes("复制 MCP 配置"));
-    await act(async () => copyCli?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    const copyAgent = getCopyBtn();
     await act(async () => copyAgent?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    // 3. 切换至 Cursor MCP tab 并复制
+    const mcpTabBtn = Array.from(el.querySelectorAll("button")).find((b) => b.textContent === "Cursor MCP");
+    await act(async () => mcpTabBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    const copyMcp = getCopyBtn();
     await act(async () => copyMcp?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
     expect(writeTextMock).toHaveBeenNthCalledWith(1, expect.stringContaining("stl_secret_token"));
