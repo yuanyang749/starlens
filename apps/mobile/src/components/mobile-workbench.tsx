@@ -603,9 +603,14 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
       <header className={searchCollapsed ? "mobile-topbar is-collapsed" : "mobile-topbar"}>
         <div className="mobile-title-row">
           <div className="mobile-brand">
-            <span className="mobile-brand__logo">
-              <Star className="h-[18px] w-[18px] fill-current" />
-            </span>
+            <Image
+              src="/brand/logo.png"
+              alt="Starlens"
+              width={32}
+              height={32}
+              className="mobile-brand__logo-img"
+              unoptimized
+            />
             <div className="mobile-brand__text">
               <strong>Starlens</strong>
               <span>@{userName}</span>
@@ -715,8 +720,22 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
         ) : null}
       </header>
 
-      {workbench.error ? <div className="mobile-status mobile-status--error" role="alert">{workbench.error}</div> : null}
-      {workbench.message ? <div className="mobile-status mobile-status--ok" role="status">{workbench.message}</div> : null}
+      {workbench.error ? (
+        <div className="mobile-status mobile-status--error" role="alert">
+          <span>{workbench.error}</span>
+          <button type="button" className="mobile-status__close" aria-label="关闭" onClick={() => actions.setError(null)}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+      {workbench.message ? (
+        <div className="mobile-status mobile-status--ok" role="status">
+          <span>{workbench.message}</span>
+          <button type="button" className="mobile-status__close" aria-label="关闭" onClick={() => actions.setMessage(null)}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
 
       {isSettings ? (
         <MobileSettings

@@ -19,9 +19,9 @@
   --m-success-soft: #ecfdf5;
   --m-danger: #dc2626;
   --m-danger-soft: #fef2f2;
-  --m-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
-  --m-shadow-md: 0 6px 20px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04);
-  --m-shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+  --m-shadow-sm: none;
+  --m-shadow-md: none;
+  --m-shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.1);
   --m-radius: 18px;
   --m-radius-sm: 12px;
 }
@@ -96,16 +96,12 @@ a {
   min-width: 0;
 }
 
-.mobile-brand__logo {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
+.mobile-brand__logo-img {
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
-  border-radius: 12px;
-  background: linear-gradient(140deg, #3b82f6, #2563eb);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  border-radius: 8px;
+  object-fit: contain;
 }
 
 .mobile-brand__text {
@@ -221,7 +217,7 @@ a {
   border-color: transparent;
   background: linear-gradient(140deg, #3b82f6, var(--m-accent));
   color: #fff;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.26);
+  box-shadow: none;
 }
 
 .mobile-button--ghost {
@@ -417,15 +413,42 @@ a {
 /* ───────────────────────── Status banners ───────────────────────── */
 
 .mobile-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 12px;
   border: 1px solid var(--m-line);
   border-radius: var(--m-radius-sm);
   background: var(--m-surface);
-  padding: 12px 14px;
+  padding: 10px 10px 10px 14px;
   color: var(--m-text-2);
   font-size: 14px;
   line-height: 1.5;
-  box-shadow: var(--m-shadow-sm);
+}
+
+.mobile-status span {
+  flex: 1 1 auto;
+}
+
+.mobile-status__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.mobile-status__close:hover {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.06);
 }
 
 .mobile-status--error {
@@ -806,8 +829,8 @@ a {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 2px;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.86);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px) saturate(160%);
   border-top: 1px solid var(--m-line);
 }
@@ -815,12 +838,12 @@ a {
 .mobile-tab-button {
   display: grid;
   justify-items: center;
-  gap: 4px;
-  padding: 6px 4px;
+  gap: 3px;
+  padding: 4px 4px;
   border: none;
   background: transparent;
   color: var(--m-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
   transition: color 140ms ease;
@@ -829,8 +852,8 @@ a {
 .mobile-tab-button__icon {
   display: grid;
   place-items: center;
-  width: 50px;
-  height: 30px;
+  width: 44px;
+  height: 26px;
   border-radius: 999px;
   transition: background 160ms ease, color 160ms ease;
 }
