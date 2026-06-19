@@ -843,8 +843,8 @@
 .mobile-tab-button__icon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   transition: background 160ms ease, color 160ms ease;
 }
