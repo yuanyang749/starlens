@@ -701,89 +701,23 @@ export function WorkbenchView({
           </button>
         </div>
       ) : null}
-      {syncMessage ? (
-        aiSearchInsights.length > 0 ? (
-          <div className="ai-search-report" role="status" aria-live="polite">
-            <div className="ai-search-report__header">
-              <div className="ai-search-report__title-wrap">
-                <span className="ai-search-report__icon-spark">✦</span>
-                <h3 className="ai-search-report__title">AI 智能检索报告</h3>
-              </div>
-              <button
-                type="button"
-                className="ai-search-report__close"
-                aria-label="关闭报告"
-                onClick={() => {
-                  setSyncMessage(null);
-                  setAiSearchInsights([]);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="ai-search-report__summary">
-              {renderFormattedSummary(syncMessage.replace(/^AI 搜索：/, ""))}
-            </div>
-
-            <div className="ai-search-report__grid">
-              {aiSearchInsights.map((item) => {
-                const score = item.score ?? 0;
-                let starsCount = 1;
-                if (score >= 900) starsCount = 5;
-                else if (score >= 700) starsCount = 4;
-                else if (score >= 500) starsCount = 3;
-                else if (score >= 300) starsCount = 2;
-
-                const isSelected = item.id === selectedId;
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`ai-search-card ${isSelected ? "is-selected" : ""}`}
-                    onClick={() => {
-                      setSelectedId(item.id);
-                    }}
-                  >
-                    <div className="ai-search-card__header">
-                      <span className="ai-search-card__name" title={item.fullName}>
-                        {item.fullName}
-                      </span>
-                      <div className="ai-search-card__stars">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`ai-search-card__star ${
-                              i < starsCount ? "is-filled" : ""
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="ai-search-card__reason">{item.reason}</p>
-                  </div>
-                );
-              })}
-            </div>
+      {syncMessage && aiSearchInsights.length === 0 ? (
+        <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
+          <div className="workbench-banner__content">
+            <span>{syncMessage}</span>
           </div>
-        ) : (
-          <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
-            <div className="workbench-banner__content">
-              <span>{syncMessage}</span>
-            </div>
-            <button
-              type="button"
-              className="workbench-banner__close"
-              aria-label="关闭提示"
-              onClick={() => {
-                setSyncMessage(null);
-                setAiSearchInsights([]);
-              }}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )
+          <button
+            type="button"
+            className="workbench-banner__close"
+            aria-label="关闭提示"
+            onClick={() => {
+              setSyncMessage(null);
+              setAiSearchInsights([]);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       ) : null}
 
       <div
@@ -841,87 +775,155 @@ export function WorkbenchView({
             {settingsPanelContent}
           </section>
         ) : (
-          <>
-            <RepoTablePane
-              repos={displayedRepos}
-              total={displayedTotal}
-              allStarsTotal={allStarsTotal}
-              loading={loading}
-              mode={aiSearchMode ? "ai_search" : "default"}
-              page={page}
-              pageSize={aiSearchMode ? aiSearchPageSize : pageSize}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              syncNow={syncNow}
-              syncing={syncing}
-              language={language}
-              tagFilter={tagFilter}
-              favoritesOnly={favoritesOnly}
-              sort={displayedSort}
-              onLanguageChange={(value) => {
-                if (aiSearchMode) return;
-                setLanguage(value);
-                setPage(1);
-              }}
-              onTagFilterChange={(value) => {
-                if (aiSearchMode) return;
-                setTagFilter(value);
-                setPage(1);
-              }}
-              onFavoritesToggle={() => {
-                if (aiSearchMode) return;
-                setFavoritesOnly((value) => !value);
-                setPage(1);
-              }}
-              onClearFilters={() => {
-                if (aiSearchMode) return;
-                clearFiltersAndDraft();
-              }}
-              onResetSort={() => {
-                if (aiSearchMode) return;
-                resetSort();
-              }}
-              onSortChange={(value) => {
-                if (aiSearchMode) return;
-                setSort(value);
-                setRecentMode(false);
-                setPage(1);
-              }}
-              onPageChange={(nextPage) => setPage(nextPage)}
-              onFavoriteToggleRepo={async (repo) => {
-                if (favoriteUpdatingId) return;
-                setFavoriteUpdatingId(repo.id);
-                await updateRepo(repo.id, { isFavorite: !repo.isFavorite });
-                setFavoriteUpdatingId(null);
-              }}
-              favoriteUpdatingId={favoriteUpdatingId}
-            />
+          <div className="workbench-content-container">
+            {syncMessage && aiSearchInsights.length > 0 ? (
+              <div className="ai-search-report" role="status" aria-live="polite">
+                <div className="ai-search-report__header">
+                  <div className="ai-search-report__title-wrap">
+                    <span className="ai-search-report__icon-spark">✦</span>
+                    <h3 className="ai-search-report__title">AI 智能检索报告</h3>
+                  </div>
+                  <button
+                    type="button"
+                    className="ai-search-report__close"
+                    aria-label="关闭报告"
+                    onClick={() => {
+                      setSyncMessage(null);
+                      setAiSearchInsights([]);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
-            <RepoDetailPanel
-              repo={selectedRepo}
-              noteDraft={noteDraft}
-              newTag={newTag}
-              favoriteUpdating={Boolean(selectedRepo && favoriteUpdatingId === selectedRepo.id)}
-              tagSubmitting={tagSubmitting}
-              tagDeleting={tagDeleting}
-              noteSaveFeedback={noteSaveFeedback}
-              onFavoriteToggle={async () => {
-                if (!selectedRepo || favoriteUpdatingId) return;
-                setFavoriteUpdatingId(selectedRepo.id);
-                await updateRepo(selectedRepo.id, { isFavorite: !selectedRepo.isFavorite });
-                setFavoriteUpdatingId(null);
-              }}
-              onNoteChange={(value) => {
-                setNoteDraft(value);
-                setNoteSaveFeedback(null);
-                scheduleNoteSave(value);
-              }}
-              onSaveNote={() => void saveNoteNow()}
-              onNewTagChange={setNewTag}
-              onAddTag={addTag}
-              onDeleteTag={deleteTag}
-            />
-          </>
+                <div className="ai-search-report__summary">
+                  {renderFormattedSummary(syncMessage.replace(/^AI 搜索：/, ""))}
+                </div>
+
+                <div className="ai-search-report__grid">
+                  {aiSearchInsights.map((item) => {
+                    const score = item.score ?? 0;
+                    let starsCount = 1;
+                    if (score >= 900) starsCount = 5;
+                    else if (score >= 700) starsCount = 4;
+                    else if (score >= 500) starsCount = 3;
+                    else if (score >= 300) starsCount = 2;
+
+                    const isSelected = item.id === selectedId;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`ai-search-card ${isSelected ? "is-selected" : ""}`}
+                        onClick={() => {
+                          setSelectedId(item.id);
+                        }}
+                      >
+                        <div className="ai-search-card__header">
+                          <span className="ai-search-card__name" title={item.fullName}>
+                            {item.fullName}
+                          </span>
+                          <div className="ai-search-card__stars">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`ai-search-card__star ${
+                                  i < starsCount ? "is-filled" : ""
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="ai-search-card__reason">{item.reason}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="workbench-repos-grid">
+              <RepoTablePane
+                repos={displayedRepos}
+                total={displayedTotal}
+                allStarsTotal={allStarsTotal}
+                loading={loading}
+                mode={aiSearchMode ? "ai_search" : "default"}
+                page={page}
+                pageSize={aiSearchMode ? aiSearchPageSize : pageSize}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                syncNow={syncNow}
+                syncing={syncing}
+                language={language}
+                tagFilter={tagFilter}
+                favoritesOnly={favoritesOnly}
+                sort={displayedSort}
+                onLanguageChange={(value) => {
+                  if (aiSearchMode) return;
+                  setLanguage(value);
+                  setPage(1);
+                }}
+                onTagFilterChange={(value) => {
+                  if (aiSearchMode) return;
+                  setTagFilter(value);
+                  setPage(1);
+                }}
+                onFavoritesToggle={() => {
+                  if (aiSearchMode) return;
+                  setFavoritesOnly((value) => !value);
+                  setPage(1);
+                }}
+                onClearFilters={() => {
+                  if (aiSearchMode) return;
+                  clearFiltersAndDraft();
+                }}
+                onResetSort={() => {
+                  if (aiSearchMode) return;
+                  resetSort();
+                }}
+                onSortChange={(value) => {
+                  if (aiSearchMode) return;
+                  setSort(value);
+                  setRecentMode(false);
+                  setPage(1);
+                }}
+                onPageChange={(nextPage) => setPage(nextPage)}
+                onFavoriteToggleRepo={async (repo) => {
+                  if (favoriteUpdatingId) return;
+                  setFavoriteUpdatingId(repo.id);
+                  await updateRepo(repo.id, { isFavorite: !repo.isFavorite });
+                  setFavoriteUpdatingId(null);
+                }}
+                favoriteUpdatingId={favoriteUpdatingId}
+              />
+
+              <RepoDetailPanel
+                repo={selectedRepo}
+                noteDraft={noteDraft}
+                newTag={newTag}
+                favoriteUpdating={Boolean(selectedRepo && favoriteUpdatingId === selectedRepo.id)}
+                tagSubmitting={tagSubmitting}
+                tagDeleting={tagDeleting}
+                noteSaveFeedback={noteSaveFeedback}
+                onFavoriteToggle={async () => {
+                  if (!selectedRepo || favoriteUpdatingId) return;
+                  setFavoriteUpdatingId(selectedRepo.id);
+                  await updateRepo(selectedRepo.id, { isFavorite: !selectedRepo.isFavorite });
+                  setFavoriteUpdatingId(null);
+                }}
+                onNoteChange={(value) => {
+                  setNoteDraft(value);
+                  setNoteSaveFeedback(null);
+                  scheduleNoteSave(value);
+                }}
+                onSaveNote={() => void saveNoteNow()}
+                onNewTagChange={setNewTag}
+                onAddTag={addTag}
+                onDeleteTag={deleteTag}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

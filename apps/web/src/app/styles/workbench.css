@@ -83,7 +83,7 @@
 
 .workbench-body {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 420px;
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 14px;
   flex: 1;
   min-height: 0;
@@ -91,15 +91,25 @@
 }
 
 .workbench-body.is-sidebar-collapsed {
-  grid-template-columns: 72px minmax(0, 1fr) 420px;
-}
-
-.workbench-body--settings {
-  grid-template-columns: 260px minmax(0, 1fr);
-}
-
-.workbench-body--settings.is-sidebar-collapsed {
   grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.workbench-content-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.workbench-repos-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .workbench-sidebar,
@@ -946,7 +956,7 @@
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 18px;
   padding: 20px 24px;
-  margin: 16px 20px;
+  margin: 0;
   box-shadow: 
     0 4px 6px -1px rgba(0, 0, 0, 0.05),
     0 2px 4px -1px rgba(0, 0, 0, 0.03),
