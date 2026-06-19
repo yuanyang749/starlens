@@ -1,9 +1,9 @@
-import { count, eq, sql, sum } from "drizzle-orm";
 import { fail, ok, unauthorized } from "@starlens/server/lib/api-response";
 import { getSessionUser } from "@starlens/server/server/auth/session";
 import { isAdminUser } from "@starlens/server/server/auth/admin";
 import { getDb } from "@starlens/server/db/client";
 import { aiUsageLogs, starredRepos, users } from "@starlens/server/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -12,7 +12,7 @@ export async function GET() {
 
   const db = getDb();
 
-  // 中文注释：一次 JOIN 同时聚合星标数和 token 用量，避免 N+1 查询。
+  // 中文注释：用相关子查询分别聚合，避免双 LEFT JOIN 产生笛卡尔积导致数值被放大。
   const rows = await db
     .select({
       id: users.id,
@@ -21,15 +21,18 @@ export async function GET() {
       avatarUrl: users.avatarUrl,
       lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
-      starredCount: count(starredRepos.id),
-      totalTokens: sum(
-        sql<number>`coalesce(${aiUsageLogs.promptTokens}, 0) + coalesce(${aiUsageLogs.completionTokens}, 0)`,
-      ),
+      starredCount: sql<number>`(
+        select count(*) from ${starredRepos}
+        where ${starredRepos.userId} = ${users.id}
+          and ${starredRepos.isStarred} = true
+      )`,
+      totalTokens: sql<number>`(
+        select coalesce(sum(${aiUsageLogs.promptTokens} + ${aiUsageLogs.completionTokens}), 0)
+        from ${aiUsageLogs}
+        where ${aiUsageLogs.userId} = ${users.id}
+      )`,
     })
     .from(users)
-    .leftJoin(starredRepos, eq(starredRepos.userId, users.id))
-    .leftJoin(aiUsageLogs, eq(aiUsageLogs.userId, users.id))
-    .groupBy(users.id)
     .orderBy(sql`${users.createdAt} desc`);
 
   return ok(rows.map((row) => ({
