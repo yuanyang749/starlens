@@ -10,11 +10,11 @@ import {
   Check,
   ChevronLeft,
   ChevronUp,
+  Clock,
   ExternalLink,
   Github,
   GitFork,
   Hash,
-  Home,
   KeyRound,
   LoaderCircle,
   LogOut,
@@ -70,7 +70,7 @@ const providerOptions: Array<{ label: string; value: ProviderType }> = [
 const tabs: Array<{ mode: WorkbenchMode; label: string; icon: typeof Search }> = [
   { mode: "all", label: "Stars", icon: Search },
   { mode: "favorites", label: "重点", icon: Star },
-  { mode: "recent", label: "最近", icon: Home },
+  { mode: "recent", label: "最近", icon: Clock },
   { mode: "settings", label: "设置", icon: Settings2 },
 ];
 
