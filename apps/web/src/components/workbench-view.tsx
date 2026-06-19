@@ -85,6 +85,72 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   return payload.data;
 }
 
+function renderFormattedSummary(text: string) {
+  // 分割并格式化段落/列表
+  let normalizedText = text.replace(/(\d+\.\s+\*\*)/g, "\n$1");
+  const lines = normalizedText.split("\n").map(line => line.trim()).filter(Boolean);
+
+  return (
+    <div className="ai-search-report__summary-flow">
+      {lines.map((line, idx) => {
+        const parts: Array<{ text: string; isBold: boolean }> = [];
+        let tempLine = line;
+        
+        const boldRegex = /\*\*(.*?)\*\*/g;
+        let match;
+        let lastIndex = 0;
+        
+        while ((match = boldRegex.exec(tempLine)) !== null) {
+          const matchIndex = match.index;
+          if (matchIndex > lastIndex) {
+            parts.push({ text: tempLine.substring(lastIndex, matchIndex), isBold: false });
+          }
+          parts.push({ text: match[1], isBold: true });
+          lastIndex = boldRegex.lastIndex;
+        }
+        
+        if (lastIndex < tempLine.length) {
+          parts.push({ text: tempLine.substring(lastIndex), isBold: false });
+        }
+
+        const content = parts.length > 0 ? parts.map((part, pIdx) => {
+          if (part.isBold) {
+            return <strong key={pIdx} className="ai-search-report__highlight">{part.text}</strong>;
+          }
+          return <span key={pIdx}>{part.text}</span>;
+        }) : line;
+
+        const isListItem = /^\d+\.\s+/.test(line);
+
+        if (isListItem) {
+          return (
+            <div key={idx} className="ai-search-report__summary-item">
+              <span className="ai-search-report__summary-bullet">•</span>
+              <div className="ai-search-report__summary-item-content">{content}</div>
+            </div>
+          );
+        }
+
+        const isNote = (line.startsWith("*(") && line.endsWith(")*")) || (line.startsWith("(") && line.endsWith(")"));
+        if (isNote) {
+          const cleanedNote = line.replace(/^\*\(/, "(").replace(/\)\*$/, ")");
+          return (
+            <p key={idx} className="ai-search-report__summary-note">
+              {cleanedNote}
+            </p>
+          );
+        }
+
+        return (
+          <p key={idx} className="ai-search-report__summary-paragraph">
+            {content}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function WorkbenchView({
   userName = "GitHub 用户",
   userAvatarUrl = null,
@@ -656,9 +722,9 @@ export function WorkbenchView({
               </button>
             </div>
 
-            <p className="ai-search-report__summary">
-              {syncMessage.replace(/^AI 搜索：/, "")}
-            </p>
+            <div className="ai-search-report__summary">
+              {renderFormattedSummary(syncMessage.replace(/^AI 搜索：/, ""))}
+            </div>
 
             <div className="ai-search-report__grid">
               {aiSearchInsights.map((item) => {
