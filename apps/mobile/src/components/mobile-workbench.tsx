@@ -821,7 +821,7 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
             onClick={() => actions.setMode(mode)}
           >
             <span className="mobile-tab-button__icon">
-              <Icon className="h-[18px] w-[18px]" />
+              <Icon className="h-4 w-4" />
             </span>
             {label}
           </button>
