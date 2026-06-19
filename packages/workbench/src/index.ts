@@ -186,6 +186,7 @@ export function useMobileWorkbench(): MobileWorkbenchState {
   const [providers, setProviders] = useState<AiConfig[]>([]);
   const [tokens, setTokens] = useState<TokenRecord[]>([]);
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasAutoSyncedRef = useRef(false);
 
   const searchParamsInput = useMemo(() => ({
     query: submittedQuery,
@@ -454,6 +455,16 @@ export function useMobileWorkbench(): MobileWorkbenchState {
   useEffect(() => {
     if (mode === "settings") void loadSettings();
   }, [loadSettings, mode]);
+
+  // 中文注释：首次登录时若仓库列表为空（无任何筛选条件），自动触发同步，避免用户手动点击。
+  useEffect(() => {
+    if (loadingRepos) return;
+    if (hasAutoSyncedRef.current) return;
+    if (total > 0 || aiSearchMode || mode === "settings") return;
+    if (submittedQuery || language || tagFilter) return;
+    hasAutoSyncedRef.current = true;
+    void syncNow();
+  }, [loadingRepos, total, aiSearchMode, mode, submittedQuery, language, tagFilter, syncNow]);
 
   useEffect(() => () => {
     if (noteDebounceRef.current) clearTimeout(noteDebounceRef.current);

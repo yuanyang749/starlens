@@ -139,6 +139,8 @@ export function WorkbenchView({
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingNoteRef = useRef<string | null>(null);
+  const hasAutoSyncedRef = useRef(false);
+  const syncNowRef = useRef<() => Promise<void>>(async () => {});
 
   const refreshList = useCallback(() => {
     const controller = new AbortController();
@@ -366,6 +368,20 @@ export function WorkbenchView({
       setSyncing(false);
     }
   }
+
+  // 中文注释：保持 syncNowRef 指向最新的 syncNow，供自动同步 effect 调用。
+  syncNowRef.current = syncNow;
+
+  // 中文注释：首次登录若仓库为空（无筛选条件），自动触发一次同步。
+  useEffect(() => {
+    if (loading) return;
+    if (hasAutoSyncedRef.current) return;
+    if (total > 0 || aiSearchMode) return;
+    if (query.trim() || language || tagFilter || favoritesOnly) return;
+    hasAutoSyncedRef.current = true;
+    void syncNowRef.current();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, total, aiSearchMode, query, language, tagFilter, favoritesOnly]);
 
   async function addTag() {
     if (!selectedRepo || !newTag.trim() || tagSubmitting) return;
