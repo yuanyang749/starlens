@@ -717,7 +717,8 @@ function detectProjectRoot() {
 
 // Skill 源目录（npm 包内的 skills/ 目录）
 function getSkillSourceDir() {
-  return new URL("../../skills/starlens", import.meta.url).pathname;
+  // src/index.mjs → ../skills/starlens = cli/skills/starlens
+  return new URL("../skills/starlens", import.meta.url).pathname;
 }
 
 // 各客户端全局 skill 目标路径
