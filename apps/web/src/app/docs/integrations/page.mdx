@@ -235,11 +235,8 @@ Codex `~/.codex/config.toml`：
 
 ```toml
 [mcp_servers.starlens]
-type = "http"
 url = "https://starlens.520ai.xin/mcp"
-
-[mcp_servers.starlens.headers]
-Authorization = "Bearer stl_xxx"
+http_headers = {Authorization = "Bearer stl_xxx"}
 startup_timeout_sec = 30
 default_tools_approval_mode = "approve"
 ```
@@ -250,7 +247,7 @@ opencode `~/.config/opencode/opencode.json`：
 {
   "mcp": {
     "starlens": {
-      "type": "http",
+      "type": "remote",
       "url": "https://starlens.520ai.xin/mcp",
       "headers": { "Authorization": "Bearer stl_xxx" },
       "enabled": true

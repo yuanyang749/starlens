@@ -1,0 +1,77 @@
+export const metadata = {
+  title: "隐私政策 | Starlens",
+  description: "Starlens 隐私政策，说明数据收集、使用和保护方式。",
+};
+
+# 隐私政策
+
+*最后更新：2026 年 6 月*
+
+Starlens 是一个自托管优先的开源项目。本文档说明在使用托管服务（`starlens.520ai.xin`）时数据的处理方式。如果你使用自己部署的实例，数据完全在你的掌控之下，本政策不适用。
+
+---
+
+## 收集的数据
+
+**通过 GitHub OAuth 登录时：**
+
+- GitHub 用户 ID、用户名、邮箱和头像 URL
+- GitHub OAuth access token（用于拉取你的 Stars，加密存储）
+
+**使用期间产生的数据：**
+
+- 你的 GitHub Stars 仓库列表（元数据、描述、README 摘要）
+- 个人标签、备注和重点收藏状态
+- AI Provider 配置（API Key 加密存储，明文不返回）
+- 个人 API Token（只保存哈希，明文只展示一次）
+
+**服务器日志：**
+
+- 请求日志（IP 地址、路径、HTTP 状态码）用于运营维护，不用于用户画像
+
+---
+
+## 数据使用方式
+
+- GitHub Stars 同步仅用于构建你的个人知识库，不与其他用户共享
+- AI 问答请求会把你的仓库摘要作为上下文发送给你配置的 AI Provider，不经过 Starlens 服务器中转
+- 个人标签、备注和收藏状态完全私有，不用于统计或分析
+- 不进行广告投放，不向第三方出售数据
+
+---
+
+## 数据存储与安全
+
+- 数据存储在私有 PostgreSQL 实例中，不对外暴露
+- GitHub token、AI API Key 和额外 header 使用 AES 加密存储
+- NextAuth 会话使用签名密钥保护
+- 生产环境使用 HTTPS，数据传输全程加密
+
+---
+
+## 第三方服务
+
+使用 Starlens 托管服务时会连接以下第三方：
+
+| 服务 | 用途 | 隐私政策 |
+| --- | --- | --- |
+| GitHub API | Stars 同步和 OAuth 登录 | [github.com/privacy](https://github.com/privacy) |
+| 你配置的 AI Provider | 生成摘要和问答回答 | 取决于你选择的 Provider |
+
+---
+
+## 数据删除
+
+如果你希望删除托管服务中的账户数据，请通过 GitHub Issues 联系我们。删除后，你的 Stars 快照、标签、备注和 Token 将被永久清除。
+
+---
+
+## 开源透明
+
+Starlens 完全开源，代码托管在 [GitHub](https://github.com/yuanyang749/starlens)。你可以审计数据处理逻辑，也可以选择自托管，让数据完全在自己的服务器上运行。
+
+---
+
+## 联系方式
+
+如有隐私相关问题，请通过 [GitHub Issues](https://github.com/yuanyang749/starlens/issues) 联系我们。

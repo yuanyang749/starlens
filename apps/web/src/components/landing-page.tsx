@@ -118,15 +118,19 @@ const footerColumns = [
 ];
 
 function footerLinkHref(item: string) {
-  if (item === "GitHub") {
-    return "https://github.com/yuanyang749/starlens";
-  }
+  const map: Record<string, string> = {
+    "功能": "/docs/features",
+    "定价（未来）": "#",
+    "更新日志": "/changelog",
+    "文档": "/docs",
+    "隐私政策": "/privacy",
+    "使用条款": "/terms",
+    "GitHub": "https://github.com/yuanyang749/starlens",
+    "讨论区": "https://github.com/yuanyang749/starlens/issues",
+    "贡献指南": "https://github.com/yuanyang749/starlens/blob/main/CONTRIBUTING.md",
+  };
 
-  if (item === "文档") {
-    return "/docs";
-  }
-
-  return "#docs";
+  return map[item] ?? "#";
 }
 
 const primaryLoginLinkClassName =
@@ -565,11 +569,23 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
           {footerColumns.map((column) => (
             <div key={column.title}>
               <strong>{column.title}</strong>
-              {column.links.map((item) => (
-                <a href={footerLinkHref(item)} key={item}>
-                  {item}
-                </a>
-              ))}
+              {column.links.map((item) => {
+                const href = footerLinkHref(item);
+                const isExternal = href.startsWith("http");
+                const isDisabled = href === "#";
+                return (
+                  <a
+                    href={isDisabled ? undefined : href}
+                    key={item}
+                    target={isExternal ? "_blank" : undefined}
+                    rel={isExternal ? "noopener noreferrer" : undefined}
+                    aria-disabled={isDisabled || undefined}
+                    style={isDisabled ? { opacity: 0.4, cursor: "default", pointerEvents: "none" } : undefined}
+                  >
+                    {item}
+                  </a>
+                );
+              })}
             </div>
           ))}
         </div>

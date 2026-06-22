@@ -1,0 +1,71 @@
+export const metadata = {
+  title: "更新日志 | Starlens",
+  description: "Starlens 各版本功能更新、修复和改进记录。",
+};
+
+# 更新日志
+
+记录 Starlens 各阶段的功能迭代与修复。
+
+---
+
+## v0.4 — AI 问答全语义覆盖
+
+**2026-06**
+
+新增 8 种 AI 问答意图类型，`ask` 接口支持自然语言问题的全面路由：
+
+- **统计数量（count）** — "我有多少个 Python 项目？"，直接走数据库聚合返回精确数字
+- **存在性检查（existence）** — "我有没有收藏 facebook/react？"，快速返回找到或未找到
+- **双仓库对比（comparison）** — "langchain 和 llamaindex 哪个更适合 RAG？"，并发拉取详情后 AI 生成结构化对比
+- **分布统计（stats）** — "我的收藏按语言怎么分布？"，聚合语言占比、收藏总数和 Star 最多仓库
+- **个性化推荐（recommendation）** — "推荐适合初学者的 Python 项目"，基于用户收藏偏好画像给出方向
+- **单仓库分析（single_repo）** — "总结一下 vercel/next.js 的用途"，结合 README 摘要进行深度解读
+- **条件过滤（structured）** — 支持 star 数区间、收藏时间范围、最近推送时间、备注内容等多维过滤
+- **语义搜索（semantic）** — 原有多路全文召回 + AI 重排
+
+搜索接口同步新增过滤字段：`minStars`、`maxStars`、`starredAfter`、`starredBefore`、`pushedAfter`、`hasNote`、`noteContains`。
+
+---
+
+## v0.3 — CLI 全面优化与多客户端 MCP 支持
+
+**2026-06**
+
+CLI 工具（`@starlens-app/cli` v0.1.7）迭代：
+
+- **修复 install-skill 向导 Enter 残留问题** — 多选后回车不再误触下一步
+- **修复 skill 文件安装路径** — 文件正确复制到各客户端 skills 目录
+- **新增 `--hosted` / `--local` 参数** — 支持非交互式直接安装指定模式
+- **幂等 TOML 写入** — 重复运行向导不会出现重复配置段
+- **兼容 opencode MCP** — 正确写入 `"type": "remote"` 和 `http_headers` 格式
+- **兼容 Codex MCP** — 使用内联表 `http_headers = {...}` 代替子表写法
+- **ANSI 颜色输出** — `printTable` 支持加粗表头和 TTY 感知
+- **ask 命令 Spinner** — 问答时显示等待动画
+
+---
+
+## v0.2 — AI 问答架构重构
+
+**2026-05**
+
+- AI 问答从简单关键词匹配升级为意图识别架构
+- 支持排序型问题（"star 最多的仓库"）直接走数据库排序，不再依赖语义搜索
+- 新增 `single_repo` 意图，支持针对特定仓库的总结和分析
+- AI 问答报告 UI 重构为毛玻璃卡片网格，支持星级置信度和定位联动
+
+---
+
+## v0.1 — 核心功能上线
+
+**2026-04**
+
+- GitHub Stars 同步至本地 PostgreSQL，支持增量更新
+- 工作台支持关键词、语言、Owner、标签、收藏状态、排序过滤
+- 标签与备注参与全文检索文档，支持个人语言标注
+- AI Provider 配置（OpenAI-compatible、Anthropic native、Gemini native）
+- 个人 API Token 管理，支持 CLI 和外部 Agent 接入
+- CLI 工具初版：搜索、查看、同步、标签、备注、安装 Skill
+- MCP Server：`search_stars`、`show_star`、`ask_stars` 等工具
+- Agent Skill 一键安装，支持 Claude Code、Cursor、Codex、opencode 等客户端
+- 用户管理面板与 AI Token 用量追踪（管理员功能）
