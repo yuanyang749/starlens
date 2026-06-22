@@ -1202,7 +1202,8 @@ async function runInstallSkillWizard(args, env) {
     console.log("");
   }
 
-  const rl = createReadlineInterface();
+  // rl 在所有 raw-mode 交互结束后再创建，避免 wizardCheckbox 的 \r 泄漏进 readline 缓冲区
+  let rl;
 
   try {
     // Step 1: 多选客户端
@@ -1219,6 +1220,9 @@ async function runInstallSkillWizard(args, env) {
       clients = await wizardCheckbox(CLIENT_ITEMS);
       console.log(`已选择：${clients.map(c => clientLabels[c]).join("、")}`);
     }
+
+    // wizardCheckbox（raw mode）完成后再创建 readline，避免 Enter 残留字符被提前消费
+    rl = createReadlineInterface();
 
     const cwd = process.cwd();
 
@@ -1389,7 +1393,7 @@ async function runInstallSkillWizard(args, env) {
     console.log(`  3. 完整文档：${HOSTED_MCP_BASE_URL}/docs/integrations`);
     console.log("");
   } finally {
-    rl.close();
+    rl?.close();
   }
 }
 
