@@ -1067,8 +1067,9 @@ async function writeMcpConfig(client, { apiBaseUrl, token, projectRoot, hosted }
 
     if (client === "opencode") {
       const opencodePath = join(home, ".config", "opencode", "opencode.json");
+      // opencode schema: type must be "remote" for HTTP MCP (not "http")
       const starlensEntry = hosted
-        ? { type: "http", url: `${apiBaseUrl}/mcp`, headers: { Authorization: `Bearer ${token || "stl_xxx"}` }, enabled: true }
+        ? { type: "remote", url: `${apiBaseUrl}/mcp`, headers: { Authorization: `Bearer ${token || "stl_xxx"}` }, enabled: true }
         : { type: "local", command: ["zsh", "-lc", `source "$HOME/.starlens/agent.env" && cd "${projectRoot}" && corepack pnpm mcp:start`], enabled: true, timeout: 10000 };
       await mergeJson(opencodePath, (obj) => ({
         ...obj,
@@ -1079,9 +1080,11 @@ async function writeMcpConfig(client, { apiBaseUrl, token, projectRoot, hosted }
 
     if (client === "codex") {
       const codexPath = join(home, ".codex", "config.toml");
+      // Codex TOML: transport inferred from keys (url = HTTP, command = stdio); no "type" field
+      // HTTP auth uses http_headers inline table, not a [headers] sub-table
       const content = hosted
-        ? `[mcp_servers.starlens]\ntype = "http"\nurl = "${apiBaseUrl}/mcp"\n\n[mcp_servers.starlens.headers]\nAuthorization = "Bearer ${token || "stl_xxx"}"\nstartup_timeout_sec = 30\ndefault_tools_approval_mode = "approve"`
-        : `[mcp_servers.starlens]\ntype = "stdio"\ncommand = "zsh"\nargs = ["-lc", "source \\"$HOME/.starlens/agent.env\\" && cd \\"${projectRoot}\\" && corepack pnpm mcp:start"]\nstartup_timeout_sec = 30\ndefault_tools_approval_mode = "approve"`;
+        ? `[mcp_servers.starlens]\nurl = "${apiBaseUrl}/mcp"\nhttp_headers = { Authorization = "Bearer ${token || "stl_xxx"}" }\nenabled = true\nstartup_timeout_sec = 30\ndefault_tools_approval_mode = "approve"`
+        : `[mcp_servers.starlens]\ncommand = "zsh"\nargs = ["-lc", "source \\"$HOME/.starlens/agent.env\\" && cd \\"${projectRoot}\\" && corepack pnpm mcp:start"]\nenabled = true\nstartup_timeout_sec = 30\ndefault_tools_approval_mode = "approve"`;
       const result = await appendTomlSection(codexPath, "mcp_servers.starlens", content);
       return result.ok ? { ok: true, path: codexPath } : { ok: false, reason: result.reason };
     }
