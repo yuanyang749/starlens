@@ -26,7 +26,9 @@ export async function getApiUser(request?: Request) {
   }
 
   if (bearerToken) {
-    return verifyPersonalApiToken(bearerToken);
+    // API token 用户只有 userId，无 email，admin 检查会视为非管理员
+    const tokenUser = await verifyPersonalApiToken(bearerToken);
+    return tokenUser ? { ...tokenUser, email: null as string | null } : null;
   }
 
   return getSessionUser();
