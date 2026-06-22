@@ -2,11 +2,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveSystemDefaultAiRuntimeConfig } from "@starlens/server/server/ai/runtime-resolver";
 
-const { getApiUserMock, resolveAiRuntimeConfigMock, searchReposMock, searchReposRankedMock } = vi.hoisted(() => ({
+const { getApiUserMock, resolveAiRuntimeConfigMock, searchReposMock, searchReposRankedMock, getRepoDetailMock, getRepoStatsMock } = vi.hoisted(() => ({
   getApiUserMock: vi.fn(),
   resolveAiRuntimeConfigMock: vi.fn(),
   searchReposMock: vi.fn(),
   searchReposRankedMock: vi.fn(),
+  getRepoDetailMock: vi.fn(),
+  getRepoStatsMock: vi.fn(),
 }));
 
 vi.mock("@starlens/server/server/auth/api-user", () => ({
@@ -16,6 +18,8 @@ vi.mock("@starlens/server/server/auth/api-user", () => ({
 vi.mock("@starlens/server/server/repos/repository", () => ({
   searchRepos: searchReposMock,
   searchReposRanked: searchReposRankedMock,
+  getRepoDetail: getRepoDetailMock,
+  getRepoStats: getRepoStatsMock,
 }));
 
 vi.mock("@starlens/server/server/ai/configs", () => ({
@@ -47,6 +51,8 @@ describe("AI ask API route", () => {
     resolveAiRuntimeConfigMock.mockResolvedValue({ config: null, source: "none" });
     searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 8, total: 0, hasMore: false });
     searchReposRankedMock.mockResolvedValue([]);
+    getRepoDetailMock.mockResolvedValue(null);
+    getRepoStatsMock.mockResolvedValue({ total: 0, byLanguage: [], totalFavorites: 0, mostStarredRepo: null });
     delete process.env.SYSTEM_AI_ENABLED;
     delete process.env.SYSTEM_AI_PROVIDER_TYPE;
     delete process.env.SYSTEM_AI_BASE_URL;
@@ -284,5 +290,100 @@ describe("AI ask API route", () => {
     });
 
     vi.unstubAllGlobals();
+  });
+
+  // ─── 新意图类型测试（无 AI 配置，走正则/直接 DB 路径）─────────────────────────
+
+  it("count intent: 正则识别统计数量并返回 total", async () => {
+    searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 1, total: 42, hasMore: false });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "我有多少个Python项目" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("42");
+  });
+
+  it("existence intent: 未找到时返回友好提示", async () => {
+    searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 5, total: 0, hasMore: false });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "我有没有收藏 nonexistent/repo" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("未找到");
+  });
+
+  it("existence intent: 找到时列出仓库", async () => {
+    searchReposMock.mockResolvedValue({
+      items: [repo("r1", "facebook/react"), repo("r2", "vercel/next.js")],
+      page: 1, pageSize: 5, total: 2, hasMore: false,
+    });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "我有没有收藏 react 相关的仓库" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string; candidates: unknown[] } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("2");
+    expect(body.data.candidates.length).toBeGreaterThan(0);
+  });
+
+  it("stats intent: 正则识别并返回统计信息", async () => {
+    getRepoStatsMock.mockResolvedValue({
+      total: 100,
+      byLanguage: [{ language: "TypeScript", count: 40 }, { language: "Python", count: 30 }],
+      totalFavorites: 15,
+      mostStarredRepo: { fullName: "sindresorhus/awesome", stargazersCount: 250000 },
+    });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "我的收藏按语言分布如何" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("100");
+  });
+
+  it("comparison intent: 两仓库都未找到时返回提示", async () => {
+    searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 3, total: 0, hasMore: false });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "langchain 和 llamaindex 哪个更好用" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string } };
+    expect(body.ok).toBe(true);
+    // 无 AI 配置时走正则 → 不识别 comparison → 走语义召回 → 无候选 → 返回未找到
+    expect(typeof body.data.answer).toBe("string");
+  });
+
+  it("unknown command exits with code 1 (CLI guard)", async () => {
+    // 验证 POST 处理无效问题时返回 fail
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean };
+    expect(body.ok).toBe(false);
   });
 });

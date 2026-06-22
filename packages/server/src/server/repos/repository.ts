@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, getTableColumns, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, getTableColumns, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import {
   DEFAULT_SEARCH_PAGE,
   DEFAULT_SEARCH_PAGE_SIZE,
@@ -157,6 +157,43 @@ function repoWhere(userId: string, input: SearchReposInput) {
         where ${repoTags.starredRepoId} = ${starredRepos.id}
           and ${repoTags.userId} = ${userId}
           and ${repoTags.tag} = ${input.tag}
+      )`,
+    );
+  }
+
+  if (input.minStars !== undefined) {
+    conditions.push(gte(starredRepos.stargazersCount, input.minStars));
+  }
+  if (input.maxStars !== undefined) {
+    conditions.push(lte(starredRepos.stargazersCount, input.maxStars));
+  }
+  if (input.starredAfter) {
+    conditions.push(gte(starredRepos.starredAtGithub, input.starredAfter));
+  }
+  if (input.starredBefore) {
+    conditions.push(lte(starredRepos.starredAtGithub, input.starredBefore));
+  }
+  if (input.pushedAfter) {
+    conditions.push(gte(starredRepos.pushedAtGithub, input.pushedAfter));
+  }
+  if (input.hasNote === true) {
+    conditions.push(
+      sql`exists (
+        select 1 from ${repoNotes}
+        where ${repoNotes.starredRepoId} = ${starredRepos.id}
+          and ${repoNotes.userId} = ${userId}
+          and length(trim(${repoNotes.note})) > 0
+      )`,
+    );
+  }
+  if (input.noteContains) {
+    const notePat = `%${input.noteContains}%`;
+    conditions.push(
+      sql`exists (
+        select 1 from ${repoNotes}
+        where ${repoNotes.starredRepoId} = ${starredRepos.id}
+          and ${repoNotes.userId} = ${userId}
+          and ${repoNotes.note} ilike ${notePat}
       )`,
     );
   }
@@ -373,4 +410,45 @@ export async function deleteRepoTag(userId: string, id: string, tag: string) {
   await refreshSearchDocument(userId, id);
 
   return getRepoDetail(userId, id);
+}
+
+export type RepoStats = {
+  total: number;
+  byLanguage: Array<{ language: string; count: number }>;
+  totalFavorites: number;
+  mostStarredRepo: { fullName: string; stargazersCount: number } | null;
+};
+
+export async function getRepoStats(userId: string): Promise<RepoStats> {
+  const db = getDb();
+  const base = and(eq(starredRepos.userId, userId), eq(starredRepos.isStarred, true));
+
+  const [totalRows, langRows, favRows, topStarRows] = await Promise.all([
+    db.select({ value: count() }).from(starredRepos).where(base),
+    db
+      .select({ language: starredRepos.language, cnt: count() })
+      .from(starredRepos)
+      .where(base)
+      .groupBy(starredRepos.language)
+      .orderBy(desc(count()))
+      .limit(10),
+    db.select({ value: count() }).from(starredRepos).where(
+      and(base, eq(starredRepos.isFavorite, true)),
+    ),
+    db
+      .select({ fullName: starredRepos.fullName, stargazersCount: starredRepos.stargazersCount })
+      .from(starredRepos)
+      .where(base)
+      .orderBy(desc(starredRepos.stargazersCount))
+      .limit(1),
+  ]);
+
+  return {
+    total: totalRows[0]?.value ?? 0,
+    byLanguage: langRows.map((r) => ({ language: r.language ?? "Unknown", count: Number(r.cnt) })),
+    totalFavorites: favRows[0]?.value ?? 0,
+    mostStarredRepo: topStarRows[0]
+      ? { fullName: topStarRows[0].fullName, stargazersCount: topStarRows[0].stargazersCount ?? 0 }
+      : null,
+  };
 }

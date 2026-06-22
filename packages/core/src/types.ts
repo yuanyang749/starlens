@@ -93,6 +93,16 @@ export type SearchReposInput = {
   tag?: string;
   favorite?: boolean;
   sort?: SearchSort;
+  // threshold
+  minStars?: number;
+  maxStars?: number;
+  // temporal
+  starredAfter?: Date;
+  starredBefore?: Date;
+  pushedAfter?: Date;
+  // note search
+  hasNote?: boolean;
+  noteContains?: string;
 };
 
 export type PaginatedResult<T> = {

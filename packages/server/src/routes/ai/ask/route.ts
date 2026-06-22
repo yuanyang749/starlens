@@ -5,7 +5,7 @@ import {
 } from "@starlens/server/server/ai/configs";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { trackAiUsage } from "@starlens/server/server/ai/usage-buffer";
-import { getRepoDetail, searchRepos, searchReposRanked } from "@starlens/server/server/repos/repository";
+import { getRepoDetail, getRepoStats, searchRepos, searchReposRanked } from "@starlens/server/server/repos/repository";
 
 // ─── 常量 ────────────────────────────────────────────────────────────────────
 // P0: 候选上限 8→15；P1: 召回量 8→20；P2: broadPool 80→100 / pick 池 30→50
@@ -94,23 +94,32 @@ function stripThinkBlocks(text: string | null) {
 }
 
 // ─── 意图识别 ─────────────────────────────────────────────────────────────────
-// 结构化意图：可以同时携带过滤条件 + 排序 + 语义查询
 type StructuredIntent = {
-  // 排序维度
   sort?: "stars" | "updated" | "recent";
   topN?: number;
-  // 过滤维度（对应 SearchReposInput 各字段）
   language?: string;
   owner?: string;
   favorite?: boolean;
   tag?: string;
-  // 剩余语义关键词（无法结构化的部分）
   q?: string;
+  // 新增过滤维度
+  minStars?: number;
+  maxStars?: number;
+  starredAfter?: string;   // ISO 日期字符串
+  starredBefore?: string;
+  pushedAfter?: string;
+  hasNote?: boolean;
+  noteContains?: string;
 };
 
 type QueryIntent =
   | { kind: "structured"; intent: StructuredIntent }
-  | { kind: "single_repo"; repoIdentifier: string }  // 分析/总结某个特定仓库
+  | { kind: "single_repo"; repoIdentifier: string }
+  | { kind: "count"; filter: StructuredIntent }
+  | { kind: "existence"; query: string; filter: StructuredIntent }
+  | { kind: "comparison"; repoA: string; repoB: string }
+  | { kind: "stats" }
+  | { kind: "recommendation"; context: string }
   | { kind: "semantic" };
 
 // 正则兜底（无 AI 配置时）
@@ -118,66 +127,91 @@ function detectQueryIntentByRegex(question: string): QueryIntent {
   const q = question.toLowerCase();
   const intent: StructuredIntent = {};
 
-  // star 排序
-  if (/(star|stars|star数|最多star|最受欢迎|最热门|热度最高|最高star)/i.test(q)) {
+  if (/(有多少|共有多少|总共多少|how many)/i.test(q)) {
+    const langMatch = q.match(/(python|typescript|javascript|go|rust|java|swift|kotlin|ruby)/i);
+    return { kind: "count", filter: langMatch ? { language: langMatch[1].toLowerCase() } : {} };
+  }
+  if (/(按语言|语言分布|语言统计|分布情况|我的收藏分布)/i.test(q)) {
+    return { kind: "stats" };
+  }
+  if (/(推荐|recommend)/i.test(q)) {
+    return { kind: "recommendation", context: question };
+  }
+  if (/(有没有|是否收藏|do i have|have i starred)/i.test(q)) {
+    return { kind: "existence", query: question, filter: {} };
+  }
+
+  if (/(star|stars|star数|最多star|最受欢迎|最热门)/i.test(q)) {
     intent.sort = "stars";
     const topMatch = q.match(/(?:前|top)\s*(\d+)/);
     intent.topN = topMatch ? Math.min(parseInt(topMatch[1], 10), 20) : 10;
-  }
-  // 最近更新
-  else if (/(最近更新|最近推送|recently updated)/i.test(q)) {
-    intent.sort = "updated";
-    intent.topN = 10;
-  }
-  // 最近收藏
-  else if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
-    intent.sort = "recent";
-    intent.topN = 10;
+  } else if (/(最近更新|最近推送|recently updated)/i.test(q)) {
+    intent.sort = "updated"; intent.topN = 10;
+  } else if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
+    intent.sort = "recent"; intent.topN = 10;
   }
 
-  // 语言过滤
-  const langMatch = q.match(/(?:用|使用|language[: ：]?)\s*(python|typescript|javascript|go|rust|java|c\+\+|c#|swift|kotlin|ruby|php|scala)/i);
-  if (langMatch) intent.language = langMatch[1];
+  const langMatch = q.match(/(?:用|使用|language[: ：]?)\s*(python|typescript|javascript|go|rust|java|swift|kotlin|ruby|php|scala)/i);
+  if (langMatch) intent.language = langMatch[1].toLowerCase();
+  if (/(我收藏的|我标记的|favorite)/i.test(q)) intent.favorite = true;
+  if (/(有备注|写了备注|has note)/i.test(q)) intent.hasNote = true;
 
-  // 收藏过滤
-  if (/(我收藏的|我标记的|我喜欢的|favorite|starred)/i.test(q)) intent.favorite = true;
-
-  const hasStructure = !!(intent.sort || intent.language || intent.owner || intent.favorite !== undefined || intent.tag);
+  const hasStructure = !!(intent.sort || intent.language || intent.owner || intent.favorite !== undefined || intent.tag || intent.hasNote);
   return hasStructure ? { kind: "structured", intent } : { kind: "semantic" };
 }
 
-// AI 结构化意图提取（轻量调用，temperature=0，max_tokens=120）
+// AI 结构化意图提取
 async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig): Promise<QueryIntent> {
-  const systemPrompt = `你是仓库检索意图解析器。将用户问题转换为结构化 JSON。
+  const today = new Date().toISOString().slice(0, 10);
+  const systemPrompt = `你是仓库检索意图解析器。将用户问题转换为结构化 JSON。今天日期：${today}
 
-可提取的字段（全部可选）：
-- sort: "stars"（最受欢迎/star最多）| "updated"（最近更新/推送）| "recent"（最近收藏）
+可提取字段（全部可选）：
+- kind: "count"（统计数量）| "existence"（存在性检查）| "comparison"（对比两仓库）| "stats"（分布统计）| "recommendation"（推荐）
+  kind 出现时同时提取相关补充字段
 - sort: "stars" | "updated" | "recent"
-- topN: 数字，默认10，最大20（"前5个" → 5）
-- language: 编程语言名（小写英文，如"python"/"typescript"/"go"）
-- owner: GitHub 用户名或组织名
-- favorite: true（仅查我收藏/标记的）
-- tag: 用户自定义标签名
-- q: 无法结构化的语义关键词
-- repoIdentifier: 当用户询问【某个特定仓库】的分析/介绍/使用方法/总结时提取，
-  值为 "owner/repo" 格式（如 "facebook/react"）或仓库名关键词（如 "build-your-own-x"）
+- topN: 数字，最大20
+- language: 小写英文语言名
+- owner: GitHub 用户名/组织名
+- favorite: true（仅收藏）
+- tag: 用户标签
+- q: 语义关键词
+- repoIdentifier: 分析/介绍某特定仓库时提取（owner/repo 或名称关键词）
+- minStars: star 数下限整数
+- maxStars: star 数上限整数
+- starredAfter: 收藏时间下限 ISO 日期（"上个月"→上月1日，"今年"→今年1月1日，"最近30天"→30天前）
+- starredBefore: 收藏时间上限 ISO 日期
+- pushedAfter: 最后推送时间下限 ISO 日期
+- hasNote: true（只查有备注的）
+- noteContains: 备注内容搜索词
+- query: kind=existence 时填写要查找的内容
+- repoA, repoB: kind=comparison 时填写两个仓库名
+- context: kind=recommendation 时填写推荐场景描述
 
 规则：
 1. 只输出 JSON，不要解释
-2. 完全是语义搜索时输出 {}
-3. 可以多个字段同时存在（如 sort+language+q）
-4. language 必须是小写英文名
-5. repoIdentifier 与其他字段互斥，出现时只输出 repoIdentifier
+2. 纯语义搜索输出 {}
+3. repoIdentifier 与 kind 互斥，出现时只输出 repoIdentifier
+4. kind=count 时：同时提取 language/owner/tag/favorite/hasNote 等过滤条件
+5. kind=existence 时：提取 query 描述要查找什么
 
 示例：
 "star最多的前5个" → {"sort":"stars","topN":5}
 "最近收藏的Python项目" → {"sort":"recent","language":"python"}
-"有关RAG检索的TypeScript仓库按star排" → {"sort":"stars","language":"typescript","q":"RAG retrieval"}
-"帮我找AI agent相关的" → {"q":"AI agent"}
-"我收藏的Go语言项目" → {"favorite":true,"language":"go"}
-"分析一下 facebook/react 这个仓库" → {"repoIdentifier":"facebook/react"}
+"TypeScript仓库按star排" → {"sort":"stars","language":"typescript"}
+"AI agent相关的" → {"q":"AI agent"}
+"我收藏的Go项目" → {"favorite":true,"language":"go"}
+"分析 facebook/react" → {"repoIdentifier":"facebook/react"}
 "build-your-own-x 怎么用" → {"repoIdentifier":"build-your-own-x"}
-"帮我总结 sindresorhus/awesome 这个项目" → {"repoIdentifier":"sindresorhus/awesome"}`;
+"我有多少个Python项目" → {"kind":"count","language":"python"}
+"我总共收藏了多少" → {"kind":"count"}
+"我有没有收藏 vercel/next.js" → {"kind":"existence","query":"vercel/next.js"}
+"langchain 和 llamaindex 哪个更好" → {"kind":"comparison","repoA":"langchain","repoB":"llamaindex"}
+"我的收藏按语言怎么分布" → {"kind":"stats"}
+"推荐适合初学者的Python项目" → {"kind":"recommendation","context":"适合初学者的Python项目"}
+"上个月收藏的仓库" → {"starredAfter":"<上月1日>","sort":"recent"}
+"star超过1万的" → {"minStars":10000,"sort":"stars"}
+"我写了备注的仓库" → {"hasNote":true}
+"备注里有work的" → {"noteContains":"work"}`;
 
   try {
     const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
@@ -186,13 +220,13 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
       body: JSON.stringify({
         model: config.model,
         temperature: 0,
-        max_tokens: 120,
+        max_tokens: 200,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: question },
+          { role: "user", content: `当前日期：${today}\n用户问题：${question}` },
         ],
       }),
-      signal: AbortSignal.timeout(5000), // 意图提取最多等 5s，超时走 fallback
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) throw new Error(`intent AI status ${response.status}`);
@@ -202,18 +236,37 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { kind: "semantic" };
 
-    const parsed = JSON.parse(jsonMatch[0]) as StructuredIntent & { repoIdentifier?: string };
+    const parsed = JSON.parse(jsonMatch[0]) as StructuredIntent & {
+      repoIdentifier?: string;
+      kind?: string;
+      query?: string;
+      repoA?: string;
+      repoB?: string;
+      context?: string;
+    };
 
-    // single_repo 意图：用户想分析/总结某个特定仓库
     if (parsed.repoIdentifier?.trim()) {
       return { kind: "single_repo", repoIdentifier: parsed.repoIdentifier.trim() };
     }
+    if (parsed.kind === "count") {
+      const { kind: _k, repoIdentifier: _r, query: _q, repoA: _a, repoB: _b, context: _c, ...filter } = parsed;
+      return { kind: "count", filter };
+    }
+    if (parsed.kind === "existence") {
+      const { kind: _k, repoIdentifier: _r, query, repoA: _a, repoB: _b, context: _c, ...filter } = parsed;
+      return { kind: "existence", query: query ?? question, filter };
+    }
+    if (parsed.kind === "comparison" && parsed.repoA && parsed.repoB) {
+      return { kind: "comparison", repoA: parsed.repoA, repoB: parsed.repoB };
+    }
+    if (parsed.kind === "stats") return { kind: "stats" };
+    if (parsed.kind === "recommendation") {
+      return { kind: "recommendation", context: parsed.context ?? question };
+    }
 
-    const hasStructure = !!(parsed.sort || parsed.language || parsed.owner || parsed.favorite !== undefined || parsed.tag);
-    // q 单独存在时仍走语义召回，不算结构化
+    const hasStructure = !!(parsed.sort || parsed.language || parsed.owner || parsed.favorite !== undefined || parsed.tag || parsed.minStars !== undefined || parsed.maxStars !== undefined || parsed.starredAfter || parsed.starredBefore || parsed.pushedAfter || parsed.hasNote || parsed.noteContains);
     return hasStructure ? { kind: "structured", intent: parsed } : { kind: "semantic" };
   } catch {
-    // AI 超时或失败 → fallback 到正则
     return detectQueryIntentByRegex(question);
   }
 }
@@ -270,6 +323,60 @@ function buildSingleRepoContext(repo: SearchRepoItem): string {
   if ((repo.topics ?? []).length > 0) lines.push(`话题标签: ${(repo.topics ?? []).join(", ")}`);
   if (repo.note?.trim()) lines.push(`用户备注: ${repo.note}`);
   return lines.join("\n");
+}
+
+// ─── 公用辅助函数 ─────────────────────────────────────────────────────────────
+
+// 统一 AI 调用封装
+async function callAIWithPrompt({
+  system, user: userContent, maxTokens = 400, config, userId, endpoint,
+}: {
+  system: string; user: string; maxTokens?: number;
+  config: ChatRuntimeConfig | null; userId?: string; endpoint: string;
+}): Promise<string | null> {
+  if (!config) return null;
+  try {
+    const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+      method: "POST",
+      headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model: config.model, temperature: 0.3, max_tokens: maxTokens,
+        messages: [{ role: "system", content: system }, { role: "user", content: userContent }],
+      }),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as OpenAiCompatibleResponse;
+    if (userId) {
+      trackAiUsage({ userId, endpoint, model: config.model, promptTokens: payload.usage?.prompt_tokens ?? 0, completionTokens: payload.usage?.completion_tokens ?? 0 });
+    }
+    return stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null).replace(/\s+/g, " ").trim() || null;
+  } catch { return null; }
+}
+
+// 将 SearchRepoItem 转换为 RecalledCandidate
+function toRecalledCandidate(item: SearchRepoItem, index: number, reason: string): RecalledCandidate {
+  return {
+    id: item.id, fullName: item.fullName, description: item.description ?? "",
+    aiSummary: item.aiSummary, repoSummary: item.repoSummary ?? "",
+    userNote: item.note ?? "", topics: item.topics ?? [], tags: item.tags ?? [],
+    language: item.language ?? "", stargazersCount: item.stargazersCount ?? 0,
+    tsRank: 1, reason, source: "question_search" as const, score: 1000 - index * 10,
+  };
+}
+
+// 生成过滤条件的中文描述
+function buildFilterDesc(si: StructuredIntent): string {
+  const parts: string[] = [];
+  if (si.language) parts.push(`${si.language} 语言`);
+  if (si.owner) parts.push(`${si.owner} 作者`);
+  if (si.favorite) parts.push("已收藏");
+  if (si.tag) parts.push(`"${si.tag}" 标签`);
+  if (si.hasNote) parts.push("有备注");
+  if (si.noteContains) parts.push(`备注含 "${si.noteContains}"`);
+  if (si.minStars !== undefined) parts.push(`Star ≥ ${si.minStars.toLocaleString()}`);
+  if (si.maxStars !== undefined) parts.push(`Star ≤ ${si.maxStars.toLocaleString()}`);
+  if (si.q) parts.push(`"${si.q}"`);
+  return parts.length > 0 ? `（${parts.join("、")}）` : "";
 }
 
 function buildHeuristicTerms(question: string) {
@@ -581,12 +688,145 @@ export async function POST(request: Request) {
   // ─── 意图识别：AI 结构化提取，无 AI 时正则兜底 ────────────────────────────────
   const intent = await detectQueryIntent(question, chatConfig);
 
+  const earlyReturn = (answer: string, cands: Array<{ id: string; fullName: string; reason: string; source: string; score: number }> = []) =>
+    ok({ answer, candidates: cands, providerConfigId: chatConfig?.id ?? null, providerConfigSource: runtimeResolution.source });
+
+  // 将 StructuredIntent 中的 ISO 字符串转换为 Date 对象
+  function parseSI(si: StructuredIntent) {
+    return {
+      ...si,
+      starredAfter: si.starredAfter ? new Date(si.starredAfter) : undefined,
+      starredBefore: si.starredBefore ? new Date(si.starredBefore) : undefined,
+      pushedAfter: si.pushedAfter ? new Date(si.pushedAfter) : undefined,
+    };
+  }
+
+  // ─── count ────────────────────────────────────────────────────────────────────
+  if (intent.kind === "count") {
+    const si = intent.filter ?? {};
+    const result = await searchRepos(user.id, { ...parseSI(si), pageSize: 1, page: 1 });
+    const desc = buildFilterDesc(si);
+    return earlyReturn(`你的收藏中${desc}共有 **${result.total}** 个仓库。`);
+  }
+
+  // ─── existence ───────────────────────────────────────────────────────────────
+  if (intent.kind === "existence") {
+    const result = await searchRepos(user.id, { ...parseSI(intent.filter), q: intent.query, sort: "relevance", pageSize: 5 });
+    if (result.total === 0) {
+      return earlyReturn(`在你的收藏中**未找到**与「${intent.query}」相关的仓库。`);
+    }
+    const list = result.items.slice(0, 3).map((r) => `- **${r.fullName}**（${(r.stargazersCount ?? 0).toLocaleString()} ⭐）`).join("\n");
+    return earlyReturn(
+      `找到 **${result.total}** 个相关仓库：\n${list}`,
+      result.items.slice(0, 3).map((r, i) => toRecalledCandidate(r, i, "匹配存在性查询")),
+    );
+  }
+
+  // ─── comparison ──────────────────────────────────────────────────────────────
+  if (intent.kind === "comparison") {
+    const [resA, resB] = await Promise.all([
+      searchRepos(user.id, { q: intent.repoA, sort: "relevance", pageSize: 3 }),
+      searchRepos(user.id, { q: intent.repoB, sort: "relevance", pageSize: 3 }),
+    ]);
+    const repoA = resA.items.find((r) => r.fullName?.toLowerCase().includes(intent.repoA.toLowerCase())) ?? resA.items[0];
+    const repoB = resB.items.find((r) => r.fullName?.toLowerCase().includes(intent.repoB.toLowerCase())) ?? resB.items[0];
+
+    if (!repoA && !repoB) {
+      return earlyReturn(`「${intent.repoA}」和「${intent.repoB}」在你的收藏中均未找到，请确认是否已收藏这两个仓库。`);
+    }
+
+    const [detailA, detailB] = await Promise.all([
+      repoA ? (getRepoDetail(user.id, repoA.id)) : Promise.resolve(null),
+      repoB ? (getRepoDetail(user.id, repoB.id)) : Promise.resolve(null),
+    ]);
+
+    const contextParts = [
+      detailA ? `【${detailA.fullName}】\n${buildSingleRepoContext(detailA)}` : `未找到「${intent.repoA}」`,
+      detailB ? `【${detailB.fullName}】\n${buildSingleRepoContext(detailB)}` : `未找到「${intent.repoB}」`,
+    ].join("\n\n---\n\n");
+
+    const answer = await callAIWithPrompt({
+      system: "你是仓库对比分析师。基于两个仓库的信息，用中文给出结构化对比：1) 核心定位差异；2) 适用场景；3) 优缺点对比；4) 推荐结论（说明哪个更适合用户的问题）。",
+      user: `用户问题：${question}\n\n${contextParts}`,
+      maxTokens: 700, config: chatConfig, userId: user.id, endpoint: "ask/comparison",
+    }) ?? `对比 ${detailA?.fullName ?? intent.repoA} 和 ${detailB?.fullName ?? intent.repoB}：请参考两仓库详情。`;
+
+    const cands = [detailA, detailB].filter(Boolean).map((r, i) =>
+      toRecalledCandidate(r as SearchRepoItem, i, "用于对比分析")
+    );
+    return earlyReturn(answer, cands);
+  }
+
+  // ─── stats ───────────────────────────────────────────────────────────────────
+  if (intent.kind === "stats") {
+    const stats = await getRepoStats(user.id);
+    const topLangs = stats.byLanguage.slice(0, 8)
+      .map((l, i) => `${i + 1}. ${l.language}：${l.count} 个`)
+      .join("\n");
+    const fallback = [
+      `你的收藏共 **${stats.total}** 个仓库，其中 **${stats.totalFavorites}** 个标记为收藏。`,
+      `\n**语言分布 Top ${Math.min(stats.byLanguage.length, 8)}：**\n${topLangs}`,
+      stats.mostStarredRepo ? `\n**Star 最多：** ${stats.mostStarredRepo.fullName}（${stats.mostStarredRepo.stargazersCount.toLocaleString()} ⭐）` : "",
+    ].join("");
+
+    const answer = await callAIWithPrompt({
+      system: "你是数据分析助手。基于用户的 GitHub 收藏统计，用中文给出简洁的分析：主要技术偏好、收藏亮点、可能的学习方向建议。",
+      user: `总仓库数：${stats.total}，收藏数：${stats.totalFavorites}\n语言分布：\n${topLangs}\nStar 最多：${stats.mostStarredRepo?.fullName ?? "无"}（${stats.mostStarredRepo?.stargazersCount.toLocaleString() ?? 0} ⭐）\n用户问题：${question}`,
+      maxTokens: 400, config: chatConfig, userId: user.id, endpoint: "ask/stats",
+    }) ?? fallback;
+
+    return earlyReturn(answer);
+  }
+
+  // ─── recommendation ───────────────────────────────────────────────────────────
+  if (intent.kind === "recommendation") {
+    const [stats, recentStars] = await Promise.all([
+      getRepoStats(user.id),
+      searchRepos(user.id, { sort: "recent", pageSize: 15 }),
+    ]);
+    const topicSet = [...new Set(recentStars.items.flatMap((r) => r.topics ?? []))].slice(0, 10);
+    const userProfile = [
+      `语言偏好：${stats.byLanguage.slice(0, 3).map((l) => l.language).join("、") || "未知"}`,
+      `近期收藏话题：${topicSet.join("、") || "无"}`,
+      `总收藏：${stats.total} 个，收藏：${stats.totalFavorites} 个`,
+    ].join("；");
+
+    const answer = await callAIWithPrompt({
+      system: "你是 GitHub 仓库推荐助手。基于用户的收藏偏好画像和推荐需求，给出 3-5 个方向性建议。重要：不要随意捏造具体仓库名，只给出技术方向、学习路径和寻找方式。",
+      user: `用户画像：${userProfile}\n推荐需求：${intent.context}\n用户问题：${question}`,
+      maxTokens: 500, config: chatConfig, userId: user.id, endpoint: "ask/recommendation",
+    }) ?? "根据你的收藏偏好，建议关注你常用语言相关的工具链、框架和最佳实践仓库。";
+
+    return earlyReturn(answer);
+  }
+
+  // ─── single_repo ──────────────────────────────────────────────────────────────
+  if (intent.kind === "single_repo") {
+    const searchResult = await searchRepos(user.id, { q: intent.repoIdentifier, sort: "relevance", pageSize: 5 });
+    const matched = searchResult.items.find((r) => r.fullName?.toLowerCase() === intent.repoIdentifier.toLowerCase()) ?? searchResult.items[0];
+
+    if (!matched) {
+      return earlyReturn(`在你的收藏中未找到仓库「${intent.repoIdentifier}」，请先确认该仓库是否已收藏。`);
+    }
+
+    const repoDetail = await getRepoDetail(user.id, matched.id) ?? matched;
+    const context = buildSingleRepoContext(repoDetail);
+
+    const answer = await callAIWithPrompt({
+      system: "你是仓库分析助手。基于提供的仓库信息，用中文给出精炼、实用的回答。重点包括：用途与核心功能、使用方法、典型场景、优缺点（如有）。回答要具体，避免空话。",
+      user: `用户问题：${question}\n\n仓库详情：\n${context}`,
+      maxTokens: 600, config: chatConfig, userId: user.id, endpoint: "ask/single_repo",
+    }) ?? `关于仓库 ${repoDetail.fullName}：${repoDetail.description ?? repoDetail.repoSummary ?? ""}`;
+
+    return earlyReturn(answer, [toRecalledCandidate(repoDetail as SearchRepoItem, 0, "精确匹配用户指定仓库")]);
+  }
+
+  // ─── structured ───────────────────────────────────────────────────────────────
   let candidates: RecalledCandidate[];
   let queries: string[];
 
   if (intent.kind === "structured") {
     const si = intent.intent;
-    // 结构化意图直接走 DB 查询，结果确定准确
     const result = await searchRepos(user.id, {
       page: 1,
       pageSize: Math.min(si.topN ?? 10, 20),
@@ -595,7 +835,14 @@ export async function POST(request: Request) {
       owner: si.owner,
       favorite: si.favorite,
       tag: si.tag,
-      q: si.q, // 剩余语义关键词走全文搜索
+      q: si.q,
+      minStars: si.minStars,
+      maxStars: si.maxStars,
+      starredAfter: si.starredAfter ? new Date(si.starredAfter) : undefined,
+      starredBefore: si.starredBefore ? new Date(si.starredBefore) : undefined,
+      pushedAfter: si.pushedAfter ? new Date(si.pushedAfter) : undefined,
+      hasNote: si.hasNote,
+      noteContains: si.noteContains,
     });
 
     const sortLabel =
@@ -603,93 +850,10 @@ export async function POST(request: Request) {
       si.sort === "updated" ? "按最近推送时间降序" :
       si.sort === "recent" ? "按收藏时间降序" : "按相关性";
 
-    const filterDesc = [
-      si.language && `语言: ${si.language}`,
-      si.owner && `作者: ${si.owner}`,
-      si.favorite && "仅收藏",
-      si.tag && `标签: ${si.tag}`,
-      si.q && `关键词: ${si.q}`,
-    ].filter(Boolean).join(" / ");
-
-    candidates = result.items.map((item, index) => ({
-      id: item.id,
-      fullName: item.fullName,
-      description: item.description ?? "",
-      aiSummary: item.aiSummary,
-      repoSummary: item.repoSummary ?? "",
-      userNote: item.note ?? "",
-      topics: item.topics ?? [],
-      tags: item.tags ?? [],
-      language: item.language ?? "",
-      stargazersCount: item.stargazersCount ?? 0,
-      tsRank: 1,
-      reason: `${sortLabel}${filterDesc ? `（${filterDesc}）` : ""}，排名第 ${index + 1}（${(item.stargazersCount ?? 0).toLocaleString()} stars）`,
-      source: "question_search" as const,
-      score: 1000 - index * 10,
-    }));
+    candidates = result.items.map((item, index) =>
+      toRecalledCandidate(item, index, `${sortLabel}${buildFilterDesc(si)}，第 ${index + 1} 名（${(item.stargazersCount ?? 0).toLocaleString()} ⭐）`)
+    );
     queries = [question];
-  } else if (intent.kind === "single_repo") {
-    // ─── 单仓库分析：精确查找后提供完整 README + 摘要给 AI ─────────────────────
-    const searchResult = await searchRepos(user.id, {
-      q: intent.repoIdentifier,
-      sort: "relevance",
-      pageSize: 5,
-    });
-    const matched = searchResult.items.find(
-      (r) => r.fullName?.toLowerCase() === intent.repoIdentifier.toLowerCase(),
-    ) ?? searchResult.items[0];
-
-    if (!matched) {
-      return ok({
-        answer: `在你的收藏中未找到仓库「${intent.repoIdentifier}」，请先确认该仓库是否已收藏。`,
-        candidates: [],
-        providerConfigId: chatConfig?.id ?? null,
-        providerConfigSource: runtimeResolution.source,
-      });
-    }
-
-    // 拿完整详情（含 readmeExcerpt）
-    const repoDetail = await getRepoDetail(user.id, matched.id) ?? matched;
-    const context = buildSingleRepoContext(repoDetail);
-
-    let answer = `关于仓库 ${repoDetail.fullName}：${repoDetail.description ?? repoDetail.repoSummary ?? ""}`;
-
-    if (chatConfig) {
-      try {
-        const response = await fetch(resolveChatCompletionsUrl(chatConfig.baseUrl), {
-          method: "POST",
-          headers: { ...chatConfig.extraHeaders, "content-type": "application/json", authorization: `Bearer ${chatConfig.apiKey}` },
-          body: JSON.stringify({
-            model: chatConfig.model,
-            temperature: 0.3,
-            max_tokens: 600,
-            messages: [
-              {
-                role: "system",
-                content: "你是仓库分析助手。基于提供的仓库信息，用中文给出精炼、实用的回答。重点包括：用途与核心功能、使用方法、典型场景、优缺点（如有）。回答要具体，避免空话。",
-              },
-              {
-                role: "user",
-                content: `用户问题：${question}\n\n仓库详情：\n${context}`,
-              },
-            ],
-          }),
-        });
-        if (response.ok) {
-          const payload = (await response.json()) as OpenAiCompatibleResponse;
-          trackAiUsage({ userId: user.id, endpoint: "ask/single_repo", model: chatConfig.model, promptTokens: payload.usage?.prompt_tokens ?? 0, completionTokens: payload.usage?.completion_tokens ?? 0 });
-          const content = stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null).replace(/\s+/g, " ").trim();
-          if (content) answer = content;
-        }
-      } catch { /* ignore, use fallback */ }
-    }
-
-    return ok({
-      answer,
-      candidates: [{ id: repoDetail.id, fullName: repoDetail.fullName, reason: "精确匹配用户指定仓库", source: "question_search", score: 1000 }],
-      providerConfigId: chatConfig?.id ?? null,
-      providerConfigSource: runtimeResolution.source,
-    });
   } else {
     const recalled = await recallCandidates(user.id, question, chatConfig);
     candidates = recalled.candidates;
@@ -715,11 +879,7 @@ export async function POST(request: Request) {
   return ok({
     answer,
     candidates: candidates.map((item) => ({
-      id: item.id,
-      fullName: item.fullName,
-      reason: item.reason,
-      source: item.source,
-      score: item.score,
+      id: item.id, fullName: item.fullName, reason: item.reason, source: item.source, score: item.score,
     })),
     providerConfigId: chatConfig?.id ?? null,
     providerConfigSource: runtimeResolution.source,
