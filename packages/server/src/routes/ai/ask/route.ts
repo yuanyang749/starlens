@@ -5,7 +5,7 @@ import {
 } from "@starlens/server/server/ai/configs";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { trackAiUsage } from "@starlens/server/server/ai/usage-buffer";
-import { searchRepos, searchReposRanked } from "@starlens/server/server/repos/repository";
+import { getRepoDetail, searchRepos, searchReposRanked } from "@starlens/server/server/repos/repository";
 
 // ─── 常量 ────────────────────────────────────────────────────────────────────
 // P0: 候选上限 8→15；P1: 召回量 8→20；P2: broadPool 80→100 / pick 池 30→50
@@ -110,6 +110,7 @@ type StructuredIntent = {
 
 type QueryIntent =
   | { kind: "structured"; intent: StructuredIntent }
+  | { kind: "single_repo"; repoIdentifier: string }  // 分析/总结某个特定仓库
   | { kind: "semantic" };
 
 // 正则兜底（无 AI 配置时）
@@ -151,25 +152,32 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
 
 可提取的字段（全部可选）：
 - sort: "stars"（最受欢迎/star最多）| "updated"（最近更新/推送）| "recent"（最近收藏）
+- sort: "stars" | "updated" | "recent"
 - topN: 数字，默认10，最大20（"前5个" → 5）
 - language: 编程语言名（小写英文，如"python"/"typescript"/"go"）
 - owner: GitHub 用户名或组织名
 - favorite: true（仅查我收藏/标记的）
 - tag: 用户自定义标签名
-- q: 无法结构化的语义关键词（如技术领域、用途描述）
+- q: 无法结构化的语义关键词
+- repoIdentifier: 当用户询问【某个特定仓库】的分析/介绍/使用方法/总结时提取，
+  值为 "owner/repo" 格式（如 "facebook/react"）或仓库名关键词（如 "build-your-own-x"）
 
 规则：
 1. 只输出 JSON，不要解释
 2. 完全是语义搜索时输出 {}
 3. 可以多个字段同时存在（如 sort+language+q）
 4. language 必须是小写英文名
+5. repoIdentifier 与其他字段互斥，出现时只输出 repoIdentifier
 
 示例：
 "star最多的前5个" → {"sort":"stars","topN":5}
 "最近收藏的Python项目" → {"sort":"recent","language":"python"}
 "有关RAG检索的TypeScript仓库按star排" → {"sort":"stars","language":"typescript","q":"RAG retrieval"}
 "帮我找AI agent相关的" → {"q":"AI agent"}
-"我收藏的Go语言项目" → {"favorite":true,"language":"go"}`;
+"我收藏的Go语言项目" → {"favorite":true,"language":"go"}
+"分析一下 facebook/react 这个仓库" → {"repoIdentifier":"facebook/react"}
+"build-your-own-x 怎么用" → {"repoIdentifier":"build-your-own-x"}
+"帮我总结 sindresorhus/awesome 这个项目" → {"repoIdentifier":"sindresorhus/awesome"}`;
 
   try {
     const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
@@ -194,7 +202,13 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { kind: "semantic" };
 
-    const parsed = JSON.parse(jsonMatch[0]) as StructuredIntent;
+    const parsed = JSON.parse(jsonMatch[0]) as StructuredIntent & { repoIdentifier?: string };
+
+    // single_repo 意图：用户想分析/总结某个特定仓库
+    if (parsed.repoIdentifier?.trim()) {
+      return { kind: "single_repo", repoIdentifier: parsed.repoIdentifier.trim() };
+    }
+
     const hasStructure = !!(parsed.sort || parsed.language || parsed.owner || parsed.favorite !== undefined || parsed.tag);
     // q 单独存在时仍走语义召回，不算结构化
     return hasStructure ? { kind: "structured", intent: parsed } : { kind: "semantic" };
@@ -239,6 +253,23 @@ function buildCandidateContext(candidates: Candidate[]) {
       return lines.join("\n");
     })
     .join("\n\n");
+}
+
+// 单仓库分析：提供更丰富的上下文（含 readmeExcerpt）
+function buildSingleRepoContext(repo: SearchRepoItem): string {
+  const lines: string[] = [
+    `仓库：${repo.fullName}`,
+    `Stars: ${(repo.stargazersCount ?? 0).toLocaleString()}`,
+    `语言: ${repo.language || "unknown"}`,
+    `主页: ${repo.htmlUrl ?? ""}`,
+  ];
+  if (repo.description?.trim()) lines.push(`简介: ${repo.description}`);
+  if (repo.aiSummary?.trim()) lines.push(`AI 摘要: ${repo.aiSummary}`);
+  else if (repo.repoSummary?.trim()) lines.push(`摘要: ${repo.repoSummary}`);
+  if (repo.readmeExcerpt?.trim()) lines.push(`README 摘录:\n${repo.readmeExcerpt.slice(0, 1200)}`);
+  if ((repo.topics ?? []).length > 0) lines.push(`话题标签: ${(repo.topics ?? []).join(", ")}`);
+  if (repo.note?.trim()) lines.push(`用户备注: ${repo.note}`);
+  return lines.join("\n");
 }
 
 function buildHeuristicTerms(question: string) {
@@ -597,6 +628,68 @@ export async function POST(request: Request) {
       score: 1000 - index * 10,
     }));
     queries = [question];
+  } else if (intent.kind === "single_repo") {
+    // ─── 单仓库分析：精确查找后提供完整 README + 摘要给 AI ─────────────────────
+    const searchResult = await searchRepos(user.id, {
+      q: intent.repoIdentifier,
+      sort: "relevance",
+      pageSize: 5,
+    });
+    const matched = searchResult.items.find(
+      (r) => r.fullName?.toLowerCase() === intent.repoIdentifier.toLowerCase(),
+    ) ?? searchResult.items[0];
+
+    if (!matched) {
+      return ok({
+        answer: `在你的收藏中未找到仓库「${intent.repoIdentifier}」，请先确认该仓库是否已收藏。`,
+        candidates: [],
+        providerConfigId: chatConfig?.id ?? null,
+        providerConfigSource: runtimeResolution.source,
+      });
+    }
+
+    // 拿完整详情（含 readmeExcerpt）
+    const repoDetail = await getRepoDetail(user.id, matched.id) ?? matched;
+    const context = buildSingleRepoContext(repoDetail);
+
+    let answer = `关于仓库 ${repoDetail.fullName}：${repoDetail.description ?? repoDetail.repoSummary ?? ""}`;
+
+    if (chatConfig) {
+      try {
+        const response = await fetch(resolveChatCompletionsUrl(chatConfig.baseUrl), {
+          method: "POST",
+          headers: { ...chatConfig.extraHeaders, "content-type": "application/json", authorization: `Bearer ${chatConfig.apiKey}` },
+          body: JSON.stringify({
+            model: chatConfig.model,
+            temperature: 0.3,
+            max_tokens: 600,
+            messages: [
+              {
+                role: "system",
+                content: "你是仓库分析助手。基于提供的仓库信息，用中文给出精炼、实用的回答。重点包括：用途与核心功能、使用方法、典型场景、优缺点（如有）。回答要具体，避免空话。",
+              },
+              {
+                role: "user",
+                content: `用户问题：${question}\n\n仓库详情：\n${context}`,
+              },
+            ],
+          }),
+        });
+        if (response.ok) {
+          const payload = (await response.json()) as OpenAiCompatibleResponse;
+          trackAiUsage({ userId: user.id, endpoint: "ask/single_repo", model: chatConfig.model, promptTokens: payload.usage?.prompt_tokens ?? 0, completionTokens: payload.usage?.completion_tokens ?? 0 });
+          const content = stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null).replace(/\s+/g, " ").trim();
+          if (content) answer = content;
+        }
+      } catch { /* ignore, use fallback */ }
+    }
+
+    return ok({
+      answer,
+      candidates: [{ id: repoDetail.id, fullName: repoDetail.fullName, reason: "精确匹配用户指定仓库", source: "question_search", score: 1000 }],
+      providerConfigId: chatConfig?.id ?? null,
+      providerConfigSource: runtimeResolution.source,
+    });
   } else {
     const recalled = await recallCandidates(user.id, question, chatConfig);
     candidates = recalled.candidates;
