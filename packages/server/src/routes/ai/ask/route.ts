@@ -94,31 +94,121 @@ function stripThinkBlocks(text: string | null) {
 }
 
 // ─── 意图识别 ─────────────────────────────────────────────────────────────────
+// 结构化意图：可以同时携带过滤条件 + 排序 + 语义查询
+type StructuredIntent = {
+  // 排序维度
+  sort?: "stars" | "updated" | "recent";
+  topN?: number;
+  // 过滤维度（对应 SearchReposInput 各字段）
+  language?: string;
+  owner?: string;
+  favorite?: boolean;
+  tag?: string;
+  // 剩余语义关键词（无法结构化的部分）
+  q?: string;
+};
+
 type QueryIntent =
-  | { kind: "sort"; sort: "stars" | "updated" | "recent"; topN: number }
+  | { kind: "structured"; intent: StructuredIntent }
   | { kind: "semantic" };
 
-function detectQueryIntent(question: string): QueryIntent {
+// 正则兜底（无 AI 配置时）
+function detectQueryIntentByRegex(question: string): QueryIntent {
   const q = question.toLowerCase();
+  const intent: StructuredIntent = {};
 
-  // star 数排序类：star 最多 / stars 最高 / 最受欢迎
-  if (/(star|stars|star数|star最多|最多star|最受欢迎|最热门|热度最高|最高star|收藏最多)/i.test(q)) {
+  // star 排序
+  if (/(star|stars|star数|最多star|最受欢迎|最热门|热度最高|最高star)/i.test(q)) {
+    intent.sort = "stars";
     const topMatch = q.match(/(?:前|top)\s*(\d+)/);
-    const topN = topMatch ? parseInt(topMatch[1], 10) : 10;
-    return { kind: "sort", sort: "stars", topN: Math.min(topN, 20) };
+    intent.topN = topMatch ? Math.min(parseInt(topMatch[1], 10), 20) : 10;
   }
-
-  // 最近更新 / 最新
-  if (/(最近更新|最新|最近推送|recently updated|latest)/i.test(q)) {
-    return { kind: "sort", sort: "updated", topN: 10 };
+  // 最近更新
+  else if (/(最近更新|最近推送|recently updated)/i.test(q)) {
+    intent.sort = "updated";
+    intent.topN = 10;
   }
-
   // 最近收藏
-  if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
-    return { kind: "sort", sort: "recent", topN: 10 };
+  else if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
+    intent.sort = "recent";
+    intent.topN = 10;
   }
 
-  return { kind: "semantic" };
+  // 语言过滤
+  const langMatch = q.match(/(?:用|使用|language[: ：]?)\s*(python|typescript|javascript|go|rust|java|c\+\+|c#|swift|kotlin|ruby|php|scala)/i);
+  if (langMatch) intent.language = langMatch[1];
+
+  // 收藏过滤
+  if (/(我收藏的|我标记的|我喜欢的|favorite|starred)/i.test(q)) intent.favorite = true;
+
+  const hasStructure = !!(intent.sort || intent.language || intent.owner || intent.favorite !== undefined || intent.tag);
+  return hasStructure ? { kind: "structured", intent } : { kind: "semantic" };
+}
+
+// AI 结构化意图提取（轻量调用，temperature=0，max_tokens=120）
+async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig): Promise<QueryIntent> {
+  const systemPrompt = `你是仓库检索意图解析器。将用户问题转换为结构化 JSON。
+
+可提取的字段（全部可选）：
+- sort: "stars"（最受欢迎/star最多）| "updated"（最近更新/推送）| "recent"（最近收藏）
+- topN: 数字，默认10，最大20（"前5个" → 5）
+- language: 编程语言名（小写英文，如"python"/"typescript"/"go"）
+- owner: GitHub 用户名或组织名
+- favorite: true（仅查我收藏/标记的）
+- tag: 用户自定义标签名
+- q: 无法结构化的语义关键词（如技术领域、用途描述）
+
+规则：
+1. 只输出 JSON，不要解释
+2. 完全是语义搜索时输出 {}
+3. 可以多个字段同时存在（如 sort+language+q）
+4. language 必须是小写英文名
+
+示例：
+"star最多的前5个" → {"sort":"stars","topN":5}
+"最近收藏的Python项目" → {"sort":"recent","language":"python"}
+"有关RAG检索的TypeScript仓库按star排" → {"sort":"stars","language":"typescript","q":"RAG retrieval"}
+"帮我找AI agent相关的" → {"q":"AI agent"}
+"我收藏的Go语言项目" → {"favorite":true,"language":"go"}`;
+
+  try {
+    const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+      method: "POST",
+      headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model: config.model,
+        temperature: 0,
+        max_tokens: 120,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question },
+        ],
+      }),
+      signal: AbortSignal.timeout(5000), // 意图提取最多等 5s，超时走 fallback
+    });
+
+    if (!response.ok) throw new Error(`intent AI status ${response.status}`);
+
+    const payload = (await response.json()) as OpenAiCompatibleResponse;
+    const raw = stripThinkBlocks(payload.choices?.[0]?.message?.content?.trim() ?? null);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return { kind: "semantic" };
+
+    const parsed = JSON.parse(jsonMatch[0]) as StructuredIntent;
+    const hasStructure = !!(parsed.sort || parsed.language || parsed.owner || parsed.favorite !== undefined || parsed.tag);
+    // q 单独存在时仍走语义召回，不算结构化
+    return hasStructure ? { kind: "structured", intent: parsed } : { kind: "semantic" };
+  } catch {
+    // AI 超时或失败 → fallback 到正则
+    return detectQueryIntentByRegex(question);
+  }
+}
+
+async function detectQueryIntent(question: string, config: ChatRuntimeConfig | null): Promise<QueryIntent> {
+  if (config) {
+    return detectQueryIntentByAI(question, config);
+  }
+  return detectQueryIntentByRegex(question);
 }
 
 // 中文注释：富文本候选上下文，包含 star 数用于排序型问题的回答。
@@ -457,22 +547,39 @@ export async function POST(request: Request) {
   const runtimeResolution = await resolveAiRuntimeConfig(user.id, "chat_completions");
   const chatConfig = asChatRuntimeConfig(runtimeResolution.config);
 
-  // ─── 意图识别：排序型问题直接走 DB 排序，不经语义召回 ────────────────────────
-  const intent = detectQueryIntent(question);
+  // ─── 意图识别：AI 结构化提取，无 AI 时正则兜底 ────────────────────────────────
+  const intent = await detectQueryIntent(question, chatConfig);
 
   let candidates: RecalledCandidate[];
   let queries: string[];
 
-  if (intent.kind === "sort") {
+  if (intent.kind === "structured") {
+    const si = intent.intent;
+    // 结构化意图直接走 DB 查询，结果确定准确
     const result = await searchRepos(user.id, {
       page: 1,
-      pageSize: intent.topN,
-      sort: intent.sort,
+      pageSize: Math.min(si.topN ?? 10, 20),
+      sort: si.sort ?? "relevance",
+      language: si.language,
+      owner: si.owner,
+      favorite: si.favorite,
+      tag: si.tag,
+      q: si.q, // 剩余语义关键词走全文搜索
     });
+
     const sortLabel =
-      intent.sort === "stars" ? "按 Star 数降序" :
-      intent.sort === "updated" ? "按最近推送时间降序" :
-      "按收藏时间降序";
+      si.sort === "stars" ? "按 Star 数降序" :
+      si.sort === "updated" ? "按最近推送时间降序" :
+      si.sort === "recent" ? "按收藏时间降序" : "按相关性";
+
+    const filterDesc = [
+      si.language && `语言: ${si.language}`,
+      si.owner && `作者: ${si.owner}`,
+      si.favorite && "仅收藏",
+      si.tag && `标签: ${si.tag}`,
+      si.q && `关键词: ${si.q}`,
+    ].filter(Boolean).join(" / ");
+
     candidates = result.items.map((item, index) => ({
       id: item.id,
       fullName: item.fullName,
@@ -485,7 +592,7 @@ export async function POST(request: Request) {
       language: item.language ?? "",
       stargazersCount: item.stargazersCount ?? 0,
       tsRank: 1,
-      reason: `${sortLabel}，排名第 ${index + 1}（${(item.stargazersCount ?? 0).toLocaleString()} stars）`,
+      reason: `${sortLabel}${filterDesc ? `（${filterDesc}）` : ""}，排名第 ${index + 1}（${(item.stargazersCount ?? 0).toLocaleString()} stars）`,
       source: "question_search" as const,
       score: 1000 - index * 10,
     }));

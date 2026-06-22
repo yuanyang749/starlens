@@ -164,7 +164,8 @@ describe("AI ask API route", () => {
   });
 
   it("returns the system default provider id when runtime fallback is enabled", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
+    // mockImplementation 每次返回新 Response 实例，避免 body 被意图检测消费后 askProvider 无法读取
+    const fetchMock = vi.fn().mockImplementation(async () =>
       new Response(
         JSON.stringify({
           choices: [{ message: { content: "" } }],
