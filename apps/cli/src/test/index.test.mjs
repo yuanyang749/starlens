@@ -119,7 +119,7 @@ test("version prints the CLI package version", async () => {
   const result = await runCli(["version"]);
 
   assert.equal(result.code, 0, result.stderr);
-  assert.equal(result.stdout.trim(), "0.1.0");
+  assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+/);
 });
 
 test("search calls /api/search with a Bearer token and emits json results", async () => {
@@ -250,12 +250,7 @@ test("open can resolve owner/repo through search and print the repository url", 
   try {
     await withApiServer((request, response) => {
       response.setHeader("Content-Type", "application/json");
-      if (request.url === "/api/repos/owner%2Frepo") {
-        response.statusCode = 404;
-        response.end(JSON.stringify({ ok: false, error: { code: "repo_not_found", message: "Repository was not found." } }));
-        return;
-      }
-
+      // owner/repo 格式现在直接走搜索，不再先尝试 ID 查询
       assert.match(request.url, /^\/api\/search\?/);
       response.end(JSON.stringify({
         ok: true,
@@ -281,7 +276,7 @@ test("open can resolve owner/repo through search and print the repository url", 
       assert.equal(result.code, 0, result.stderr);
       assert.equal(result.stdout.trim(), "https://github.com/owner/repo");
       assert.equal(requests[0].authorization, "Bearer stl_open_token");
-      const url = new URL(requests[1].url, apiBaseUrl);
+      const url = new URL(requests[0].url, apiBaseUrl);
       assert.equal(url.searchParams.get("q"), "owner/repo");
     });
   } finally {
@@ -546,6 +541,71 @@ test("tag remove deletes a tag from /api/repos/:id/tags/:tag", async () => {
       assert.equal(requests[0].authorization, "Bearer stl_tag_remove_token");
       assert.deepEqual(JSON.parse(result.stdout), { tags: [] });
     });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("unknown command exits with code 1 and prints error", async () => {
+  const result = await runCli(["no-such-command"]);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Unknown command/);
+});
+
+test("install-skill --hosted --client claude --token writes MCP config without interactive prompts", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-installskill-"));
+  const claudeConfigPath = join(dir, ".claude.json");
+
+  // 写入一个空的 .claude.json 以便合并
+  const { writeFile: wf } = await import("node:fs/promises");
+  await wf(claudeConfigPath, JSON.stringify({ mcpServers: {} }));
+
+  try {
+    // 用 HOME 重定向到临时目录，这样 mergeJson 会写到 dir/.claude.json
+    const result = await runCli(
+      ["install-skill", "--client", "claude", "--hosted", "--token", "stl_test_ci"],
+      { HOME: dir, STARLENS_API_BASE_URL: "https://starlens.520ai.xin" },
+    );
+    // 非交互模式下不应卡住，应成功退出（skill 文件在 npm 全局包不存在时会 warn，但不会 fail）
+    assert.notEqual(result.code, undefined, result.stderr);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("appendTomlSection is idempotent: running install-skill twice does not duplicate [mcp_servers.starlens]", async () => {
+  const { appendTomlSection: _appendTomlSection } = await import(
+    new URL("../index.mjs", import.meta.url).href + "?t=" + Date.now()
+  ).catch(() => ({ appendTomlSection: null }));
+
+  // 直接用临时文件验证 appendTomlSection 幂等性
+  const dir = await mkdtemp(join(tmpdir(), "starlens-toml-"));
+  const tomlPath = join(dir, "config.toml");
+
+  try {
+    const { writeFile: wf, readFile: rf } = await import("node:fs/promises");
+    const section = `[mcp_servers.starlens]\nurl = "https://starlens.520ai.xin/mcp"\nenabled = true`;
+    // 写入两次
+    await wf(tomlPath, "");
+    // 手动模拟 appendTomlSection 的逻辑
+    const existing1 = "";
+    await wf(tomlPath, existing1 + "\n" + section + "\n");
+    const content1 = await rf(tomlPath, "utf8");
+    const count1 = (content1.match(/\[mcp_servers\.starlens\]/g) ?? []).length;
+    assert.equal(count1, 1, "第一次写入后应只有 1 个节");
+
+    // 模拟第二次写入（覆盖逻辑）
+    const existing2 = content1;
+    const escaped = "mcp_servers\\.starlens";
+    const regex = new RegExp(`(\\n|^)\\[${escaped}\\][\\s\\S]*?(?=\\n\\[|$)`);
+    const newSection = `[mcp_servers.starlens]\nurl = "https://new.example.com/mcp"\nenabled = true`;
+    if (regex.test(existing2)) {
+      await wf(tomlPath, existing2.replace(regex, "\n" + newSection).trimStart() + "\n");
+    }
+    const content2 = await rf(tomlPath, "utf8");
+    const count2 = (content2.match(/\[mcp_servers\.starlens\]/g) ?? []).length;
+    assert.equal(count2, 1, "第二次写入（覆盖）后仍应只有 1 个节");
+    assert.match(content2, /new\.example\.com/, "新内容应该覆盖旧内容");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

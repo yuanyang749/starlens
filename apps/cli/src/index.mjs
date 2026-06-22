@@ -31,7 +31,12 @@ const helpText = [
   "  stars note <repo-id|owner/repo> (--set <text>|--clear) [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag add <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag remove <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
-  "  stars install-skill [--api-base-url <url>] [--token <token>] [--client claude,cursor,...]  (多客户端逗号分隔)",
+  "  stars install-skill [--client <names>] [--token <token>] [--api-base-url <url>] [--hosted|--local]",
+  "    启动交互式安装向导，配置 Starlens Skill 和 MCP Server。",
+  "    --client  逗号分隔的客户端（claude, cursor, codex, opencode, vscode, openclaw, hermes, other）",
+  "    --token   预填 API Token（跳过 Token 输入步骤）",
+  "    --hosted  使用托管服务（starlens.520ai.xin），跳过模式选择交互",
+  "    --local   使用自部署服务，跳过模式选择交互",
   "  stars version",
   "",
   "Configuration:",
@@ -288,6 +293,23 @@ function outputJson(value) {
   console.log(JSON.stringify(value, null, 2));
 }
 
+function startSpinner(message) {
+  if (!process.stderr.isTTY) return null;
+  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  let i = 0;
+  process.stderr.write(`${frames[0]} ${message}`);
+  const id = setInterval(() => {
+    process.stderr.write(`\r${frames[i++ % frames.length]} ${message}`);
+  }, 80);
+  return id;
+}
+
+function stopSpinner(id) {
+  if (!id) return;
+  clearInterval(id);
+  process.stderr.write("\r\x1b[K"); // 清除 spinner 行
+}
+
 function truncate(value, width) {
   const text = String(value ?? "");
   return text.length > width ? `${text.slice(0, Math.max(0, width - 1))}…` : text;
@@ -298,6 +320,11 @@ function printTable(rows, columns) {
     console.log("No results.");
     return;
   }
+
+  const tty = process.stdout.isTTY;
+  const BOLD = tty ? "\x1b[1m" : "";
+  const DIM  = tty ? "\x1b[2m" : "";
+  const RESET = tty ? "\x1b[0m" : "";
 
   const widths = columns.map((column) =>
     Math.min(
@@ -311,8 +338,8 @@ function printTable(rows, columns) {
       .join("  ")
       .trimEnd();
 
-  console.log(line(Object.fromEntries(columns.map((column) => [column.key, column.label]))));
-  console.log(widths.map((width) => "-".repeat(width)).join("  "));
+  console.log(BOLD + line(Object.fromEntries(columns.map((column) => [column.key, column.label]))) + RESET);
+  console.log(DIM + widths.map((width) => "-".repeat(width)).join("  ") + RESET);
   for (const row of rows) console.log(line(row));
 }
 
@@ -387,7 +414,11 @@ function renderSearch(data, format) {
       { key: "summary", label: "Summary", maxWidth: 56 },
     ],
   );
-  console.log(`\nPage ${data.page ?? 1} · ${data.total ?? 0} total · hasMore=${Boolean(data.hasMore)}`);
+  const page = data.page ?? 1;
+  console.log(`\nPage ${page} · ${data.total ?? 0} total`);
+  if (data.hasMore) {
+    console.log(`→ 翻页：添加 --page ${page + 1}`);
+  }
 }
 
 function renderRepo(repo, format) {
@@ -461,11 +492,17 @@ function searchOptions(args) {
 }
 
 async function resolveRepo(repoOrId, config) {
-  try {
-    return await apiRequest(`/api/repos/${encodeURIComponent(repoOrId)}`, { config });
-  } catch (error) {
-    if (!(error instanceof CliError) || error.status !== 404) {
-      throw error;
+  // owner/repo 格式不像 UUID，直接走搜索路径，避免浪费一次必然 404 的请求
+  const looksLikeOwnerRepo = /^[^/]+\/[^/]+$/.test(repoOrId) &&
+    !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(repoOrId);
+
+  if (!looksLikeOwnerRepo) {
+    try {
+      return await apiRequest(`/api/repos/${encodeURIComponent(repoOrId)}`, { config });
+    } catch (error) {
+      if (!(error instanceof CliError) || error.status !== 404) {
+        throw error;
+      }
     }
   }
 
@@ -648,7 +685,14 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   if (command === "ask") {
     const question = args.slice(1).join(" ").trim();
     if (!question) throw new CliError("ask requires a question.");
-    renderAsk(await apiRequest("/api/ai/ask", { method: "POST", config, body: { question } }), config.format);
+    const spinner = startSpinner("思考中...");
+    let data;
+    try {
+      data = await apiRequest("/api/ai/ask", { method: "POST", config, body: { question } });
+    } finally {
+      stopSpinner(spinner);
+    }
+    renderAsk(data, config.format);
     return;
   }
 
@@ -893,6 +937,9 @@ async function wizardCheckbox(items) {
           const n = parseInt(s.trim(), 10);
           return items[n - 1]?.value ?? null;
         }).filter(Boolean);
+        if (selected.length === 0) {
+          process.stdout.write(`⚠  未选择任何客户端，已自动选中「${items[0].label}」。\n`);
+        }
         resolve(selected.length > 0 ? selected : [items[0].value]);
       });
     });
@@ -953,6 +1000,9 @@ async function wizardCheckbox(items) {
         stdin.pause();
         process.stdout.write("\n");
         const result = items.map(it => it.value).filter(v => selected.has(v));
+        if (result.length === 0) {
+          process.stdout.write(`⚠  未选择任何客户端，已自动选中「${items[0].label}」。\n`);
+        }
         resolve(result.length > 0 ? result : [items[0].value]);
       } else if (chunk === "\x03") { // Ctrl+C
         stdin.setRawMode(false);
@@ -969,65 +1019,6 @@ function buildMcpArgs(projectRoot) {
   return ["-lc", `source "$HOME/.starlens/agent.env" && cd "${projectRoot}" && corepack pnpm mcp:start`];
 }
 
-function renderClaudeCodeSnippet(projectRoot) {
-  const mcpJson = JSON.stringify(
-    {
-      type: "stdio",
-      command: "zsh",
-      args: buildMcpArgs(projectRoot),
-    },
-    null,
-    2,
-  );
-  return `claude mcp add-json starlens '${mcpJson}'`;
-}
-
-function renderCursorSnippet(projectRoot) {
-  return JSON.stringify(
-    {
-      mcpServers: {
-        starlens: {
-          command: "corepack",
-          args: ["pnpm", "mcp:start"],
-          cwd: projectRoot,
-          env: {
-            STARLENS_TOKEN: "（从 ~/.starlens/agent.env 读取）",
-            STARLENS_API_BASE_URL: "（从 ~/.starlens/agent.env 读取）",
-          },
-        },
-      },
-    },
-    null,
-    2,
-  );
-}
-
-function renderCodexSnippet(projectRoot) {
-  return `[mcp_servers.starlens]
-type = "stdio"
-command = "zsh"
-args = ["-lc", "source \\"$HOME/.starlens/agent.env\\" && cd \\"${projectRoot}\\" && corepack pnpm mcp:start"]
-startup_timeout_sec = 30
-default_tools_approval_mode = "approve"`;
-}
-
-function renderOpencodeSnippet(projectRoot) {
-  return JSON.stringify(
-    {
-      mcp: {
-        starlens: {
-          type: "local",
-          command: ["zsh", "-lc", `source "$HOME/.starlens/agent.env" && cd "${projectRoot}" && corepack pnpm mcp:start`],
-          enabled: true,
-          timeout: 10000,
-        },
-      },
-    },
-    null,
-    2,
-  );
-}
-
 async function mergeJson(filePath, mergeFn) {
   let existing = {};
   try {
@@ -1042,10 +1033,14 @@ async function mergeJson(filePath, mergeFn) {
 async function appendTomlSection(filePath, sectionKey, content) {
   let existing = "";
   try { existing = await readFile(filePath, "utf8"); } catch { /* 新建 */ }
-  if (existing.includes(`[${sectionKey}]`)) {
-    return { ok: false, reason: `[${sectionKey}] 节点已存在，跳过写入` };
-  }
   await mkdir(filePath.replace(/\/[^/]+$/, ""), { recursive: true });
+  const escaped = sectionKey.replace(/\./g, "\\.");
+  const sectionRegex = new RegExp(`(\\n|^)\\[${escaped}\\][\\s\\S]*?(?=\\n\\[|$)`);
+  if (sectionRegex.test(existing)) {
+    // 已存在 → 覆盖旧节内容，保持幂等
+    await writeFile(filePath, existing.replace(sectionRegex, "\n" + content).trimStart() + "\n");
+    return { ok: true, updated: true };
+  }
   await writeFile(filePath, existing + (existing && !existing.endsWith("\n") ? "\n" : "") + "\n" + content + "\n");
   return { ok: true };
 }
@@ -1114,57 +1109,6 @@ function isHostedUrl(url) {
   }
 }
 
-function renderHostedClaudeSnippet(apiBaseUrl, token) {
-  return `claude mcp add-json starlens '${JSON.stringify({
-    type: "http",
-    url: `${apiBaseUrl}/mcp`,
-    headers: { Authorization: `Bearer ${token || "stl_xxx"}` },
-  }, null, 2)}'`;
-}
-
-function renderHostedCursorSnippet(apiBaseUrl, token) {
-  return JSON.stringify(
-    {
-      mcpServers: {
-        starlens: {
-          url: `${apiBaseUrl}/mcp`,
-          headers: { Authorization: `Bearer ${token || "stl_xxx"}` },
-        },
-      },
-    },
-    null,
-    2,
-  );
-}
-
-function renderHostedCodexSnippet(apiBaseUrl, token) {
-  return `[mcp_servers.starlens]
-type = "http"
-url = "${apiBaseUrl}/mcp"
-
-[mcp_servers.starlens.headers]
-Authorization = "Bearer ${token || "stl_xxx"}"
-startup_timeout_sec = 30
-default_tools_approval_mode = "approve"`;
-}
-
-function renderHostedOpencodeSnippet(apiBaseUrl, token) {
-  return JSON.stringify(
-    {
-      mcp: {
-        starlens: {
-          type: "http",
-          url: `${apiBaseUrl}/mcp`,
-          headers: { Authorization: `Bearer ${token || "stl_xxx"}` },
-          enabled: true,
-        },
-      },
-    },
-    null,
-    2,
-  );
-}
-
 async function runInstallSkillWizard(args, env) {
   let rest = [...args];
 
@@ -1174,6 +1118,10 @@ async function runInstallSkillWizard(args, env) {
   rest = tokenArg.rest;
   const clientArg = readOption(rest, "--client");
   rest = clientArg.rest;
+  const hostedArg = readFlag(rest, "--hosted");
+  rest = hostedArg.rest;
+  const localArg = readFlag(rest, "--local");
+  rest = localArg.rest;
 
   const clientLabels = {
     claude: "Claude Code", cursor: "Cursor", vscode: "VS Code (Copilot)",
@@ -1270,11 +1218,20 @@ async function runInstallSkillWizard(args, env) {
         // 部署模式
         console.log("");
         const defaultUrl = apiBaseUrlArg.value ?? env.STARLENS_API_BASE_URL ?? HOSTED_MCP_BASE_URL;
-        console.log("部署模式：");
-        console.log("  1) 托管服务（推荐）— 使用 starlens.520ai.xin，无需本地启动服务");
-        console.log("  2) 自部署 — 使用你自己的服务器或本地开发环境");
-        const modeChoice = await wizardPrompt(rl, "选择模式", "1");
-        const isSelfHosted = modeChoice.trim() === "2";
+        let isSelfHosted;
+        if (hostedArg.found) {
+          isSelfHosted = false;
+          console.log("✓ 使用托管服务模式（--hosted）");
+        } else if (localArg.found) {
+          isSelfHosted = true;
+          console.log("✓ 使用自部署模式（--local）");
+        } else {
+          console.log("部署模式：");
+          console.log("  1) 托管服务（推荐）— 使用 starlens.520ai.xin，无需本地启动服务");
+          console.log("  2) 自部署 — 使用你自己的服务器或本地开发环境");
+          const modeChoice = await wizardPrompt(rl, "选择模式", "1");
+          isSelfHosted = modeChoice.trim() === "2";
+        }
 
         let projectRoot;
         if (isSelfHosted) {
