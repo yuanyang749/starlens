@@ -93,7 +93,35 @@ function stripThinkBlocks(text: string | null) {
   return text.replace(/<think[\s\S]*?<\/think>/gi, " ").trim();
 }
 
-// 中文注释：富文本候选上下文，优先展示 aiSummary / 用户备注 / 自定义标签，去掉对语义无用的 stars 数和日期。
+// ─── 意图识别 ─────────────────────────────────────────────────────────────────
+type QueryIntent =
+  | { kind: "sort"; sort: "stars" | "updated" | "recent"; topN: number }
+  | { kind: "semantic" };
+
+function detectQueryIntent(question: string): QueryIntent {
+  const q = question.toLowerCase();
+
+  // star 数排序类：star 最多 / stars 最高 / 最受欢迎
+  if (/(star|stars|star数|star最多|最多star|最受欢迎|最热门|热度最高|最高star|收藏最多)/i.test(q)) {
+    const topMatch = q.match(/(?:前|top)\s*(\d+)/);
+    const topN = topMatch ? parseInt(topMatch[1], 10) : 10;
+    return { kind: "sort", sort: "stars", topN: Math.min(topN, 20) };
+  }
+
+  // 最近更新 / 最新
+  if (/(最近更新|最新|最近推送|recently updated|latest)/i.test(q)) {
+    return { kind: "sort", sort: "updated", topN: 10 };
+  }
+
+  // 最近收藏
+  if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
+    return { kind: "sort", sort: "recent", topN: 10 };
+  }
+
+  return { kind: "semantic" };
+}
+
+// 中文注释：富文本候选上下文，包含 star 数用于排序型问题的回答。
 function buildCandidateContext(candidates: Candidate[]) {
   return candidates
     .map((item, index) => {
@@ -102,6 +130,7 @@ function buildCandidateContext(candidates: Candidate[]) {
       const githubTopics = item.topics.length > 0 ? item.topics : [];
       const lines = [
         `#${index + 1} ${item.fullName}`,
+        `Stars: ${item.stargazersCount.toLocaleString()}`,
         `语言: ${item.language || "unknown"}`,
         `摘要: ${summary}`,
       ];
@@ -388,7 +417,7 @@ async function askProvider(question: string, candidates: Candidate[], config: Ch
         {
           role: "system",
           content:
-            "你是仓库检索助手。基于候选仓库给出精炼中文结论：1) 列出最匹配的1到3个仓库及一句话理由；2) 若候选中有用户自己备注或标签过的仓库，优先推荐；3) 若无明显匹配则明确说明。",
+            "你是仓库检索助手。基于候选仓库给出精炼中文结论：1) 列出最匹配的1到3个仓库及一句话理由；2) 对于「star 最多」「最受欢迎」等排序类问题，直接按候选列表中 Stars 字段排名给出答案，无需猜测；3) 若候选中有用户自己备注或标签过的仓库，优先推荐；4) 若无明显匹配则明确说明。",
         },
         {
           role: "user",
@@ -427,7 +456,46 @@ export async function POST(request: Request) {
   const question = body.question.trim();
   const runtimeResolution = await resolveAiRuntimeConfig(user.id, "chat_completions");
   const chatConfig = asChatRuntimeConfig(runtimeResolution.config);
-  const { candidates, queries } = await recallCandidates(user.id, question, chatConfig);
+
+  // ─── 意图识别：排序型问题直接走 DB 排序，不经语义召回 ────────────────────────
+  const intent = detectQueryIntent(question);
+
+  let candidates: RecalledCandidate[];
+  let queries: string[];
+
+  if (intent.kind === "sort") {
+    const result = await searchRepos(user.id, {
+      page: 1,
+      pageSize: intent.topN,
+      sort: intent.sort,
+    });
+    const sortLabel =
+      intent.sort === "stars" ? "按 Star 数降序" :
+      intent.sort === "updated" ? "按最近推送时间降序" :
+      "按收藏时间降序";
+    candidates = result.items.map((item, index) => ({
+      id: item.id,
+      fullName: item.fullName,
+      description: item.description ?? "",
+      aiSummary: item.aiSummary,
+      repoSummary: item.repoSummary ?? "",
+      userNote: item.note ?? "",
+      topics: item.topics ?? [],
+      tags: item.tags ?? [],
+      language: item.language ?? "",
+      stargazersCount: item.stargazersCount ?? 0,
+      tsRank: 1,
+      reason: `${sortLabel}，排名第 ${index + 1}（${(item.stargazersCount ?? 0).toLocaleString()} stars）`,
+      source: "question_search" as const,
+      score: 1000 - index * 10,
+    }));
+    queries = [question];
+  } else {
+    const recalled = await recallCandidates(user.id, question, chatConfig);
+    candidates = recalled.candidates;
+    queries = recalled.queries;
+  }
+
   const hasCandidates = candidates.length > 0;
 
   let answer =
