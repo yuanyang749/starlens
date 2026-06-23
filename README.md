@@ -12,22 +12,26 @@ The project is currently in active `v1` development. The main goal is to make a 
 - Stores repository metadata, topics, language, star counts, timestamps, README excerpts, user tags, notes, and favorite state.
 - Provides a desktop workbench at `/app` and a mobile workbench at `/mobile`.
 - Supports keyword search, filters, sorting, repository detail inspection, tag editing, note editing, and favorite management.
-- Supports AI-assisted repository recall through OpenAI-compatible provider settings or environment-based fallback.
+- Supports advanced search filters: star count range, starred date range, last push date, note content, and note presence.
+- Supports AI-powered natural language queries with 8 intent types: count, existence, comparison, stats, recommendation, single-repo analysis, structured filtering, and semantic search.
 - Exposes personal API tokens for CLI, MCP, and agent workflows.
+- One-command Agent Skill install for Claude Code, Cursor, Codex, opencode and more via `stars install-skill`.
 - Includes static product documentation under `/docs`.
 
 ## Current Scope
 
 Implemented or actively wired:
 
-- Public landing page and documentation routes.
+- Public landing page, documentation, changelog, privacy, and terms routes.
 - Authenticated Web workbench.
 - Mobile workbench shell and shared mobile workbench state.
 - Shared API route implementation through `packages/server`.
-- GitHub Stars sync and repository search.
-- AI provider configuration, validation, and AI ask route integration.
-- CLI commands for login, status, sync, search, show, open, ask, favorite, notes, and tags.
+- GitHub Stars sync and repository search with advanced filters.
+- AI provider configuration, validation, and AI ask route with 8 intent types.
+- CLI (`@starlens-app/cli`) published to npm: `stars` commands for login, status, sync, search, show, open, ask, favorite, notes, tags, and `install-skill`.
 - MCP stdio server for IDE and local agent clients.
+- HTTP MCP endpoint for hosted clients (Claude Code, Cursor).
+- Agent Skill one-click install for Claude Code, Cursor, Codex, opencode, OpenClaw, Hermes, and VS Code.
 
 Explicitly out of scope for `v1`:
 
@@ -45,7 +49,7 @@ Starlens is a `pnpm` workspace:
 apps/
   web/       Next.js Web app, desktop workbench, landing page, docs, API shims
   mobile/    Next.js mobile workbench app
-  cli/       Local CLI for token-based access
+  cli/       Local CLI for token-based access (@starlens-app/cli)
   mcp/       Local stdio MCP server
 
 packages/
@@ -163,6 +167,7 @@ For hosted Neon validation, copy `.env.neon.example` to `.env.neon` and use the 
 | `corepack pnpm dev:mobile` | Start the Mobile app with `.env`. |
 | `corepack pnpm build` | Build the Web app. |
 | `corepack pnpm build:mobile` | Build the Mobile app. |
+| `corepack pnpm build:packages` | Build internal packages (run this first if you see type errors). |
 | `corepack pnpm lint` | Run Web lint checks. |
 | `corepack pnpm lint:mobile` | Run Mobile lint checks. |
 | `corepack pnpm test` | Run Web tests. |
@@ -174,35 +179,110 @@ For hosted Neon validation, copy `.env.neon.example` to `.env.neon` and use the 
 Package-level tests:
 
 ```bash
-corepack pnpm --filter @starlens/cli test
-corepack pnpm --filter @starlens/agent-tools test
+corepack pnpm --filter @starlens-app/cli test
+corepack pnpm --filter @starlens-app/agent-tools test
 corepack pnpm --filter @starlens/workbench test
 ```
 
 ## CLI Usage
 
+The CLI is available as a standalone npm package:
+
+```bash
+npm install -g @starlens-app/cli
+```
+
 Create a personal token in the Web app, then log in:
 
 ```bash
-printf '%s\n' 'stl_xxx' | corepack pnpm --filter @starlens/cli start -- login --token-stdin
+printf '%s\n' 'stl_xxx' | stars login --token-stdin
 ```
 
 Common commands:
 
 ```bash
-corepack pnpm --filter @starlens/cli start -- status
-corepack pnpm --filter @starlens/cli start -- sync
-corepack pnpm --filter @starlens/cli start -- search "agent framework"
-corepack pnpm --filter @starlens/cli start -- show owner/repo
-corepack pnpm --filter @starlens/cli start -- ask "哪些仓库适合做本地 agent 工具？"
-corepack pnpm --filter @starlens/cli start -- favorite owner/repo
-corepack pnpm --filter @starlens/cli start -- note owner/repo --set "Review for MCP integration"
-corepack pnpm --filter @starlens/cli start -- tag add owner/repo agent
+stars status
+stars sync
+stars search "agent framework"
+stars show owner/repo
+stars ask "which repos are good for local agent workflows?"
+stars ask "how many TypeScript projects do I have?"
+stars favorite owner/repo
+stars note owner/repo --set "Review for MCP integration"
+stars tag add owner/repo agent
+```
+
+One-command install of the Agent Skill for your AI clients:
+
+```bash
+stars install-skill
+```
+
+The wizard walks you through selecting clients (Claude Code, Cursor, Codex, opencode, and more), installs the Skill file, and optionally writes MCP config entries.
+
+If you prefer to run directly from the monorepo during development:
+
+```bash
+corepack pnpm --filter @starlens-app/cli start -- <command>
 ```
 
 ## MCP / Agent Integration
 
-Start the local MCP server:
+### Hosted HTTP MCP (recommended for most clients)
+
+If you use the hosted service at `https://starlens.520ai.xin`, connect via HTTP MCP — no local process needed:
+
+**Claude Code:**
+
+```bash
+claude mcp add-json starlens '{
+  "type": "http",
+  "url": "https://starlens.520ai.xin/mcp",
+  "headers": { "Authorization": "Bearer stl_xxx" }
+}'
+```
+
+**Cursor** (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "starlens": {
+      "url": "https://starlens.520ai.xin/mcp",
+      "headers": { "Authorization": "Bearer stl_xxx" }
+    }
+  }
+}
+```
+
+**opencode** (`~/.config/opencode/opencode.json`):
+
+```json
+{
+  "mcp": {
+    "starlens": {
+      "type": "remote",
+      "url": "https://starlens.520ai.xin/mcp",
+      "headers": { "Authorization": "Bearer stl_xxx" },
+      "enabled": true
+    }
+  }
+}
+```
+
+**Codex** (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.starlens]
+url = "https://starlens.520ai.xin/mcp"
+http_headers = {Authorization = "Bearer stl_xxx"}
+startup_timeout_sec = 30
+default_tools_approval_mode = "approve"
+```
+
+### Self-hosted stdio MCP
+
+Start the local MCP server against your own Starlens instance:
 
 ```bash
 STARLENS_TOKEN="stl_xxx" \
@@ -210,7 +290,7 @@ STARLENS_API_BASE_URL="http://localhost:3000" \
 corepack pnpm mcp:start
 ```
 
-Cursor-style MCP config:
+Cursor-style stdio config:
 
 ```json
 {
@@ -228,21 +308,32 @@ Cursor-style MCP config:
 }
 ```
 
-Available MCP tools include:
+### Available MCP Tools
 
-- `search_stars`
-- `show_star`
-- `sync_stars`
-- `favorite_star`
-- `unfavorite_star`
-- `set_star_note`
-- `add_star_tag`
-- `remove_star_tag`
-- `ask_stars`
+| Tool | Purpose |
+| --- | --- |
+| `search_stars` | Search and filter starred repositories |
+| `show_star` | View a single repository's detail |
+| `sync_stars` | Trigger a GitHub Stars sync |
+| `favorite_star` | Mark a repository as favorite |
+| `unfavorite_star` | Remove favorite state |
+| `set_star_note` | Set or clear a repository note |
+| `add_star_tag` | Add a tag to a repository |
+| `remove_star_tag` | Remove a tag from a repository |
+| `ask_stars` | Natural language AI query over your Stars |
 
 Do not commit real API tokens or MCP client configs containing secrets.
 
 ## Documentation
+
+User-facing docs are available in the running Web app at `/docs`:
+
+- [Features](/docs/features) — search, filters, AI ask intent types, tags, notes
+- [Architecture](/docs/architecture) — module layout and data flow
+- [Integrations](/docs/integrations) — GitHub OAuth, API Token, AI Provider, CLI, MCP
+- [Deployment](/docs/deployment) — Docker self-hosting, Node.js, local dev
+
+Internal design and API notes:
 
 - [Project plan](docs/project-plan.md)
 - [Environment guide](docs/environments.md)
@@ -250,25 +341,27 @@ Do not commit real API tokens or MCP client configs containing secrets.
 - [Database schema](docs/database-schema.md)
 - [Sync flow design](docs/sync-flow-design.md)
 - [Agent integration](docs/agent-integration.md)
-- [Frontend implementation plan](docs/frontend-implementation-plan.md)
-
-The running Web app also exposes user-facing docs under `/docs`.
 
 ## Deployment Notes
 
-The intended default deployment path is Docker self-hosting plus PostgreSQL, with Neon Free remaining a convenient hosted database option when needed.
+The primary deployment path is Docker self-hosting with PostgreSQL. See the [deployment docs](https://starlens.520ai.xin/docs/deployment) for the full guide.
+
+Quick reference for Docker:
+
+```bash
+# Run migrations
+docker compose -f deploy/docker-compose.yml --profile migrate run --rm starlens-migrate
+
+# Build and start
+docker compose -f deploy/docker-compose.yml up -d --build starlens-web
+```
 
 Before deploying:
 
 ```bash
-corepack pnpm db:migrate:neon
-corepack pnpm db:check:neon
 corepack pnpm test
 corepack pnpm lint
-corepack pnpm build
 ```
-
-Deployment environment variables should match `.env.neon.example` and use the production `NEXTAUTH_URL`.
 
 ## Security Notes
 
@@ -277,6 +370,15 @@ Deployment environment variables should match `.env.neon.example` and use the pr
 - MCP runs as a local stdio process and does not open a public network port.
 - `v1` uses user-level token ownership as the authorization boundary; fine-grained token scopes are not part of the current scope.
 
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, PR guidelines, code style, and good first issues.
+
 ## Project Status
 
-Starlens is not a finished product yet. The highest-value remaining work is tightening production verification, completing scheduled sync, improving deployment documentation, and expanding real-device mobile validation.
+Core functionality is stable and running in production. Active development focus:
+
+- Expanding AI ask coverage and accuracy.
+- Scheduled automatic sync.
+- Mobile workbench polish and real-device testing.
+- Improving deployment documentation and self-hosting experience.
