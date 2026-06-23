@@ -16,6 +16,36 @@ const PICK_POOL_LIMIT = 50;
 const ANSWER_CANDIDATE_LIMIT = 15;
 const TS_RANK_THRESHOLD = 0.01; // 低于此分数视为低置信度，不进候选池
 
+// ─── 安全限制 ─────────────────────────────────────────────────────────────────
+const MAX_QUESTION_LENGTH = 1000;
+const RATE_LIMIT_USER_KEY_RPM = 20;  // 用户自有 API Key
+const RATE_LIMIT_SYSTEM_KEY_RPM = 5; // 系统共享 Key（更严格）
+
+const rateLimitBuckets = new Map<string, { timestamps: number[] }>();
+
+function checkRateLimit(userId: string, isSystemKey: boolean): { allowed: boolean; retryAfterSeconds: number } {
+  const rpm = isSystemKey ? RATE_LIMIT_SYSTEM_KEY_RPM : RATE_LIMIT_USER_KEY_RPM;
+  const key = `${userId}:${isSystemKey ? "sys" : "usr"}`;
+  const now = Date.now();
+  const windowMs = 60_000;
+
+  let bucket = rateLimitBuckets.get(key);
+  if (!bucket) {
+    bucket = { timestamps: [] };
+    rateLimitBuckets.set(key, bucket);
+  }
+
+  bucket.timestamps = bucket.timestamps.filter((ts) => now - ts < windowMs);
+
+  if (bucket.timestamps.length >= rpm) {
+    const retryAfterSeconds = Math.ceil((bucket.timestamps[0] + windowMs - now) / 1000);
+    return { allowed: false, retryAfterSeconds };
+  }
+
+  bucket.timestamps.push(now);
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
 // ─── 类型 ────────────────────────────────────────────────────────────────────
 type Candidate = {
   id: string;
@@ -91,6 +121,11 @@ function resolveChatCompletionsUrl(baseUrl: string) {
 function stripThinkBlocks(text: string | null) {
   if (!text) return "";
   return text.replace(/<think[\s\S]*?<\/think>/gi, " ").trim();
+}
+
+// 用 XML 标签隔离用户输入，防止 prompt injection
+function wrapUserQuestion(question: string): string {
+  return `<question>\n${question}\n</question>`;
 }
 
 // ─── 意图识别 ─────────────────────────────────────────────────────────────────
@@ -223,7 +258,7 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
         max_tokens: 200,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `当前日期：${today}\n用户问题：${question}` },
+          { role: "user", content: `当前日期：${today}\n${wrapUserQuestion(question)}` },
         ],
       }),
       signal: AbortSignal.timeout(5000),
@@ -493,7 +528,7 @@ async function expandQuestionTermsWithProvider(question: string, config: ChatRun
           role: "system",
           content: "把用户检索意图转成最多8个技术关键词或短语，偏英文，逗号分隔，只输出关键词，不要解释。",
         },
-        { role: "user", content: question },
+        { role: "user", content: wrapUserQuestion(question) },
       ],
     }),
   });
@@ -540,7 +575,7 @@ async function pickCandidatesWithProvider(question: string, pool: Candidate[], c
           role: "system",
           content: "你是仓库筛选助手。根据用户问题，从候选仓库里选最相关的1到10个，输出JSON：{\"ids\":[\"id1\",\"id2\"]}。只输出JSON。",
         },
-        { role: "user", content: `问题：${question}\n候选池：${JSON.stringify(compactPool)}` },
+        { role: "user", content: `${wrapUserQuestion(question)}\n候选池：${JSON.stringify(compactPool)}` },
       ],
     }),
   });
@@ -649,7 +684,7 @@ async function askProvider(question: string, candidates: Candidate[], config: Ch
         },
         {
           role: "user",
-          content: `用户问题：${question}\n\n候选仓库：\n${buildCandidateContext(topCandidates)}`,
+          content: `${wrapUserQuestion(question)}\n\n候选仓库：\n${buildCandidateContext(topCandidates)}`,
         },
       ],
     }),
@@ -682,8 +717,19 @@ export async function POST(request: Request) {
   }
 
   const question = body.question.trim();
+
+  if (question.length > MAX_QUESTION_LENGTH) {
+    return fail("question_too_long", `Question must be ${MAX_QUESTION_LENGTH} characters or fewer.`);
+  }
+
   const runtimeResolution = await resolveAiRuntimeConfig(user.id, "chat_completions");
   const chatConfig = asChatRuntimeConfig(runtimeResolution.config);
+
+  const isSystemKey = runtimeResolution.source === "system_default";
+  const rateCheck = checkRateLimit(user.id, isSystemKey);
+  if (!rateCheck.allowed) {
+    return fail("rate_limit_exceeded", `Too many requests. Retry in ${rateCheck.retryAfterSeconds}s.`, 429);
+  }
 
   // ─── 意图识别：AI 结构化提取，无 AI 时正则兜底 ────────────────────────────────
   const intent = await detectQueryIntent(question, chatConfig);
@@ -747,7 +793,7 @@ export async function POST(request: Request) {
 
     const answer = await callAIWithPrompt({
       system: "你是仓库对比分析师。基于两个仓库的信息，用中文给出结构化对比：1) 核心定位差异；2) 适用场景；3) 优缺点对比；4) 推荐结论（说明哪个更适合用户的问题）。",
-      user: `用户问题：${question}\n\n${contextParts}`,
+      user: `${wrapUserQuestion(question)}\n\n${contextParts}`,
       maxTokens: 700, config: chatConfig, userId: user.id, endpoint: "ask/comparison",
     }) ?? `对比 ${detailA?.fullName ?? intent.repoA} 和 ${detailB?.fullName ?? intent.repoB}：请参考两仓库详情。`;
 
@@ -771,7 +817,7 @@ export async function POST(request: Request) {
 
     const answer = await callAIWithPrompt({
       system: "你是数据分析助手。基于用户的 GitHub 收藏统计，用中文给出简洁的分析：主要技术偏好、收藏亮点、可能的学习方向建议。",
-      user: `总仓库数：${stats.total}，收藏数：${stats.totalFavorites}\n语言分布：\n${topLangs}\nStar 最多：${stats.mostStarredRepo?.fullName ?? "无"}（${stats.mostStarredRepo?.stargazersCount.toLocaleString() ?? 0} ⭐）\n用户问题：${question}`,
+      user: `总仓库数：${stats.total}，收藏数：${stats.totalFavorites}\n语言分布：\n${topLangs}\nStar 最多：${stats.mostStarredRepo?.fullName ?? "无"}（${stats.mostStarredRepo?.stargazersCount.toLocaleString() ?? 0} ⭐）\n${wrapUserQuestion(question)}`,
       maxTokens: 400, config: chatConfig, userId: user.id, endpoint: "ask/stats",
     }) ?? fallback;
 
@@ -793,7 +839,7 @@ export async function POST(request: Request) {
 
     const answer = await callAIWithPrompt({
       system: "你是 GitHub 仓库推荐助手。基于用户的收藏偏好画像和推荐需求，给出 3-5 个方向性建议。重要：不要随意捏造具体仓库名，只给出技术方向、学习路径和寻找方式。",
-      user: `用户画像：${userProfile}\n推荐需求：${intent.context}\n用户问题：${question}`,
+      user: `用户画像：${userProfile}\n推荐需求：${intent.context}\n${wrapUserQuestion(question)}`,
       maxTokens: 500, config: chatConfig, userId: user.id, endpoint: "ask/recommendation",
     }) ?? "根据你的收藏偏好，建议关注你常用语言相关的工具链、框架和最佳实践仓库。";
 
@@ -814,7 +860,7 @@ export async function POST(request: Request) {
 
     const answer = await callAIWithPrompt({
       system: "你是仓库分析助手。基于提供的仓库信息，用中文给出精炼、实用的回答。重点包括：用途与核心功能、使用方法、典型场景、优缺点（如有）。回答要具体，避免空话。",
-      user: `用户问题：${question}\n\n仓库详情：\n${context}`,
+      user: `${wrapUserQuestion(question)}\n\n仓库详情：\n${context}`,
       maxTokens: 600, config: chatConfig, userId: user.id, endpoint: "ask/single_repo",
     }) ?? `关于仓库 ${repoDetail.fullName}：${repoDetail.description ?? repoDetail.repoSummary ?? ""}`;
 
