@@ -406,6 +406,14 @@ describe("AI ask API route", () => {
   });
 
   it("comparison intent: 两仓库都未找到时返回提示", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: '{"kind":"comparison","repoA":"langchain","repoB":"llamaindex"}' } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
     searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 3, total: 0, hasMore: false });
     const { POST } = await import("@/app/api/ai/ask/route");
     const response = await POST(
@@ -416,8 +424,161 @@ describe("AI ask API route", () => {
     );
     const body = await json(response) as { ok: boolean; data: { answer: string } };
     expect(body.ok).toBe(true);
-    // 无 AI 配置时走正则 → 不识别 comparison → 走语义召回 → 无候选 → 返回未找到
+    expect(body.data.answer).toContain("langchain");
+    vi.unstubAllGlobals();
+  });
+
+  it("comparison intent: 找到两仓库时调用 AI 对比", async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: '{"kind":"comparison","repoA":"langchain","repoB":"llamaindex"}' } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockImplementation(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: "langchain 更适合生产环境，llamaindex 更适合快速原型。" } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
+    getRepoDetailMock.mockResolvedValue(repo("r1", "langchain-ai/langchain"));
+    searchReposMock.mockImplementation(async (_userId: string, opts: { q?: string }) => {
+      const name = opts?.q?.toLowerCase() ?? "";
+      if (name.includes("langchain")) return { items: [repo("r1", "langchain-ai/langchain")], page: 1, pageSize: 3, total: 1, hasMore: false };
+      if (name.includes("llamaindex")) return { items: [repo("r2", "run-llama/llama_index")], page: 1, pageSize: 3, total: 1, hasMore: false };
+      return { items: [], page: 1, pageSize: 3, total: 0, hasMore: false };
+    });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "langchain 和 llamaindex 哪个更好用" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string; candidates: unknown[] } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("langchain");
+    vi.unstubAllGlobals();
+  });
+
+  it("recommendation intent: 返回方向性建议", async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: '{"kind":"recommendation","context":"适合初学者的Python项目"}' } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockImplementation(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: "建议从 requests 和 Flask 入手，适合 Python 初学者。" } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
+    getRepoStatsMock.mockResolvedValue({ total: 50, byLanguage: [{ language: "Python", count: 30 }], totalFavorites: 5, mostStarredRepo: null });
+    searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 15, total: 0, hasMore: false });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "推荐适合初学者的Python项目" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("Python");
+    vi.unstubAllGlobals();
+  });
+
+  it("single_repo intent: 精确分析指定仓库", async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: '{"repoIdentifier":"facebook/react"}' } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockImplementation(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: "React 是 Meta 开源的 UI 框架，适合构建复杂前端应用。" } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
+    const reactRepo = { ...repo("r1", "facebook/react"), readmeExcerpt: "A declarative, component-based library for building UIs." };
+    searchReposMock.mockResolvedValue({ items: [reactRepo], page: 1, pageSize: 5, total: 1, hasMore: false });
+    getRepoDetailMock.mockResolvedValue(reactRepo);
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "介绍一下 facebook/react" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string; candidates: unknown[] } };
+    expect(body.ok).toBe(true);
+    expect(body.data.answer).toContain("React");
+    expect(body.data.candidates).toHaveLength(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("structured intent: 按 star 数排序并返回候选列表", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: '{"sort":"stars","topN":5}' } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
+    const items = ["sindresorhus/awesome", "vuejs/vue", "facebook/react"].map((n, i) => repo(`r${i}`, n));
+    searchReposMock.mockResolvedValue({ items, page: 1, pageSize: 5, total: 3, hasMore: false });
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "star最多的前5个仓库" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string; candidates: unknown[] } };
+    expect(body.ok).toBe(true);
+    expect(body.data.candidates.length).toBeGreaterThan(0);
+    vi.unstubAllGlobals();
+  });
+
+  it("无 AI 配置时降级为 semantic 路径，返回有效响应", async () => {
+    // resolveAiRuntimeConfigMock 默认返回 { config: null, source: "none" }
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "我有多少个Python项目" }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; data: { answer: string } };
+    expect(body.ok).toBe(true);
     expect(typeof body.data.answer).toBe("string");
+    // 无 AI 时走 semantic，answer 为确定性回退文案而非空值
+    expect(body.data.answer.length).toBeGreaterThan(0);
+  });
+
+  it("question 超过长度限制时返回 400", async () => {
+    const { POST } = await import("@/app/api/ai/ask/route");
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: "a".repeat(1001) }),
+      }),
+    );
+    const body = await json(response) as { ok: boolean; error: { code: string } };
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("question_too_long");
   });
 
   it("unknown command exits with code 1 (CLI guard)", async () => {
