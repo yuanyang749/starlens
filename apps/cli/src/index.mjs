@@ -650,7 +650,14 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
 
   if (command === "sync") {
     if (args.length > 1) throw new CliError(`Unknown sync arguments: ${args.slice(1).join(" ")}`);
-    renderSync(await apiRequest("/api/sync", { method: "POST", config }), config.format);
+    const spinner = startSpinner("同步中...");
+    let data;
+    try {
+      data = await apiRequest("/api/sync", { method: "POST", config });
+    } finally {
+      stopSpinner(spinner);
+    }
+    renderSync(data, config.format);
     return;
   }
 
