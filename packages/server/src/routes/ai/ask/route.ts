@@ -176,14 +176,29 @@ function detectQueryIntentByRegex(question: string): QueryIntent {
     return { kind: "existence", query: question, filter: {} };
   }
 
-  if (/(star|stars|star数|最多star|最受欢迎|最热门)/i.test(q)) {
-    intent.sort = "stars";
-    const topMatch = q.match(/(?:前|top)\s*(\d+)/);
-    intent.topN = topMatch ? Math.min(parseInt(topMatch[1], 10), 20) : 10;
-  } else if (/(最近更新|最近推送|recently updated)/i.test(q)) {
-    intent.sort = "updated"; intent.topN = 10;
-  } else if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
-    intent.sort = "recent"; intent.topN = 10;
+  // 时间过滤：今天/昨天 star/收藏 → starredAfter（优先于 sort 判断，避免动词"star了"误触发 sort:stars）
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (/(今天|今日).*(star|收藏|starred)|(star|收藏|starred).*(今天|今日)/i.test(q)) {
+    intent.starredAfter = todayStr;
+    intent.sort = "recent";
+  } else if (/(昨天|yesterday).*(star|收藏|starred)|(star|收藏|starred).*(昨天|yesterday)/i.test(q)) {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    intent.starredAfter = yesterday;
+    intent.starredBefore = todayStr;
+    intent.sort = "recent";
+  }
+
+  // 排序（仅在无时间过滤时判断，且正则收窄为明确的 star 数语义，避免"star了"动词误触发）
+  if (!intent.starredAfter) {
+    if (/(star数|最多star|star最多|最受欢迎|最热门|按star排|star排名)/i.test(q)) {
+      intent.sort = "stars";
+      const topMatch = q.match(/(?:前|top)\s*(\d+)/);
+      intent.topN = topMatch ? Math.min(parseInt(topMatch[1], 10), 20) : 10;
+    } else if (/(最近更新|最近推送|recently updated)/i.test(q)) {
+      intent.sort = "updated"; intent.topN = 10;
+    } else if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
+      intent.sort = "recent"; intent.topN = 10;
+    }
   }
 
   const langMatch = q.match(/(?:用|使用|language[: ：]?)\s*(python|typescript|javascript|go|rust|java|swift|kotlin|ruby|php|scala)/i);
@@ -191,7 +206,7 @@ function detectQueryIntentByRegex(question: string): QueryIntent {
   if (/(我收藏的|我标记的|favorite)/i.test(q)) intent.favorite = true;
   if (/(有备注|写了备注|has note)/i.test(q)) intent.hasNote = true;
 
-  const hasStructure = !!(intent.sort || intent.language || intent.owner || intent.favorite !== undefined || intent.tag || intent.hasNote);
+  const hasStructure = !!(intent.sort || intent.starredAfter || intent.language || intent.owner || intent.favorite !== undefined || intent.tag || intent.hasNote);
   return hasStructure ? { kind: "structured", intent } : { kind: "semantic" };
 }
 
@@ -228,6 +243,7 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
 3. repoIdentifier 与 kind 互斥，出现时只输出 repoIdentifier
 4. kind=count 时：同时提取 language/owner/tag/favorite/hasNote 等过滤条件
 5. kind=existence 时：提取 query 描述要查找什么
+6. 关键区分："star了/starred/收藏了" 是收藏动作 → 提取 starredAfter 时间过滤 + sort:recent；"star数/star最多/star排" 才是按 star 数排序 → sort:stars
 
 示例：
 "star最多的前5个" → {"sort":"stars","topN":5}
@@ -246,7 +262,11 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
 "上个月收藏的仓库" → {"starredAfter":"<上月1日>","sort":"recent"}
 "star超过1万的" → {"minStars":10000,"sort":"stars"}
 "我写了备注的仓库" → {"hasNote":true}
-"备注里有work的" → {"noteContains":"work"}`;
+"备注里有work的" → {"noteContains":"work"}
+"我今天star了哪些仓库" → {"starredAfter":"${today}","sort":"recent"}
+"今天收藏了哪些" → {"starredAfter":"${today}","sort":"recent"}
+"昨天star的项目" → {"starredAfter":"<昨天>","starredBefore":"${today}","sort":"recent"}
+"今天star了哪些，都是做什么的" → {"starredAfter":"${today}","sort":"recent"}`;
 
   try {
     const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
