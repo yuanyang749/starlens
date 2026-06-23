@@ -157,59 +157,6 @@ type QueryIntent =
   | { kind: "recommendation"; context: string }
   | { kind: "semantic" };
 
-// 正则兜底（无 AI 配置时）
-function detectQueryIntentByRegex(question: string): QueryIntent {
-  const q = question.toLowerCase();
-  const intent: StructuredIntent = {};
-
-  if (/(有多少|共有多少|总共多少|how many)/i.test(q)) {
-    const langMatch = q.match(/(python|typescript|javascript|go|rust|java|swift|kotlin|ruby)/i);
-    return { kind: "count", filter: langMatch ? { language: langMatch[1].toLowerCase() } : {} };
-  }
-  if (/(按语言|语言分布|语言统计|分布情况|我的收藏分布)/i.test(q)) {
-    return { kind: "stats" };
-  }
-  if (/(推荐|recommend)/i.test(q)) {
-    return { kind: "recommendation", context: question };
-  }
-  if (/(有没有|是否收藏|do i have|have i starred)/i.test(q)) {
-    return { kind: "existence", query: question, filter: {} };
-  }
-
-  // 时间过滤：今天/昨天 star/收藏 → starredAfter（优先于 sort 判断，避免动词"star了"误触发 sort:stars）
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (/(今天|今日).*(star|收藏|starred)|(star|收藏|starred).*(今天|今日)/i.test(q)) {
-    intent.starredAfter = todayStr;
-    intent.sort = "recent";
-  } else if (/(昨天|yesterday).*(star|收藏|starred)|(star|收藏|starred).*(昨天|yesterday)/i.test(q)) {
-    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-    intent.starredAfter = yesterday;
-    intent.starredBefore = todayStr;
-    intent.sort = "recent";
-  }
-
-  // 排序（仅在无时间过滤时判断，且正则收窄为明确的 star 数语义，避免"star了"动词误触发）
-  if (!intent.starredAfter) {
-    if (/(star数|最多star|star最多|最受欢迎|最热门|按star排|star排名)/i.test(q)) {
-      intent.sort = "stars";
-      const topMatch = q.match(/(?:前|top)\s*(\d+)/);
-      intent.topN = topMatch ? Math.min(parseInt(topMatch[1], 10), 20) : 10;
-    } else if (/(最近更新|最近推送|recently updated)/i.test(q)) {
-      intent.sort = "updated"; intent.topN = 10;
-    } else if (/(最近收藏|最新收藏|recently starred)/i.test(q)) {
-      intent.sort = "recent"; intent.topN = 10;
-    }
-  }
-
-  const langMatch = q.match(/(?:用|使用|language[: ：]?)\s*(python|typescript|javascript|go|rust|java|swift|kotlin|ruby|php|scala)/i);
-  if (langMatch) intent.language = langMatch[1].toLowerCase();
-  if (/(我收藏的|我标记的|favorite)/i.test(q)) intent.favorite = true;
-  if (/(有备注|写了备注|has note)/i.test(q)) intent.hasNote = true;
-
-  const hasStructure = !!(intent.sort || intent.starredAfter || intent.language || intent.owner || intent.favorite !== undefined || intent.tag || intent.hasNote);
-  return hasStructure ? { kind: "structured", intent } : { kind: "semantic" };
-}
-
 // AI 结构化意图提取
 async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig): Promise<QueryIntent> {
   const today = new Date().toISOString().slice(0, 10);
@@ -322,7 +269,7 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
     const hasStructure = !!(parsed.sort || parsed.language || parsed.owner || parsed.favorite !== undefined || parsed.tag || parsed.minStars !== undefined || parsed.maxStars !== undefined || parsed.starredAfter || parsed.starredBefore || parsed.pushedAfter || parsed.hasNote || parsed.noteContains);
     return hasStructure ? { kind: "structured", intent: parsed } : { kind: "semantic" };
   } catch {
-    return detectQueryIntentByRegex(question);
+    return { kind: "semantic" };
   }
 }
 
@@ -330,7 +277,7 @@ async function detectQueryIntent(question: string, config: ChatRuntimeConfig | n
   if (config) {
     return detectQueryIntentByAI(question, config);
   }
-  return detectQueryIntentByRegex(question);
+  return { kind: "semantic" };
 }
 
 // 中文注释：富文本候选上下文，包含 star 数用于排序型问题的回答。

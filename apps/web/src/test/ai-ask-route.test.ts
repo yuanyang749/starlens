@@ -292,9 +292,29 @@ describe("AI ask API route", () => {
     vi.unstubAllGlobals();
   });
 
-  // ─── 新意图类型测试（无 AI 配置，走正则/直接 DB 路径）─────────────────────────
+  // ─── 新意图类型测试（AI 识别意图 + 直接 DB 路径）──────────────────────────────
 
-  it("count intent: 正则识别统计数量并返回 total", async () => {
+  const mockAiConfig = {
+    source: "user_default" as const,
+    config: {
+      id: "ai-cfg",
+      providerType: "openai_compatible" as const,
+      baseUrl: "https://ai.test/v1",
+      apiKey: "key",
+      extraHeaders: {},
+      model: "model",
+    },
+  };
+
+  it("count intent: AI识别统计数量并返回 total", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: '{"kind":"count","language":"python"}' } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
     searchReposMock.mockResolvedValue({ items: [], page: 1, pageSize: 1, total: 42, hasMore: false });
     const { POST } = await import("@/app/api/ai/ask/route");
     const response = await POST(
@@ -306,6 +326,7 @@ describe("AI ask API route", () => {
     const body = await json(response) as { ok: boolean; data: { answer: string } };
     expect(body.ok).toBe(true);
     expect(body.data.answer).toContain("42");
+    vi.unstubAllGlobals();
   });
 
   it("existence intent: 未找到时返回友好提示", async () => {
@@ -323,6 +344,14 @@ describe("AI ask API route", () => {
   });
 
   it("existence intent: 找到时列出仓库", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: '{"kind":"existence","query":"react"}' } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
     searchReposMock.mockResolvedValue({
       items: [repo("r1", "facebook/react"), repo("r2", "vercel/next.js")],
       page: 1, pageSize: 5, total: 2, hasMore: false,
@@ -338,9 +367,25 @@ describe("AI ask API route", () => {
     expect(body.ok).toBe(true);
     expect(body.data.answer).toContain("2");
     expect(body.data.candidates.length).toBeGreaterThan(0);
+    vi.unstubAllGlobals();
   });
 
-  it("stats intent: 正则识别并返回统计信息", async () => {
+  it("stats intent: AI识别并返回统计信息", async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: '{"kind":"stats"}' } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockImplementation(async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: "你共有 100 个仓库，TypeScript 占比最高。" } }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    resolveAiRuntimeConfigMock.mockResolvedValue(mockAiConfig);
     getRepoStatsMock.mockResolvedValue({
       total: 100,
       byLanguage: [{ language: "TypeScript", count: 40 }, { language: "Python", count: 30 }],
@@ -357,6 +402,7 @@ describe("AI ask API route", () => {
     const body = await json(response) as { ok: boolean; data: { answer: string } };
     expect(body.ok).toBe(true);
     expect(body.data.answer).toContain("100");
+    vi.unstubAllGlobals();
   });
 
   it("comparison intent: 两仓库都未找到时返回提示", async () => {
