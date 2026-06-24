@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AiConfig, ProviderType } from "@starlens-app/core";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, RefreshCw, ShieldCheck } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -47,6 +47,9 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [cardBusy, setCardBusy] = useState<Record<string, "validating" | "fetching-models" | null>>({});
+  const [cardMessage, setCardMessage] = useState<Record<string, { type: "ok" | "err"; text: string } | null>>({});
+  const cardMessageTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [form, setForm] = useState({
     apiKey: "",
     baseUrl: "",
@@ -150,24 +153,50 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     }
   };
 
-  const validateSelected = async () => {
-    if (!selected) return;
+  const setCardMsg = (id: string, msg: { type: "ok" | "err"; text: string } | null) => {
+    if (cardMessageTimers.current[id]) clearTimeout(cardMessageTimers.current[id]);
+    setCardMessage((prev) => ({ ...prev, [id]: msg }));
+    if (msg) {
+      cardMessageTimers.current[id] = setTimeout(() => {
+        setCardMessage((prev) => ({ ...prev, [id]: null }));
+      }, 4000);
+    }
+  };
+
+  const validateConfig = async (id: string) => {
+    setCardBusy((prev) => ({ ...prev, [id]: "validating" }));
     try {
       const result = await fetchApi<{ message: string; status: string }>(
-        `/api/ai/configs/${selected.id}/validate`,
+        `/api/ai/configs/${id}/validate`,
         { method: "POST" },
       );
       await loadConfigs();
-      if (result.status === "error") {
-        setMessage(null);
-        setError(result.message || "Provider 验证失败。");
-        return;
-      }
-      setError(null);
-      setMessage(result.message || `验证${result.status === "success" ? "成功" : `结果：${result.status}`}。`);
+      setCardMsg(id, {
+        type: result.status === "success" ? "ok" : "err",
+        text: result.message || (result.status === "success" ? "验证成功" : "验证失败"),
+      });
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "AI 配置验证失败。");
+      setCardMsg(id, { type: "err", text: err instanceof ApiClientError ? err.message : "验证失败" });
+    } finally {
+      setCardBusy((prev) => ({ ...prev, [id]: null }));
     }
+  };
+
+  const fetchModels = async (id: string) => {
+    setCardBusy((prev) => ({ ...prev, [id]: "fetching-models" }));
+    try {
+      await fetchApi(`/api/ai/configs/${id}/models`);
+      setCardMsg(id, { type: "ok", text: "模型列表已刷新" });
+    } catch (err) {
+      setCardMsg(id, { type: "err", text: err instanceof ApiClientError ? err.message : "获取模型失败" });
+    } finally {
+      setCardBusy((prev) => ({ ...prev, [id]: null }));
+    }
+  };
+
+  const validateSelected = async () => {
+    if (!selected) return;
+    await validateConfig(selected.id);
   };
 
   return (
@@ -214,32 +243,59 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
           <p className="rounded border border-dashed p-4 text-sm">暂无 Provider。</p>
         ) : (
           <div className="space-y-3">
-            {configs.map((config) => (
-              <article key={config.id} className="rounded border p-3">
-                <div className="flex justify-between gap-3">
-                  <button
-                    onClick={() => setSelectedId(config.id)}
-                    className="text-left font-semibold"
-                  >
-                    {config.displayName}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await fetchApi(`/api/ai/configs/${config.id}`, { method: "DELETE" });
-                      await loadConfigs();
-                    }}
-                    className="text-sm text-red-500 underline"
-                  >
-                    删除
-                  </button>
-                </div>
-                <div className="mt-2 text-xs text-[color:var(--muted)]">
-                  {config.providerType} · {config.model}
-                  {config.isDefault ? " · 默认" : ""}
-                  {config.lastValidationStatus ? ` · ${formatValidationStatus(config.lastValidationStatus)}` : ""}
-                </div>
-              </article>
-            ))}
+            {configs.map((config) => {
+              const busy = cardBusy[config.id];
+              const msg = cardMessage[config.id];
+              return (
+                <article key={config.id} className="rounded border p-3">
+                  <div className="flex justify-between gap-3">
+                    <button
+                      onClick={() => setSelectedId(config.id)}
+                      className="text-left font-semibold"
+                    >
+                      {config.displayName}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await fetchApi(`/api/ai/configs/${config.id}`, { method: "DELETE" });
+                        await loadConfigs();
+                      }}
+                      className="text-sm text-red-500 underline"
+                    >
+                      删除
+                    </button>
+                  </div>
+                  <div className="mt-1 text-xs text-[color:var(--muted)]">
+                    {config.providerType} · {config.model}
+                    {config.isDefault ? " · 默认" : ""}
+                    {config.lastValidationStatus ? ` · ${formatValidationStatus(config.lastValidationStatus)}` : ""}
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <button
+                      disabled={!!busy}
+                      onClick={() => validateConfig(config.id)}
+                      className="inline-flex items-center gap-1 text-xs text-[color:var(--muted)] underline disabled:opacity-50"
+                    >
+                      <ShieldCheck className="h-3 w-3" />
+                      {busy === "validating" ? "验证中…" : "验证"}
+                    </button>
+                    <button
+                      disabled={!!busy}
+                      onClick={() => fetchModels(config.id)}
+                      className="inline-flex items-center gap-1 text-xs text-[color:var(--muted)] underline disabled:opacity-50"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      {busy === "fetching-models" ? "获取中…" : "获取模型"}
+                    </button>
+                  </div>
+                  {msg ? (
+                    <p className={`mt-1.5 text-xs ${msg.type === "ok" ? "text-emerald-500" : "text-red-500"}`}>
+                      {msg.text}
+                    </p>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

@@ -370,7 +370,9 @@ describe("AI settings interactions", () => {
     );
     await act(async () => validate?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(el.textContent).toContain("fetch failed");
-    expect(el.querySelector(".text-red-500")?.textContent).toContain("fetch failed");
+    // 错误信息显示在卡片内的 <p> 元素中（区分"删除"按钮的 text-red-500）
+    const cardErr = el.querySelector("article p.text-red-500");
+    expect(cardErr?.textContent).toContain("fetch failed");
   });
 
   it("hides system default connection details for non-admin users", async () => {
