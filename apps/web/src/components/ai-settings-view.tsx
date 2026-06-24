@@ -46,7 +46,6 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cardBusy, setCardBusy] = useState<Record<string, "validating" | "fetching-models" | null>>({});
   const [cardMessage, setCardMessage] = useState<Record<string, { type: "ok" | "err"; text: string } | null>>({});
   const cardMessageTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -65,7 +64,6 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
       const data = await fetchApi<AiConfig[]>("/api/ai/configs", { signal });
       setError(null);
       setConfigs(data);
-      setSelectedId((prev) => prev ?? data[0]?.id ?? null);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof ApiClientError ? err.message : "AI 配置加载失败。");
@@ -93,7 +91,6 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     return () => controller.abort();
   }, []);
 
-  const selected = configs.find((config) => config.id === selectedId) ?? null;
   const userDefault = configs.find((config) => config.isDefault && config.enabled) ?? null;
   const isUsingSystemDefault = !userDefault && Boolean(systemDefault?.configured && systemDefault.enabled);
   const runtimeStatusTitle = userDefault
@@ -138,21 +135,6 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     }
   };
 
-  const patchSelected = async (payload: Record<string, unknown>) => {
-    if (!selected) return;
-    try {
-      await fetchApi<AiConfig>(`/api/ai/configs/${selected.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      await loadConfigs();
-      setMessage("Provider 配置已更新。");
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "AI 配置更新失败。");
-    }
-  };
-
   const setCardMsg = (id: string, msg: { type: "ok" | "err"; text: string } | null) => {
     if (cardMessageTimers.current[id]) clearTimeout(cardMessageTimers.current[id]);
     setCardMessage((prev) => ({ ...prev, [id]: msg }));
@@ -192,11 +174,6 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     } finally {
       setCardBusy((prev) => ({ ...prev, [id]: null }));
     }
-  };
-
-  const validateSelected = async () => {
-    if (!selected) return;
-    await validateConfig(selected.id);
   };
 
   return (
@@ -249,12 +226,7 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
               return (
                 <article key={config.id} className="rounded border p-3">
                   <div className="flex justify-between gap-3">
-                    <button
-                      onClick={() => setSelectedId(config.id)}
-                      className="text-left font-semibold"
-                    >
-                      {config.displayName}
-                    </button>
+                    <span className="font-semibold">{config.displayName}</span>
                     <button
                       onClick={async () => {
                         await fetchApi(`/api/ai/configs/${config.id}`, { method: "DELETE" });
@@ -418,31 +390,6 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
           </button>
         </div>
 
-        {selected ? (
-          <div className="mt-6 space-y-3 rounded-[18px] border border-[color:var(--line)] p-4">
-            <div className="text-sm font-medium">正在编辑：{selected.displayName}</div>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <button
-                className="underline"
-                onClick={() => patchSelected({ isDefault: true })}
-              >
-                设为默认
-              </button>
-              <button className="underline" onClick={validateSelected}>
-                验证
-              </button>
-              <button
-                className="underline"
-                onClick={async () => {
-                  await fetchApi(`/api/ai/configs/${selected.id}/models`);
-                  setMessage("模型列表已获取。");
-                }}
-              >
-                获取模型
-              </button>
-            </div>
-          </div>
-        ) : null}
       </section>
     </div>
   );
