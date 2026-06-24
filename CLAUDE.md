@@ -9,8 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run Web app: `corepack pnpm dev` (Uses `.env`)
 - Run Mobile app: `corepack pnpm dev:mobile` (Uses `.env`)
 - Run MCP Stdio server: `corepack pnpm mcp:start` (Requires `STARLENS_TOKEN` and `STARLENS_API_BASE_URL`)
-- Login with CLI: `printf '%s\n' '<your-token>' | corepack pnpm --filter @starlens/cli start -- login --token-stdin`
-- CLI status: `corepack pnpm --filter @starlens/cli start -- status`
+- Login with CLI: `printf '%s\n' '<your-token>' | corepack pnpm --filter @starlens-app/cli start -- login --token-stdin`
+- CLI status: `corepack pnpm --filter @starlens-app/cli start -- status`
 
 ### Build
 

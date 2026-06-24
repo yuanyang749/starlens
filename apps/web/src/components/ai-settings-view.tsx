@@ -271,7 +271,7 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
           <div className="mb-3 text-sm text-red-500">
             {error}{" "}
             <button
-              className="underline"
+              className="underline cursor-pointer"
               onClick={() => {
                 setLoading(true);
                 loadConfigs();
@@ -299,7 +299,7 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
               const msg = cardMessage[config.id];
               const isEditing = editingId === config.id;
               const ef = editForms[config.id];
-              const pillBtn = "inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40";
+              const pillBtn = "inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40";
               return (
                 <article key={config.id} className="rounded-[14px] border border-[color:var(--line)] bg-[color:var(--surface)] p-4 transition-shadow hover:shadow-sm">
                   {/* ── 标题行 ── */}
@@ -317,7 +317,7 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
                         await fetchApi(`/api/ai/configs/${config.id}`, { method: "DELETE" });
                         await loadConfigs();
                       }}
-                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
                     >
                       删除
                     </button>
@@ -427,26 +427,28 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-4">
-                        <label className="inline-flex items-center gap-2 text-xs text-[color:var(--muted)]">
+                        <label className="inline-flex items-center gap-2 text-xs text-[color:var(--muted)] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={ef.enabled}
                             onChange={(e) => updateEditForm(config.id, { enabled: e.target.checked })}
+                            className="cursor-pointer"
                           />
                           启用
                         </label>
-                        <label className="inline-flex items-center gap-2 text-xs text-[color:var(--muted)]">
+                        <label className="inline-flex items-center gap-2 text-xs text-[color:var(--muted)] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={ef.isDefault}
                             onChange={(e) => updateEditForm(config.id, { isDefault: e.target.checked })}
+                            className="cursor-pointer"
                           />
                           设为默认
                         </label>
                         <button
                           disabled={busy === "saving"}
                           onClick={() => saveEdit(config.id)}
-                          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-black px-4 text-xs font-medium text-white disabled:opacity-50"
+                          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-black px-4 text-xs font-medium text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {busy === "saving" ? "保存中…" : "保存"}
                         </button>
@@ -559,25 +561,27 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-[color:var(--line)] pt-4">
-          <label className="inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">
+          <label className="inline-flex items-center gap-2 text-sm text-[color:var(--muted)] cursor-pointer">
             <input
               checked={form.enabled}
               onChange={(event) => updateForm({ enabled: event.target.checked })}
               type="checkbox"
+              className="cursor-pointer"
             />
             启用
           </label>
-          <label className="inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">
+          <label className="inline-flex items-center gap-2 text-sm text-[color:var(--muted)] cursor-pointer">
             <input
               checked={form.isDefault}
               onChange={(event) => updateForm({ isDefault: event.target.checked })}
               type="checkbox"
+              className="cursor-pointer"
             />
             设为默认
           </label>
           <button
             onClick={createConfig}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-medium text-white"
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-medium text-white cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             创建配置

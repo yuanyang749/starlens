@@ -76,8 +76,7 @@ describe("tokens settings interactions", () => {
 
     expect(el.querySelectorAll(".app-panel")).toHaveLength(1);
     expect(el.textContent).toContain("可用 API Token");
-    expect(el.textContent).toContain("CLI 接入路径");
-    expect(el.textContent).toContain("正式实现规则");
+    expect(el.textContent).toContain("使用指南 & 配置代码");
   });
 
   it("requires a remark before creating a token and places the button below the input", async () => {
@@ -191,7 +190,7 @@ describe("tokens settings interactions", () => {
     const copyMcp = getCopyBtn();
     await act(async () => copyMcp?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
-    expect(writeTextMock).toHaveBeenNthCalledWith(1, expect.stringContaining("stl_secret_token"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(1, expect.stringContaining("npm install -g @starlens-app/cli"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_TOKEN"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("stl_secret_token"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_SKILL_FILE"));

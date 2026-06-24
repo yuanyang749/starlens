@@ -222,7 +222,9 @@ export function WorkbenchView({
       .then((data) => {
         setRepos(data.items);
         setTotal(data.total);
-        if (!favoritesOnly && !aiSearchMode) {
+        if (typeof data.allStarsTotal === "number") {
+          setAllStarsTotal(data.allStarsTotal);
+        } else if (!favoritesOnly && !aiSearchMode && !query.trim() && !language && !tagFilter) {
           setAllStarsTotal(data.total);
         }
         setPageSize(data.pageSize);

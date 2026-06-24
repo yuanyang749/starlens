@@ -28,7 +28,11 @@ function currentApiBaseUrl() {
 }
 
 function buildCliSetupSnippet(rawToken: string) {
-  return `printf '%s\\n' ${shellQuote(rawToken)} | corepack pnpm --filter @starlens/cli start -- login --token-stdin`;
+  return [
+    "npm install -g @starlens-app/cli",
+    "stars setup",
+    "stars -v",
+  ].join("\n");
 }
 
 function buildAgentSkillSnippet(rawToken: string) {
@@ -78,7 +82,8 @@ export function TokensSettingsView() {
   const [copyableTokens, setCopyableTokens] = useState<Record<string, string>>({});
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
   const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
-  const [activeSnippetTab, setActiveSnippetTab] = useState<Record<string, "cli" | "agent" | "mcp">>({});
+  const [activeTab, setActiveTab] = useState<"cli" | "agent" | "mcp">("cli");
+  const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const canCreateToken = noteDraft.trim().length > 0;
 
@@ -116,6 +121,7 @@ export function TokensSettingsView() {
       });
       if (token.token) {
         setCopyableTokens((current) => ({ ...current, [token.id]: token.token! }));
+        setSelectedTokenId(token.id);
       }
       setNoteDraft("");
       await loadTokens();
@@ -169,6 +175,21 @@ export function TokensSettingsView() {
     }
   };
 
+  const activeTokenId = selectedTokenId || tokens[0]?.id || "default";
+  const activeToken = tokens.find((t) => t.id === activeTokenId);
+  const rawToken = activeToken ? copyableTokens[activeToken.id] : undefined;
+  const maskedToken = activeToken ? maskToken(activeToken, rawToken) : "stl_xxx";
+  const tokenValue = rawToken || "stl_xxx";
+
+  const cliSnippet = buildCliSetupSnippet(tokenValue);
+  const agentSnippet = buildAgentSkillSnippet(tokenValue);
+  const mcpSnippet = buildMcpConfigSnippet(tokenValue);
+  const activeSnippet = activeTab === "cli" ? cliSnippet : activeTab === "agent" ? agentSnippet : mcpSnippet;
+
+  const displaySnippet = rawToken
+    ? maskSnippet(activeSnippet, rawToken, maskedToken)
+    : activeSnippet.replaceAll("stl_xxx", maskedToken);
+
   return (
     <section className="app-panel rounded-[24px] p-5">
       <div className="mb-5 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]">
@@ -176,7 +197,7 @@ export function TokensSettingsView() {
         可用 API Token
       </div>
 
-      <label className="mb-4 block">
+      <label className="mb-4 block cursor-pointer">
         <span className="mb-2 block text-sm font-medium text-[color:var(--foreground)]">
           用途备注 <span className="text-red-500">*</span>
         </span>
@@ -197,14 +218,14 @@ export function TokensSettingsView() {
           type="button"
           onClick={createToken}
           disabled={!canCreateToken}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
         >
           <Plus className="h-4 w-4" />新建 Token
         </button>
       </div>
 
       {toast ? <p className="mb-3 text-sm text-emerald-500">{toast}</p> : null}
-      {error ? <div className="mb-3 rounded border border-red-400 p-3 text-sm text-red-500">{error} <button onClick={() => { setLoading(true); loadTokens(); }} className="underline">重试</button></div> : null}
+      {error ? <div className="mb-3 rounded border border-red-400 p-3 text-sm text-red-500">{error} <button onClick={() => { setLoading(true); loadTokens(); }} className="underline cursor-pointer">重试</button></div> : null}
 
       {loading ? (
         <div className="space-y-3" data-testid="tokens-skeleton">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded bg-[color:var(--surface-2)]" />)}</div>
@@ -213,13 +234,8 @@ export function TokensSettingsView() {
       ) : (
         <div className="space-y-4">
           {tokens.map((token) => {
-            const rawToken = copyableTokens[token.id];
-            const maskedToken = maskToken(token, rawToken);
-            const cliSnippet = rawToken ? buildCliSetupSnippet(rawToken) : "";
-            const agentSnippet = rawToken ? buildAgentSkillSnippet(rawToken) : "";
-            const mcpSnippet = rawToken ? buildMcpConfigSnippet(rawToken) : "";
-            const activeTab = activeSnippetTab[token.id] ?? "cli";
-            const activeSnippet = activeTab === "cli" ? cliSnippet : activeTab === "agent" ? agentSnippet : mcpSnippet;
+            const currentRawToken = copyableTokens[token.id];
+            const currentMaskedToken = maskToken(token, currentRawToken);
 
             return (
               <article key={token.id} className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel-strong)] p-4">
@@ -227,84 +243,106 @@ export function TokensSettingsView() {
                   <div>
                     <h2 className="text-lg font-semibold tracking-tight">{token.name}</h2>
                     {token.note ? <p className="mt-1 text-sm text-[color:var(--foreground)]">{token.note}</p> : null}
-                    <p className="mt-1 font-mono text-sm text-[color:var(--muted)]">{maskedToken}</p>
+                    <p className="mt-1 font-mono text-sm text-[color:var(--muted)]">{currentMaskedToken}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    {rawToken ? (
+                    {currentRawToken ? (
                       <button
                         type="button"
                         onClick={() => void copyToken(token.id)}
-                        className="inline-flex items-center gap-1 text-sm text-[color:var(--accent)] underline"
+                        className="inline-flex items-center gap-1 text-sm text-[color:var(--accent)] underline cursor-pointer"
                       >
                         <Copy className="h-3.5 w-3.5" />
                         {copiedTokenId === token.id ? "已复制" : "复制"}
                       </button>
                     ) : null}
-                    <button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline">撤销</button>
+                    <button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline cursor-pointer">撤销</button>
                   </div>
                 </div>
-                {rawToken ? (
-                  <div className="mt-4 border-t border-[color:var(--line)] pt-4">
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="flex gap-1 rounded-full bg-[color:var(--surface-2)] p-1">
-                        {(["cli", "agent", "mcp"] as const).map((tab) => {
-                          const labels = { cli: "CLI", agent: "Agent Skill", mcp: "Cursor MCP" };
-                          return (
-                            <button
-                              key={tab}
-                              type="button"
-                              onClick={() => setActiveSnippetTab((s) => ({ ...s, [token.id]: tab }))}
-                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                                activeTab === tab
-                                  ? "bg-[color:var(--foreground)] text-white shadow-sm"
-                                  : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
-                              }`}
-                            >
-                              {labels[tab]}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void copySnippet(token.id, activeTab, activeSnippet)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--surface-2)] px-3 py-1.5 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:bg-[color:var(--line)]"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        {copiedSnippetId === `${token.id}:${activeTab}` ? "已复制" : "复制"}
-                      </button>
-                    </div>
-                    <div className="relative rounded-[14px] bg-[#0f1117] overflow-hidden">
-                      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-white/[0.06]">
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-                      </div>
-                      <pre className="overflow-x-auto p-4 font-mono text-xs leading-6 text-[#c9d1d9] scrollbar-thin">
-                        <code>{maskSnippet(activeSnippet, rawToken, maskedToken)}</code>
-                      </pre>
-                    </div>
-                  </div>
-                ) : null}
               </article>
             );
           })}
         </div>
       )}
 
-      <div className="mt-5 grid gap-3 border-t border-[color:var(--line)] pt-4 md:grid-cols-2">
-        <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)]">
-          <TerminalSquare className="h-4 w-4 text-[color:var(--accent)]" />
-          CLI 接入路径
+      {/* ── 使用指南 & 配置代码 ── */}
+      <div className="mt-6 border-t border-[color:var(--line)] pt-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-[color:var(--foreground)]">使用指南 & 配置代码</h3>
+            <a
+              href="/docs/integrations"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-[color:var(--accent)] hover:underline inline-flex items-center cursor-pointer font-medium"
+            >
+              (查看详细文档)
+            </a>
+          </div>
+          {tokens.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[color:var(--muted)]">选择 Token：</span>
+              <select
+                value={selectedTokenId || tokens[0]?.id || ""}
+                onChange={(e) => setSelectedTokenId(e.target.value)}
+                className="h-8 rounded-full border border-[color:var(--line)] bg-white px-3 text-xs outline-none cursor-pointer"
+              >
+                {tokens.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.note ? `${t.name} (${t.note})` : t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)]">
-          <ShieldCheck className="h-4 w-4 text-[color:var(--accent)]" />
-          正式实现规则
+
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex gap-1 rounded-full bg-[color:var(--surface-2)] p-1">
+            {(["cli", "agent", "mcp"] as const).map((tab) => {
+              const labels = { cli: "CLI", agent: "Agent Skill", mcp: "Cursor MCP" };
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                    activeTab === tab
+                      ? "bg-[color:var(--foreground)] text-white shadow-sm"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                  }`}
+                >
+                  {labels[tab]}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => void copySnippet(activeTokenId, activeTab, activeSnippet)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--surface-2)] px-3 py-1.5 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:bg-[color:var(--line)] cursor-pointer"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {copiedSnippetId === `${activeTokenId}:${activeTab}` ? "已复制" : "复制"}
+          </button>
         </div>
-        <div className="flex items-center gap-2 rounded-[18px] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-[color:var(--foreground)] md:col-span-2">
-          <FileText className="h-4 w-4 text-[color:var(--accent)]" />
-          Agent Skill 文件：agent-skills/starlens/SKILL.md
+
+        <div className="relative rounded-[14px] bg-[#0f1117] overflow-hidden">
+          <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-white/[0.06]">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+          </div>
+          <pre className="overflow-x-auto p-4 font-mono text-xs leading-6 text-[#c9d1d9] scrollbar-thin">
+            <code>{displaySnippet}</code>
+          </pre>
         </div>
+
+        {activeToken && !rawToken && (
+          <p className="mt-2 text-xs text-amber-500">
+            提示：当前显示为脱敏 Token。复制并配置时，请将代码中的 <code>{maskedToken}</code> 替换为您保存的真实 Token。
+          </p>
+        )}
       </div>
     </section>
   );

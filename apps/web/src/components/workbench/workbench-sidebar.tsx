@@ -101,7 +101,7 @@ export function WorkbenchSidebar({
         <section className="workbench-nav-section" aria-label="工具">
           <p className="workbench-nav-section__title">工具</p>
           {/* 中文注释：工作台直接补充文档入口，方便用户从操作界面跳回功能和配置说明。 */}
-          <Link href="/docs" className="workbench-nav-item" aria-label="使用文档">
+          <Link href="/docs" className="workbench-nav-item" aria-label="使用文档" target="_blank" rel="noopener noreferrer">
             <span className="workbench-nav-item__leading">
               <BookOpen className="h-4 w-4" />
               <span className="workbench-nav-item__label">使用文档</span>

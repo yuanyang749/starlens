@@ -367,6 +367,8 @@ describe("workbench view", () => {
 
     expect(docsLink).toBeTruthy();
     expect(docsLink?.getAttribute("href")).toBe("/docs");
+    expect(docsLink?.getAttribute("target")).toBe("_blank");
+    expect(docsLink?.getAttribute("rel")).toContain("noopener");
     expect(docsLink?.textContent).toContain("使用文档");
   });
 
