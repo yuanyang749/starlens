@@ -17,6 +17,7 @@ import { formatDateTime } from "./workbench/workbench-formatters";
 import { WorkbenchTopbar } from "./workbench/workbench-topbar";
 import { TokensSettingsView } from "./tokens-settings-view";
 import { AdminUsersView } from "./admin-users-view";
+import { DashboardView } from "./workbench/dashboard-view";
 
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = { ok: false; error: { code: string; message: string } };
@@ -201,7 +202,7 @@ export function WorkbenchView({
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
-  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin">("repos");
+  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard">("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
@@ -661,7 +662,7 @@ export function WorkbenchView({
   const displayedRepos = aiSearchMode ? aiSearchPagedRepos : repos;
   const displayedTotal = aiSearchMode ? aiSearchTotal : total;
   const displayedSort = aiSearchMode ? "relevance" : sort;
-  const showingSettingsPanel = contentMode !== "repos";
+  const showingSettingsPanel = contentMode !== "repos" && contentMode !== "dashboard";
 
   let settingsPanelContent: React.ReactNode = null;
 
@@ -761,6 +762,7 @@ export function WorkbenchView({
           onOpenTokens={() => setContentMode("tokens")}
           isAdmin={isAdmin}
           onOpenAdmin={() => setContentMode("admin")}
+          onOpenDashboard={() => setContentMode("dashboard")}
           recentActive={recentMode}
           total={allStarsTotal}
           favoriteCount={favoriteCount}
@@ -776,6 +778,8 @@ export function WorkbenchView({
           <section data-testid="workbench-settings-pane" className="workbench-settings-pane">
             {settingsPanelContent}
           </section>
+        ) : contentMode === "dashboard" ? (
+          <DashboardView />
         ) : (
           <div className="workbench-content-container">
             {syncMessage && aiSearchInsights.length > 0 ? (

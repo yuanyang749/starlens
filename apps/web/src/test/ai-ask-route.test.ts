@@ -142,7 +142,7 @@ describe("AI ask API route", () => {
       SYSTEM_AI_BASE_URL: "https://newapi.520ai.xin/v1",
       SYSTEM_AI_API_KEY: "test-key",
       SYSTEM_AI_MODEL: "gemini-3-flash",
-    } as NodeJS.ProcessEnv);
+    } as unknown as NodeJS.ProcessEnv);
 
     expect(config).toMatchObject({
       id: "system:default",
@@ -158,7 +158,7 @@ describe("AI ask API route", () => {
       OPENAI_BASE_URL: "https://newapi.520ai.xin/v1",
       OPENAI_API_KEY: "test-key",
       OPENAI_MODEL_KEY: "gemini-3-flash",
-    } as NodeJS.ProcessEnv);
+    } as unknown as NodeJS.ProcessEnv);
 
     expect(config).toMatchObject({
       id: "system:default",

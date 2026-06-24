@@ -428,13 +428,15 @@ export type RepoStats = {
   byLanguage: Array<{ language: string; count: number }>;
   totalFavorites: number;
   mostStarredRepo: { fullName: string; stargazersCount: number } | null;
+  monthlyTrend: Array<{ month: string; count: number }>;
+  topRepos: Array<{ fullName: string; language: string | null; stargazersCount: number }>;
 };
 
 export async function getRepoStats(userId: string): Promise<RepoStats> {
   const db = getDb();
   const base = and(eq(starredRepos.userId, userId), eq(starredRepos.isStarred, true));
 
-  const [totalRows, langRows, favRows, topStarRows] = await Promise.all([
+  const [totalRows, langRows, favRows, topStarRows, trendRows, topReposRows] = await Promise.all([
     db.select({ value: count() }).from(starredRepos).where(base),
     db
       .select({ language: starredRepos.language, cnt: count() })
@@ -452,6 +454,25 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
       .where(base)
       .orderBy(desc(starredRepos.stargazersCount))
       .limit(1),
+    db
+      .select({
+        month: sql<string>`to_char(${starredRepos.starredAtGithub}, 'YYYY-MM')`,
+        cnt: count(),
+      })
+      .from(starredRepos)
+      .where(and(base, sql`${starredRepos.starredAtGithub} is not null`))
+      .groupBy(sql`to_char(${starredRepos.starredAtGithub}, 'YYYY-MM')`)
+      .orderBy(sql`to_char(${starredRepos.starredAtGithub}, 'YYYY-MM')`),
+    db
+      .select({
+        fullName: starredRepos.fullName,
+        language: starredRepos.language,
+        stargazersCount: starredRepos.stargazersCount,
+      })
+      .from(starredRepos)
+      .where(base)
+      .orderBy(desc(starredRepos.stargazersCount))
+      .limit(5),
   ]);
 
   return {
@@ -461,5 +482,11 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
     mostStarredRepo: topStarRows[0]
       ? { fullName: topStarRows[0].fullName, stargazersCount: topStarRows[0].stargazersCount ?? 0 }
       : null,
+    monthlyTrend: trendRows.map((r) => ({ month: r.month, count: Number(r.cnt) })),
+    topRepos: topReposRows.map((r) => ({
+      fullName: r.fullName,
+      language: r.language,
+      stargazersCount: r.stargazersCount ?? 0,
+    })),
   };
 }

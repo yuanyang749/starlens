@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Shield, Star } from "lucide-react";
+import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Shield, Star, LayoutDashboard } from "lucide-react";
 
 type WorkbenchSidebarProps = {
-  contentMode: "repos" | "general" | "providers" | "tokens" | "admin";
+  contentMode: "repos" | "general" | "providers" | "tokens" | "admin" | "dashboard";
   favoritesOnly: boolean;
   aiSearchActive: boolean;
   onFavoritesClick: () => void;
@@ -15,6 +15,7 @@ type WorkbenchSidebarProps = {
   onOpenTokens: () => void;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
+  onOpenDashboard: () => void;
   recentActive: boolean;
   total: number;
   favoriteCount: number;
@@ -36,6 +37,7 @@ export function WorkbenchSidebar({
   onOpenTokens,
   isAdmin,
   onOpenAdmin,
+  onOpenDashboard,
   recentActive,
   total,
   favoriteCount,
@@ -61,6 +63,17 @@ export function WorkbenchSidebar({
       <div className="workbench-sidebar__groups">
         <section className="workbench-nav-section" aria-label="工作台">
           <p className="workbench-nav-section__title">工作台</p>
+          <button
+            type="button"
+            onClick={onOpenDashboard}
+            className={contentMode === "dashboard" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="数据看板"
+          >
+            <span className="workbench-nav-item__leading">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="workbench-nav-item__label">数据看板</span>
+            </span>
+          </button>
           <button
             type="button"
             onClick={onAllStarsClick}
