@@ -26,6 +26,7 @@ function setInputValue(input: HTMLInputElement, value: string) {
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("general settings layout", () => {
@@ -401,5 +402,91 @@ describe("AI settings interactions", () => {
     expect(el.textContent).toContain("系统默认 AI 已启用");
     expect(el.textContent).not.toContain("gpt-4.1-mini");
     expect(el.textContent).not.toContain("https://newapi.example/v1");
+  });
+
+  it("allows direct toggling of enabled and isDefault fields from the provider list", async () => {
+    const config = {
+      id: "ai-1",
+      displayName: "My Provider",
+      providerType: "openai_compatible",
+      model: "gpt-4",
+      baseUrl: "https://example.com",
+      enabled: false,
+      isDefault: false,
+      lastValidatedAt: null,
+      lastValidationStatus: null,
+      lastValidationError: null,
+    };
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url === "/api/ai/system-default") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: {
+            baseUrl: null,
+            configured: false,
+            enabled: false,
+            model: null,
+            providerType: null,
+            source: "system_default",
+          },
+        })));
+      }
+
+      if (url === "/api/ai/configs/ai-1" && init?.method === "PATCH") {
+        const body = JSON.parse(init.body as string);
+        if (body.enabled !== undefined) {
+          config.enabled = body.enabled;
+        }
+        if (body.isDefault !== undefined) {
+          config.isDefault = body.isDefault;
+        }
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: config })));
+      }
+
+      if (url === "/api/ai/configs") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: [config],
+        })));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: [] })));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { el } = mount(<AISettingsView />);
+    await act(async () => Promise.resolve());
+
+    // Find checkboxes inside the card
+    const checkboxes = Array.from(el.querySelectorAll("article input[type='checkbox']")) as HTMLInputElement[];
+    expect(checkboxes).toHaveLength(2);
+
+    const [enabledCheckbox, defaultCheckbox] = checkboxes;
+    expect(enabledCheckbox.checked).toBe(false);
+    expect(defaultCheckbox.checked).toBe(false);
+
+    // Toggle enabled checkbox
+    await act(async () => {
+      enabledCheckbox.click();
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/ai/configs/ai-1", expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ enabled: true }),
+    }));
+    expect(config.enabled).toBe(true);
+
+    // Toggle isDefault checkbox
+    await act(async () => {
+      defaultCheckbox.click();
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/ai/configs/ai-1", expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ isDefault: true }),
+    }));
+    expect(config.isDefault).toBe(true);
   });
 });

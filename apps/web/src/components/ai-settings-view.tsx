@@ -217,6 +217,27 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     }
   };
 
+  const toggleConfigField = async (config: AiConfig, field: "enabled" | "isDefault", value: boolean) => {
+    setCardBusy((prev) => ({ ...prev, [config.id]: "saving" }));
+    try {
+      await fetchApi<AiConfig>(`/api/ai/configs/${config.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          [field]: value,
+        }),
+      });
+      if (editForms[config.id]) {
+        updateEditForm(config.id, { [field]: value });
+      }
+      await loadConfigs();
+    } catch (err) {
+      setCardMsg(config.id, { type: "err", text: err instanceof ApiClientError ? err.message : "更新失败" });
+    } finally {
+      setCardBusy((prev) => ({ ...prev, [config.id]: null }));
+    }
+  };
+
   const fetchModels = async (id: string) => {
     setCardBusy((prev) => ({ ...prev, [id]: "fetching-models" }));
     try {
@@ -300,6 +321,30 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
                     >
                       删除
                     </button>
+                  </div>
+
+                  {/* ── 快速配置行 ── */}
+                  <div className="mt-2.5 flex items-center gap-4 text-xs font-medium text-[color:var(--muted)]">
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.enabled}
+                        disabled={busy === "saving"}
+                        onChange={(e) => toggleConfigField(config, "enabled", e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-[color:var(--line)] accent-[color:var(--accent)] cursor-pointer"
+                      />
+                      启用
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.isDefault}
+                        disabled={busy === "saving"}
+                        onChange={(e) => toggleConfigField(config, "isDefault", e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-[color:var(--line)] accent-[color:var(--accent)] cursor-pointer"
+                      />
+                      设为默认
+                    </label>
                   </div>
 
                   {/* ── 操作按钮行 ── */}

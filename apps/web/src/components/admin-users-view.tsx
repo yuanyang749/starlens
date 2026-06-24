@@ -150,10 +150,6 @@ export function AdminUsersView() {
           </table>
         </div>
       )}
-
-      <p className="mt-4 text-xs text-[color:var(--muted)]">
-        Token 用量统计自功能上线起计，早期数据不计入。
-      </p>
     </section>
   );
 }

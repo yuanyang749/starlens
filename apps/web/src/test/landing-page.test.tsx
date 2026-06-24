@@ -23,6 +23,7 @@ function mount(node: React.ReactNode) {
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("landing page workspace links", () => {
