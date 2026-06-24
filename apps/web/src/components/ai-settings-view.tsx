@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { AiConfig, ProviderType } from "@starlens-app/core";
-import { Bot, Plus, RefreshCw, ShieldCheck } from "lucide-react";
+import { Bot, Pencil, Plus, RefreshCw, ShieldCheck, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -46,9 +46,14 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [cardBusy, setCardBusy] = useState<Record<string, "validating" | "fetching-models" | null>>({});
+  const [cardBusy, setCardBusy] = useState<Record<string, "validating" | "fetching-models" | "saving" | null>>({});
   const [cardMessage, setCardMessage] = useState<Record<string, { type: "ok" | "err"; text: string } | null>>({});
   const cardMessageTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForms, setEditForms] = useState<Record<string, {
+    displayName: string; providerType: ProviderType; model: string;
+    baseUrl: string; apiKey: string; enabled: boolean; isDefault: boolean;
+  }>>({});;
   const [form, setForm] = useState({
     apiKey: "",
     baseUrl: "",
@@ -164,6 +169,54 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     }
   };
 
+  const openEdit = (config: AiConfig) => {
+    setEditForms((prev) => ({
+      ...prev,
+      [config.id]: {
+        displayName: config.displayName,
+        providerType: config.providerType,
+        model: config.model,
+        baseUrl: config.baseUrl ?? "",
+        apiKey: "",
+        enabled: config.enabled,
+        isDefault: config.isDefault,
+      },
+    }));
+    setEditingId(config.id);
+  };
+
+  const updateEditForm = (id: string, updates: Partial<typeof editForms[string]>) => {
+    setEditForms((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
+  };
+
+  const saveEdit = async (id: string) => {
+    const ef = editForms[id];
+    if (!ef) return;
+    setCardBusy((prev) => ({ ...prev, [id]: "saving" }));
+    try {
+      await fetchApi<AiConfig>(`/api/ai/configs/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          displayName: ef.displayName,
+          providerType: ef.providerType,
+          model: ef.model,
+          baseUrl: ef.baseUrl || undefined,
+          apiKey: ef.apiKey || undefined,
+          enabled: ef.enabled,
+          isDefault: ef.isDefault,
+        }),
+      });
+      await loadConfigs();
+      setEditingId(null);
+      setCardMsg(id, { type: "ok", text: "配置已保存" });
+    } catch (err) {
+      setCardMsg(id, { type: "err", text: err instanceof ApiClientError ? err.message : "保存失败" });
+    } finally {
+      setCardBusy((prev) => ({ ...prev, [id]: null }));
+    }
+  };
+
   const fetchModels = async (id: string) => {
     setCardBusy((prev) => ({ ...prev, [id]: "fetching-models" }));
     try {
@@ -223,8 +276,12 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
             {configs.map((config) => {
               const busy = cardBusy[config.id];
               const msg = cardMessage[config.id];
+              const isEditing = editingId === config.id;
+              const ef = editForms[config.id];
+              const pillBtn = "inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40";
               return (
                 <article key={config.id} className="rounded-[14px] border border-[color:var(--line)] bg-[color:var(--surface)] p-4 transition-shadow hover:shadow-sm">
+                  {/* ── 标题行 ── */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{config.displayName}</p>
@@ -244,24 +301,114 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
                       删除
                     </button>
                   </div>
+
+                  {/* ── 操作按钮行 ── */}
                   <div className="mt-3 flex items-center gap-2">
-                    <button
-                      disabled={!!busy}
-                      onClick={() => validateConfig(config.id)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
+                    <button disabled={!!busy} onClick={() => validateConfig(config.id)} className={pillBtn}>
                       <ShieldCheck className="h-3 w-3" />
                       {busy === "validating" ? "验证中…" : "验证"}
                     </button>
-                    <button
-                      disabled={!!busy}
-                      onClick={() => fetchModels(config.id)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
+                    <button disabled={!!busy} onClick={() => fetchModels(config.id)} className={pillBtn}>
                       <RefreshCw className={`h-3 w-3 ${busy === "fetching-models" ? "animate-spin" : ""}`} />
                       {busy === "fetching-models" ? "获取中…" : "获取模型"}
                     </button>
+                    <button
+                      disabled={!!busy}
+                      onClick={() => isEditing ? setEditingId(null) : openEdit(config)}
+                      className={`${pillBtn} ${isEditing ? "border-[color:var(--accent)] text-[color:var(--accent)]" : ""}`}
+                    >
+                      {isEditing ? <X className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+                      {isEditing ? "取消" : "编辑"}
+                    </button>
                   </div>
+
+                  {/* ── 行内编辑表单 ── */}
+                  {isEditing && ef ? (
+                    <div className="mt-4 space-y-3 border-t border-[color:var(--line)] pt-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <label className={labelClass}>显示名称</label>
+                          <input
+                            value={ef.displayName}
+                            onChange={(e) => updateEditForm(config.id, { displayName: e.target.value })}
+                            className={inputClass}
+                            placeholder="例如：我的 OpenAI"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className={labelClass}>模型</label>
+                          <input
+                            value={ef.model}
+                            onChange={(e) => updateEditForm(config.id, { model: e.target.value })}
+                            className={inputClass}
+                            placeholder="例如：gpt-4o-mini"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={labelClass}>Provider 类型</label>
+                        <Select
+                          value={ef.providerType}
+                          onValueChange={(v) => updateEditForm(config.id, { providerType: v as ProviderType })}
+                        >
+                          <SelectTrigger className="ai-provider-select-trigger">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="ai-provider-select-content" position="popper">
+                            {providerOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={labelClass}>Base URL</label>
+                        <input
+                          value={ef.baseUrl}
+                          onChange={(e) => updateEditForm(config.id, { baseUrl: e.target.value })}
+                          className={inputClass}
+                          placeholder="https://api.openai.com/v1"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className={labelClass}>API Key（留空不修改）</label>
+                        <input
+                          value={ef.apiKey}
+                          onChange={(e) => updateEditForm(config.id, { apiKey: e.target.value })}
+                          className={inputClass}
+                          type="password"
+                          placeholder="sk-..."
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="inline-flex items-center gap-2 text-xs text-[color:var(--muted)]">
+                          <input
+                            type="checkbox"
+                            checked={ef.enabled}
+                            onChange={(e) => updateEditForm(config.id, { enabled: e.target.checked })}
+                          />
+                          启用
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-xs text-[color:var(--muted)]">
+                          <input
+                            type="checkbox"
+                            checked={ef.isDefault}
+                            onChange={(e) => updateEditForm(config.id, { isDefault: e.target.checked })}
+                          />
+                          设为默认
+                        </label>
+                        <button
+                          disabled={busy === "saving"}
+                          onClick={() => saveEdit(config.id)}
+                          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-black px-4 text-xs font-medium text-white disabled:opacity-50"
+                        >
+                          {busy === "saving" ? "保存中…" : "保存"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {msg ? (
                     <p className={`mt-2 text-xs font-medium ${msg.type === "ok" ? "text-emerald-500" : "text-red-500"}`}>
                       {msg.text}
