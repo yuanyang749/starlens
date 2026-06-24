@@ -224,29 +224,31 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
               const busy = cardBusy[config.id];
               const msg = cardMessage[config.id];
               return (
-                <article key={config.id} className="rounded border p-3">
-                  <div className="flex justify-between gap-3">
-                    <span className="font-semibold">{config.displayName}</span>
+                <article key={config.id} className="rounded-[14px] border border-[color:var(--line)] bg-[color:var(--surface)] p-4 transition-shadow hover:shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{config.displayName}</p>
+                      <p className="mt-0.5 truncate text-xs text-[color:var(--muted)]">
+                        {config.providerType} · {config.model}
+                        {config.isDefault ? " · 默认" : ""}
+                        {config.lastValidationStatus ? ` · ${formatValidationStatus(config.lastValidationStatus)}` : ""}
+                      </p>
+                    </div>
                     <button
                       onClick={async () => {
                         await fetchApi(`/api/ai/configs/${config.id}`, { method: "DELETE" });
                         await loadConfigs();
                       }}
-                      className="text-sm text-red-500 underline"
+                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
                     >
                       删除
                     </button>
                   </div>
-                  <div className="mt-1 text-xs text-[color:var(--muted)]">
-                    {config.providerType} · {config.model}
-                    {config.isDefault ? " · 默认" : ""}
-                    {config.lastValidationStatus ? ` · ${formatValidationStatus(config.lastValidationStatus)}` : ""}
-                  </div>
-                  <div className="mt-2 flex items-center gap-3">
+                  <div className="mt-3 flex items-center gap-2">
                     <button
                       disabled={!!busy}
                       onClick={() => validateConfig(config.id)}
-                      className="inline-flex items-center gap-1 text-xs text-[color:var(--muted)] underline disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <ShieldCheck className="h-3 w-3" />
                       {busy === "validating" ? "验证中…" : "验证"}
@@ -254,14 +256,14 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
                     <button
                       disabled={!!busy}
                       onClick={() => fetchModels(config.id)}
-                      className="inline-flex items-center gap-1 text-xs text-[color:var(--muted)] underline disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <RefreshCw className="h-3 w-3" />
+                      <RefreshCw className={`h-3 w-3 ${busy === "fetching-models" ? "animate-spin" : ""}`} />
                       {busy === "fetching-models" ? "获取中…" : "获取模型"}
                     </button>
                   </div>
                   {msg ? (
-                    <p className={`mt-1.5 text-xs ${msg.type === "ok" ? "text-emerald-500" : "text-red-500"}`}>
+                    <p className={`mt-2 text-xs font-medium ${msg.type === "ok" ? "text-emerald-500" : "text-red-500"}`}>
                       {msg.text}
                     </p>
                   ) : null}
