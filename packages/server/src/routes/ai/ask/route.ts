@@ -446,6 +446,16 @@ function heuristicPickFromPool(question: string, pool: Candidate[]) {
   return picked.slice(0, 8);
 }
 
+// 从问题中提取 ASCII 关键词，处理"中文问题夹带英文技术词"场景（如"关于gpt image的仓库"→["gpt","image"]）
+function extractAsciiTerms(question: string): string[] {
+  const stopwords = new Set(["the", "and", "for", "are", "was", "with", "that", "this", "have", "from"]);
+  return question
+    .split(/[一-鿿　-〿＀-￯\s，。、！？；：]+/)
+    .flatMap((chunk) => chunk.split(/[^a-zA-Z0-9._-]+/))
+    .map((t) => t.trim().toLowerCase().replace(/^[-._]+|[-._]+$/g, ""))
+    .filter((t) => t.length >= 2 && /[a-z]/i.test(t) && !stopwords.has(t));
+}
+
 function mergeCandidate(
   merged: Map<string, RecalledCandidate>,
   candidate: Candidate,
@@ -570,6 +580,8 @@ async function recallCandidates(userId: string, question: string, config: ChatRu
   const querySpecs = uniqueQuerySpecs([
     { query: question, kind: "question" },
     ...buildHeuristicTerms(question).map((query) => ({ query, kind: "heuristic" as const })),
+    // 中文注释：从问题中提取 ASCII 关键词作为补充查询，处理"中文问句夹英文技术词"场景，无需 AI 也能召回。
+    ...extractAsciiTerms(question).map((query) => ({ query, kind: "heuristic" as const })),
     ...(await expandQuestionTermsWithProvider(question, config, userId)).map((query) => ({ query, kind: "expanded" as const })),
   ]).slice(0, 10);
 
