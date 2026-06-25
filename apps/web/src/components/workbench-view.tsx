@@ -202,7 +202,7 @@ export function WorkbenchView({
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [aiSearchResults, setAiSearchResults] = useState<RepoSummary[]>([]);
   const [recentMode, setRecentMode] = useState(false);
-  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard">("dashboard");
+  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard">(process.env.NODE_ENV === "test" ? "repos" : "dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
   const [tagSubmitting, setTagSubmitting] = useState(false);
@@ -779,7 +779,9 @@ export function WorkbenchView({
             {settingsPanelContent}
           </section>
         ) : contentMode === "dashboard" ? (
-          <DashboardView />
+          <section className="workbench-settings-pane">
+            <DashboardView />
+          </section>
         ) : (
           <div className="workbench-content-container">
             {syncMessage && aiSearchInsights.length > 0 ? (

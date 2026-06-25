@@ -8,6 +8,7 @@ import { RingCenter } from "@/components/charts/ring-center";
 import { AreaChart, Area } from "@/components/charts/area-chart";
 import { Grid } from "@/components/charts/grid";
 import { XAxis } from "@/components/charts/x-axis";
+import { YAxis } from "@/components/charts/y-axis";
 import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
 
 interface RepoStats {
@@ -99,8 +100,7 @@ export function DashboardView() {
   }));
 
   return (
-    <div className="h-full overflow-y-auto bg-neutral-50/50 p-6 dark:bg-neutral-900/10">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="space-y-6">
         
         {/* 顶部标题 */}
         <div className="flex items-center gap-2">
@@ -201,6 +201,7 @@ export function DashboardView() {
                   <Grid horizontal strokeDasharray="3 3" stroke="#f0f0f0" />
                   <Area dataKey="count" stroke="#3b82f6" fill="url(#blue-gradient)" strokeWidth={2} />
                   <XAxis />
+                  <YAxis />
                   <ChartTooltip />
                   <defs>
                     <linearGradient id="blue-gradient" x1="0" y1="0" x2="0" y2="1">
@@ -258,7 +259,6 @@ export function DashboardView() {
           </div>
         </div>
 
-      </div>
     </div>
   );
 }

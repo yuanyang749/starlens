@@ -87,6 +87,32 @@ beforeEach(() => {
         );
       }
 
+      if (url === "/api/stats") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              ok: true,
+              data: {
+                total: 3,
+                byLanguage: [
+                  { language: "TypeScript", count: 2 },
+                  { language: "Python", count: 1 },
+                ],
+                totalFavorites: 1,
+                mostStarredRepo: { fullName: "owner/repo", stargazersCount: 100 },
+                monthlyTrend: [
+                  { month: "2026-05", count: 1 },
+                  { month: "2026-06", count: 2 },
+                ],
+                topRepos: [
+                  { fullName: "owner/repo", language: "TypeScript", stargazersCount: 100 }
+                ],
+              },
+            }),
+          ),
+        );
+      }
+
       return Promise.resolve(
         new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 3, unstarred: 0 } } })),
       );
