@@ -40,6 +40,8 @@ export type SyncGitHubStarsResult = {
 };
 
 const SYNC_HISTORY_LIMIT = 8;
+// 中文注释：当前为进程内实现，多实例部署需迁移至 sync_runs 表（见架构优化方案 6.3）。
+// githubAccounts 表已持久化最近一次同步状态，此历史仅用于短期 UI 展示。
 const syncHistoryByUser = new Map<string, SyncHistoryEntry[]>();
 
 export function addSyncHistory(userId: string, entry: SyncHistoryEntry) {

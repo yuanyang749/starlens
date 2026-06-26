@@ -5,7 +5,8 @@ import { agentTools, callAgentTool } from "@starlens-app/agent-tools";
 import { unauthorized } from "@starlens/server/lib/api-response";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 
-const HOSTED_API_BASE_URL = "https://starlens.520ai.xin";
+// 中文注释：优先读取环境变量，未配置时回退到官方 Hosted 默认值，支持自托管部署。
+const HOSTED_API_BASE_URL = process.env.STARLENS_API_BASE_URL ?? "https://starlens.520ai.xin";
 
 async function handleMcp(request: Request): Promise<Response> {
   const user = await getApiUser(request);

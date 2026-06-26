@@ -9,7 +9,8 @@
     "./db/*": "./src/db/*.ts",
     "./lib/*": "./src/lib/*.ts",
     "./routes/*": "./src/routes/*.ts",
-    "./server/*": "./src/server/*.ts"
+    "./server/*": "./src/server/*.ts",
+    "./server/ai/ask/*": "./src/server/ai/ask/*.ts"
   },
   "dependencies": {
     "@starlens-app/core": "workspace:*",

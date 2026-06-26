@@ -24,6 +24,7 @@
     "db:migrate:neon": "node scripts/with-env.mjs .env.neon -- corepack pnpm --filter @starlens/web db:migrate",
     "db:check:local": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env",
     "db:check:neon": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env.neon",
+    "check:api-shims": "node scripts/check-api-shims.mjs",
     "deploy": "node scripts/deploy.mjs"
   },
   "devDependencies": {
