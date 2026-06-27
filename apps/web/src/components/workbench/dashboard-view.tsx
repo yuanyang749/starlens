@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Star, FolderHeart, Award, History, Github } from "lucide-react";
+import { Star, FolderHeart, Award, History, Github } from "lucide-react";
 import { RingChart } from "@/components/charts/ring-chart";
 import { Ring } from "@/components/charts/ring";
 import { RingCenter } from "@/components/charts/ring-center";
@@ -100,6 +100,7 @@ export function DashboardView() {
   }));
 
   return (
+<<<<<<< HEAD
     <div className="space-y-6">
         
         {/* 顶部标题 */}
@@ -107,11 +108,16 @@ export function DashboardView() {
           <LayoutDashboard className="h-6 w-6 text-neutral-800 dark:text-neutral-200" />
           <h1 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">Stars 看板</h1>
         </div>
+=======
+    <div className="h-full overflow-auto">
+      <section className="app-panel rounded-[24px] p-[18px] min-h-full">
+        <div className="space-y-6">
+>>>>>>> 741079e (refactor(web): 调整项目代码与文档)
 
         {/* 宏观指标卡片 (Metric Cards) */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+
+          <div className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--surface-2)] p-5">
             <div>
               <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">全部 Stars</p>
               <h3 className="mt-1 text-2xl font-bold text-neutral-800 dark:text-neutral-100">{stats.total}</h3>
@@ -121,7 +127,7 @@ export function DashboardView() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--surface-2)] p-5">
             <div>
               <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">重点收藏</p>
               <h3 className="mt-1 text-2xl font-bold text-neutral-800 dark:text-neutral-100">{stats.totalFavorites}</h3>
@@ -131,7 +137,7 @@ export function DashboardView() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="flex items-center justify-between rounded-xl border border-[color:var(--line)] bg-[color:var(--surface-2)] p-5">
             <div className="truncate pr-4">
               <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">最热门标星</p>
               <h3 className="mt-1 truncate text-lg font-bold text-neutral-800 dark:text-neutral-100" title={stats.mostStarredRepo?.fullName || "无"}>
@@ -150,11 +156,11 @@ export function DashboardView() {
 
         {/* 可视化图表区 */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          
+
           {/* 语言占比 - Bklit RingChart */}
-          <div className="flex flex-col rounded-xl border border-neutral-200/80 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="flex flex-col rounded-xl border border-[color:var(--line)] bg-[color:var(--surface-2)] p-5">
             <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">标星语言分布</h4>
-            
+
             <div className="mt-6 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row">
               <div className="relative h-44 w-44">
                 <RingChart data={ringData} size={176} strokeWidth={10} ringGap={4} baseInnerRadius={45}>
@@ -192,9 +198,9 @@ export function DashboardView() {
           </div>
 
           {/* 标星增长趋势 - Bklit AreaChart */}
-          <div className="flex flex-col rounded-xl border border-neutral-200/80 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="flex flex-col rounded-xl border border-[color:var(--line)] bg-[color:var(--surface-2)] p-5">
             <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">标星增长趋势</h4>
-            
+
             <div className="mt-6 flex-1 min-h-[176px]">
               {areaData.length > 1 ? (
                 <AreaChart data={areaData} xDataKey="date" aspectRatio="2 / 1">
@@ -222,26 +228,26 @@ export function DashboardView() {
         </div>
 
         {/* 顶部热门仓库列表 */}
-        <div className="rounded-xl border border-neutral-200/80 bg-white p-5 shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+        <div className="rounded-xl border border-[color:var(--line)] bg-[color:var(--surface-2)] p-5">
           <div className="flex items-center gap-1.5 text-neutral-800 dark:text-neutral-200">
             <Github className="h-4.5 w-4.5" />
             <h4 className="text-sm font-semibold">热门标星项目</h4>
           </div>
-          <div className="mt-3 overflow-hidden rounded-lg border border-neutral-100 dark:border-neutral-900">
-            <div className="grid grid-cols-12 bg-neutral-50 p-2.5 text-xs font-semibold text-neutral-500 dark:bg-neutral-900/50">
+          <div className="mt-3 overflow-hidden rounded-lg border border-[color:var(--line)]">
+            <div className="grid grid-cols-12 bg-[color:var(--surface-2)] p-2.5 text-xs font-semibold text-neutral-500 dark:bg-neutral-900/50">
               <div className="col-span-8">仓库全称</div>
               <div className="col-span-2 text-right">主要语言</div>
               <div className="col-span-2 text-right">Stars 数</div>
             </div>
-            <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
+            <div className="divide-y divide-[color:var(--line)]">
               {stats.topRepos && stats.topRepos.length > 0 ? (
                 stats.topRepos.map((repo, idx) => (
-                  <div key={idx} className="grid grid-cols-12 p-3 text-sm items-center hover:bg-neutral-50/50 dark:hover:bg-neutral-900/10 transition-colors">
+                  <div key={idx} className="grid grid-cols-12 p-3 text-sm items-center hover:bg-[color:var(--surface-2)] dark:hover:bg-neutral-900/10 transition-colors">
                     <div className="col-span-8 font-medium text-neutral-800 dark:text-neutral-200 truncate pr-4">
                       {repo.fullName}
                     </div>
                     <div className="col-span-2 text-right text-xs text-neutral-500">
-                      <span className="inline-block px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                      <span className="inline-block px-2 py-0.5 rounded-full bg-[color:var(--surface-2)] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
                         {repo.language || "Unknown"}
                       </span>
                     </div>
@@ -258,7 +264,7 @@ export function DashboardView() {
             </div>
           </div>
         </div>
-
+      </section>
     </div>
   );
 }
