@@ -100,19 +100,9 @@ export function DashboardView() {
   }));
 
   return (
-<<<<<<< HEAD
-    <div className="space-y-6">
-        
-        {/* 顶部标题 */}
-        <div className="flex items-center gap-2">
-          <LayoutDashboard className="h-6 w-6 text-neutral-800 dark:text-neutral-200" />
-          <h1 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">Stars 看板</h1>
-        </div>
-=======
     <div className="h-full overflow-auto">
       <section className="app-panel rounded-[24px] p-[18px] min-h-full">
         <div className="space-y-6">
->>>>>>> 741079e (refactor(web): 调整项目代码与文档)
 
         {/* 宏观指标卡片 (Metric Cards) */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -263,6 +253,7 @@ export function DashboardView() {
               )}
             </div>
           </div>
+        </div>
         </div>
       </section>
     </div>
