@@ -331,22 +331,18 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             ))}
           </nav>
           <div className="landing-header__actions">
-            <a
-              href="https://github.com/yuanyang749/starlens"
-              target="_blank"
-              rel="noreferrer"
-              className="landing-icon-link"
-              aria-label="查看 GitHub 仓库"
-            >
-              <Github className="h-5 w-5" />
-            </a>
-            <GitHubSignInButton
-              githubAuthEnabled={githubAuthEnabled}
-              className="landing-button landing-button--header h-11 px-4 text-xs font-semibold"
-            >
-              <Github className="h-4 w-4" />
-              使用 GitHub 登录
-            </GitHubSignInButton>
+            <div className="landing-auth-wrapper">
+              <GitHubSignInButton
+                githubAuthEnabled={githubAuthEnabled}
+                className="landing-button-circle"
+                disabledTitle="当前本地环境尚未配置 GitHub OAuth。"
+              >
+                <div className="landing-button-circle__inner">
+                  <Github className="h-5 w-5" />
+                  <span className="landing-button-circle__text">登录</span>
+                </div>
+              </GitHubSignInButton>
+            </div>
           </div>
         </div>
       </header>

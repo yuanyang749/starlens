@@ -99,22 +99,6 @@ html {
   gap: 14px;
 }
 
-.landing-icon-link {
-  display: inline-flex;
-  width: 42px;
-  height: 42px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: #101827;
-  transition: background 180ms ease, transform 180ms ease;
-}
-
-.landing-icon-link:hover {
-  background: rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
-}
-
 .landing-button {
   width: fit-content;
   justify-content: center;
@@ -167,6 +151,76 @@ html {
   background: #111827;
   color: #ffffff;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+/* 极简圆标 + 胶囊悬浮展开设计 ฅ'ω'ฅ */
+.landing-auth-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-button-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 9999px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  color: #1f2937;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.landing-button-circle__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0px;
+  padding: 0 10px;
+  width: 100%;
+  height: 100%;
+  white-space: nowrap;
+  transition: gap 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landing-button-circle__text {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease, margin-left 300ms ease;
+  margin-left: 0;
+}
+
+/* 悬浮时，圆标侧向平滑展开成胶囊按钮喵～ */
+.landing-button-circle:hover {
+  width: 96px;
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+}
+
+.landing-button-circle:hover .landing-button-circle__inner {
+  gap: 6px;
+}
+
+.landing-button-circle:hover .landing-button-circle__text {
+  opacity: 1;
+  max-width: 50px;
+  margin-left: 2px;
+}
+
+.landing-button-circle:active {
+  transform: scale(0.96);
 }
 
 .landing-section {
