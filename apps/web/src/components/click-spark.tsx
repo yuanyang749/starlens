@@ -172,15 +172,41 @@ export default function ClickSpark({
 
         const x1 = spark.x + distance * Math.cos(spark.angle);
         const y1 = spark.y + distance * Math.sin(spark.angle);
-        const x2 = spark.x + (distance + lineLength) * Math.cos(spark.angle);
-        const y2 = spark.y + (distance + lineLength) * Math.sin(spark.angle);
 
-        context.strokeStyle = sparkColor;
-        context.lineWidth = 2;
-        context.beginPath();
-        context.moveTo(x1, y1);
-        context.lineTo(x2, y2);
-        context.stroke();
+        // 绘制闪烁的五角星粒子
+        const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) => {
+          let rot = (Math.PI / 2) * 3;
+          let sx = cx;
+          let sy = cy;
+          const step = Math.PI / spikes;
+
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - outerRadius);
+          for (let i = 0; i < spikes; i++) {
+            sx = cx + Math.cos(rot) * outerRadius;
+            sy = cy + Math.sin(rot) * outerRadius;
+            ctx.lineTo(sx, sy);
+            rot += step;
+
+            sx = cx + Math.cos(rot) * innerRadius;
+            sy = cy + Math.sin(rot) * innerRadius;
+            ctx.lineTo(sx, sy);
+            rot += step;
+          }
+          ctx.lineTo(cx, cy - outerRadius);
+          ctx.closePath();
+          ctx.fillStyle = sparkColor;
+          ctx.fill();
+        };
+
+        // 增加闪烁（Opacity 抖动/呼吸）和星形的大小随时间衰减
+        const currentOpacity = (1 - eased) * (0.8 + Math.sin(timestamp * 0.05) * 0.2);
+        context.save();
+        context.globalAlpha = Math.max(0, Math.min(1, currentOpacity));
+        
+        const starSize = sparkSize * (1 - eased);
+        drawStar(context, x1, y1, 5, starSize, starSize * 0.4);
+        context.restore();
 
         return true;
       });

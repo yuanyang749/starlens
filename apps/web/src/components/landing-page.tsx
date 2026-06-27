@@ -308,14 +308,14 @@ function FeatureMock({ type }: { type: string }) {
 export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
   return (
     <ClickSpark
-      sparkColor="#000"
-      sparkSize={10}
-      sparkRadius={16}
-      sparkCount={8}
-      duration={400}
-      extraScale={1}
+      sparkColor="#000000"
+      sparkSize={12}
+      sparkRadius={20}
+      sparkCount={10}
+      duration={500}
+      extraScale={1.2}
     >
-      <div className="landing-page min-h-screen overflow-x-hidden">
+      <div className="landing-page min-h-screen">
         <LandingInteractions />
         <header className="landing-header">
         <div className="landing-header__inner">

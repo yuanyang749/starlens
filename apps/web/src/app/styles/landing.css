@@ -8,8 +8,15 @@ html {
   scroll-behavior: smooth;
 }
 
+/* 隐藏原生的鼠标指针，以启用我们写在 Canvas 里的闪烁五角星指针动效 */
+.custom-cursor-enabled,
+.custom-cursor-enabled * {
+  cursor: none !important;
+}
+
 .landing-page {
   min-height: 100vh;
+  overflow-x: clip;
   color: #101722;
   background:
     linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
