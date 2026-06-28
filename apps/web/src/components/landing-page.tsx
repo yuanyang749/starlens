@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
+  ChevronDown,
   Cloud,
   Database,
   FileText,
@@ -392,6 +393,11 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
           <div className="landing-hero__visual" aria-label="Starlens 产品预览">
             <ProductPreview />
           </div>
+
+          <a href="#pain" className="landing-hero__scroll-hint" aria-label="向下滚动">
+            <span>向下滚动</span>
+            <ChevronDown className="h-5 w-5" />
+          </a>
         </section>
 
         <section id="pain" className="landing-section landing-pain landing-block">

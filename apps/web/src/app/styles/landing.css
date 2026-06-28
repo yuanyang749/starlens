@@ -235,12 +235,50 @@ html {
 }
 
 .landing-hero {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(560px, 0.92fr) minmax(620px, 1.08fr);
   gap: 64px;
-  min-height: 790px;
-  padding: 64px 64px 56px;
+  height: calc(100vh - 80px);
+  min-height: 680px;
+  padding: 40px 64px 80px;
   align-items: center;
+}
+
+/* 向下滚动指示器 */
+.landing-hero__scroll-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  z-index: 10;
+}
+
+.landing-hero__scroll-hint:hover {
+  color: #0f172a;
+}
+
+.landing-hero__scroll-hint svg {
+  animation: landing-scroll-bounce 1.6s infinite;
+}
+
+@keyframes landing-scroll-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
 }
 
 .landing-hero__copy {
@@ -1261,8 +1299,13 @@ html {
 
   .landing-hero {
     grid-template-columns: 1fr;
-    min-height: auto;
-    padding: 54px 28px;
+    height: auto;
+    min-height: calc(100vh - 80px);
+    padding: 54px 28px 100px;
+  }
+
+  .landing-hero__scroll-hint {
+    display: none;
   }
 
   .landing-hero__copy {
@@ -1289,6 +1332,12 @@ html {
 }
 
 @media (max-width: 780px) {
+  .landing-header__inner,
+  .landing-section,
+  .landing-footer {
+    width: 100%;
+  }
+
   .landing-header__inner {
     grid-template-columns: 1fr auto;
   }
@@ -1335,26 +1384,36 @@ html {
   .landing-hero,
   .landing-block,
   .landing-deploy {
-    padding-right: 14px;
-    padding-left: 14px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  /* 移动端收窄各卡片内部 padding，提高文字排版可读性与宽度利用率 */
+  .landing-pain-card,
+  .landing-feature-card,
+  .landing-workflow-card,
+  .landing-terminal-card,
+  .landing-agent-card,
+  .landing-provider-card {
+    padding: 20px;
   }
 
   /* 覆盖 1180px 断点继承的 28px 左右内边距，收窄移动端主体留白 */
   .landing-hero {
     padding-top: 48px;
     padding-bottom: 48px;
-    padding-right: 14px;
-    padding-left: 14px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
   .landing-footer {
-    padding-right: 14px;
-    padding-left: 14px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
   .landing-header__inner {
-    padding-right: 14px;
-    padding-left: 14px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
   .landing-hero h1 {
