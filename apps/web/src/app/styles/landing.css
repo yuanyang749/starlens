@@ -1335,8 +1335,26 @@ html {
   .landing-hero,
   .landing-block,
   .landing-deploy {
-    padding-right: 18px;
-    padding-left: 18px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  /* 覆盖 1180px 断点继承的 28px 左右内边距，收窄移动端主体留白 */
+  .landing-hero {
+    padding-top: 48px;
+    padding-bottom: 48px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .landing-footer {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .landing-header__inner {
+    padding-right: 14px;
+    padding-left: 14px;
   }
 
   .landing-hero h1 {
