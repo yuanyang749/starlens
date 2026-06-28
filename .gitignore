@@ -17,3 +17,4 @@ coverage
 node_modules
 crawler/
 .trae
+apps/web/next-env.d.ts

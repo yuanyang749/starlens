@@ -745,6 +745,30 @@
   padding: 14px;
 }
 
+.repo-summary-card__text-scroll {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.repo-summary-card__text-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.repo-summary-card__text-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.repo-summary-card__text-scroll::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, 0.15);
+  border-radius: 2px;
+}
+
+.repo-summary-card__text-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.3);
+}
+
+
 .repo-detail-link {
   display: inline-flex;
   align-items: center;

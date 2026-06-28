@@ -1,7 +1,7 @@
 "use client";
 
 import type { RepoSummary, SearchSort } from "@starlens-app/core";
-import { ArrowDownUp, Loader2, Star, X } from "lucide-react";
+import { ArrowDownUp, FilterX, Loader2, Star, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -178,7 +178,7 @@ export function RepoTablePane({
                 aria-label="清空筛选"
                 disabled={isAiSearchMode}
               >
-                <X className="h-4 w-4" />
+                <FilterX className="h-4 w-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent>

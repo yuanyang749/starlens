@@ -43,7 +43,7 @@ export function cleanMarkdown(input: string) {
     .trim();
 }
 
-export function extractReadmeExcerpt(readme: string, maxLength = 420) {
+export function extractReadmeExcerpt(readme: string, maxLength = 1200) {
   const cleaned = cleanMarkdown(readme);
   if (cleaned.length <= maxLength) {
     return cleaned;

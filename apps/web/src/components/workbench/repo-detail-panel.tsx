@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { RepoSummary } from "@starlens-app/core";
 import { Bot, Check, ExternalLink, Globe, Plus, Star, X } from "lucide-react";
 import {
@@ -11,31 +10,16 @@ import {
 } from "./workbench-formatters";
 import { RepoDetailMetadata } from "./repo-detail-metadata";
 
-function CollapsibleText({
+function ScrollableText({
   text,
   className = "",
-  limit = 240,
 }: {
   text: string;
   className?: string;
-  limit?: number;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const shouldCollapse = text.length > limit;
-  const visibleText = shouldCollapse && !expanded ? `${text.slice(0, limit).trim()}...` : text;
-
   return (
-    <div>
-      <p className={className}>{visibleText}</p>
-      {shouldCollapse ? (
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          className="repo-detail-link"
-        >
-          {expanded ? "收起" : "展开"}
-        </button>
-      ) : null}
+    <div className="repo-summary-card__text-scroll">
+      <p className={className}>{text}</p>
     </div>
   );
 }
@@ -197,9 +181,8 @@ export function RepoDetailPanel({
         </div>
         <div className="repo-summary-card">
           <Bot className="h-4 w-4 text-[color:var(--accent)]" />
-          <CollapsibleText
+          <ScrollableText
             text={summaryText}
-            limit={360}
             className="repo-summary-card__body"
           />
           <p className="repo-detail-hint">
