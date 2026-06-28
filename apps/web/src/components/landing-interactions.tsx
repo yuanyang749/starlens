@@ -1,17 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 
-const trackerItems = [
-  { id: "hero", label: "首屏" },
-  { id: "pain", label: "痛点" },
-  { id: "features", label: "功能" },
-  { id: "workflow", label: "工作方式" },
-  { id: "providers", label: "AI 服务" },
-  { id: "deploy", label: "部署" },
-];
-
-interface Particle { 
+interface Particle {
   x: number;
   y: number;
   vx: number;
@@ -23,10 +14,11 @@ interface Particle {
   color: string;
 }
 
+// 中文注释：本组件仅负责 Canvas 鼠标指针粒子系统（RAF + Canvas 领域）。
+// 滚动追踪器与滚动驱动动效已迁移至 landing-scroll-animations.tsx（GSAP 统一管理）。
 export function LandingInteractions() {
-  const [activeSection, setActiveSection] = useState("hero");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  
+
   // 鼠标位置与惯性跟随变量
   const mouseRef = useRef({ x: 0, y: 0, lastX: 0, lastY: 0, speed: 0 });
   const starRef = useRef({ x: 0, y: 0, rotation: 0, targetRotation: 0 });
@@ -72,7 +64,7 @@ export function LandingInteractions() {
       c.rotate(rotation);
       c.globalAlpha = opacity;
       c.beginPath();
-      
+
       let rot = (Math.PI / 2) * 3;
       const step = Math.PI / spikes;
       c.moveTo(0, -outerRadius);
@@ -143,7 +135,7 @@ export function LandingInteractions() {
         p.y += p.vy + 0.15; // 带有少许重力感下落
         p.alpha -= 0.02; // 逐渐消散
         p.rotation += p.rotationSpeed;
-        
+
         if (p.alpha <= 0) return false;
 
         // 绘制拖尾小黑色五角星或微尘 (原本 outerRadius: 6, innerRadius: 2.4, 稍微加大粒子尺寸)
@@ -205,61 +197,21 @@ export function LandingInteractions() {
 
     animationFrameId.current = requestAnimationFrame(renderLoop);
 
-    let frame = 0;
-    const updateScrollState = () => {
-      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = scrollable > 0 ? window.scrollY / scrollable : 0;
-      document.documentElement.style.setProperty("--landing-scroll-progress", String(progress));
-      
-      const isNearBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
-      if (isNearBottom) {
-        const lastItem = trackerItems[trackerItems.length - 1];
-        if (lastItem) {
-          setActiveSection(lastItem.id);
-        }
-        return;
-      }
-
-      const current = trackerItems
-        .map((item) => {
-          const node = document.getElementById(item.id);
-          return {
-            id: item.id,
-            offset: node ? Math.abs(node.getBoundingClientRect().top - window.innerHeight * 0.28) : Infinity,
-          };
-        })
-        .sort((a, b) => a.offset - b.offset)[0]?.id;
-
-      if (current) {
-        setActiveSection(current);
-      }
-    };
-
-    const onScroll = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(updateScrollState);
-    };
-
     const onPointerMove = (event: PointerEvent) => {
       // 写入 Canvas 动效位置
       mouseRef.current.x = event.clientX;
       mouseRef.current.y = event.clientY;
 
+      // 写入 --landing-pointer-x/y，驱动产品预览卡片的 3D 视差倾斜
       const x = event.clientX / window.innerWidth - 0.5;
       const y = event.clientY / window.innerHeight - 0.5;
       document.documentElement.style.setProperty("--landing-pointer-x", x.toFixed(4));
       document.documentElement.style.setProperty("--landing-pointer-y", y.toFixed(4));
     };
 
-    updateScrollState();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
 
     return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("resize", resizeCanvas);
       cancelAnimationFrame(animationFrameId.current);
@@ -268,31 +220,15 @@ export function LandingInteractions() {
   }, []);
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 9999,
-        }}
-        aria-hidden="true"
-      />
-      <div className="landing-scroll-tracker" aria-label="页面滚动进度">
-        <span className="landing-scroll-tracker__bar" />
-        {trackerItems.map((item) => (
-          <a
-            href={`#${item.id}`}
-            className={activeSection === item.id ? "is-active" : ""}
-            key={item.id}
-            aria-label={`跳转到${item.label}`}
-          >
-            <i />
-            <span>{item.label}</span>
-          </a>
-        ))}
-      </div>
-    </>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 9999,
+      }}
+      aria-hidden="true"
+    />
   );
 }

@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { BrandLogo } from "./brand-logo";
 import ClickSpark from "./click-spark";
 import { LandingInteractions } from "./landing-interactions";
+import { LandingScrollAnimations } from "./landing-scroll-animations";
+import { LandingHeader } from "./landing-header";
 import {
   ArrowRight,
   Bot,
@@ -23,15 +25,6 @@ import {
   TerminalSquare,
 } from "lucide-react";
 import { GitHubSignInButton } from "./github-sign-in-button";
-
-const navItems = [
-  { href: "#pain", label: "痛点" },
-  { href: "#features", label: "功能" },
-  { href: "#workflow", label: "工作方式" },
-  { href: "#providers", label: "AI 与协议" },
-  { href: "#deploy", label: "开源与自部署" },
-  { href: "/docs", label: "文档" },
-];
 
 // 中文注释：痛点内容直接承接用户真实使用场景，避免落地页只停留在功能罗列。
 const painCards = [
@@ -318,35 +311,8 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
     >
       <div className="landing-page min-h-screen">
         <LandingInteractions />
-        <header className="landing-header">
-        <div className="landing-header__inner">
-          <Link href="/" className="landing-brand" aria-label="Starlens 首页">
-            <BrandLogo size={30} className="rounded-lg" priority />
-            <span>Starlens</span>
-          </Link>
-          <nav className="landing-nav" aria-label="落地页导航">
-            {navItems.map((item) => (
-              <a href={item.href} key={item.href}>
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          <div className="landing-header__actions">
-            <div className="landing-auth-wrapper">
-              <GitHubSignInButton
-                githubAuthEnabled={githubAuthEnabled}
-                className="landing-button-circle"
-                disabledTitle="当前本地环境尚未配置 GitHub OAuth。"
-              >
-                <div className="landing-button-circle__inner">
-                  <Github className="h-5 w-5" />
-                  <span className="landing-button-circle__text">登录</span>
-                </div>
-              </GitHubSignInButton>
-            </div>
-          </div>
-        </div>
-      </header>
+        <LandingScrollAnimations />
+        <LandingHeader githubAuthEnabled={githubAuthEnabled} />
 
       <main>
         <section id="hero" className="landing-hero landing-section">

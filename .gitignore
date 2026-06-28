@@ -16,3 +16,4 @@ coverage
 .claude/settings.local.json
 node_modules
 crawler/
+.trae

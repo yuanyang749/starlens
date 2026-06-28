@@ -230,6 +230,63 @@ html {
   transform: scale(0.96);
 }
 
+/* 移动端汉堡菜单按钮：桌面隐藏，≤1180px 显示 */
+.landing-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 9999px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  color: #1f2937;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+.landing-menu-toggle:hover {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+/* 移动端下拉导航面板：绝对定位覆盖在 header 下方，桌面隐藏 */
+.landing-nav-mobile {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 0;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+  transition: max-height 280ms ease;
+}
+
+.landing-nav-mobile.is-open {
+  max-height: 380px;
+  border-top: 1px solid rgba(226, 232, 240, 0.86);
+}
+
+.landing-nav-mobile a {
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.55);
+  color: #374151;
+  font-size: 15px;
+  font-weight: 650;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.landing-nav-mobile a:hover {
+  background: #f8fafc;
+  color: #020617;
+}
+
 .landing-section {
   scroll-margin-top: 96px;
 }
@@ -1297,6 +1354,15 @@ html {
     display: none;
   }
 
+  /* 横向导航隐藏后，启用汉堡菜单与下拉面板 */
+  .landing-menu-toggle {
+    display: inline-flex;
+  }
+
+  .landing-nav-mobile {
+    display: flex;
+  }
+
   .landing-hero {
     grid-template-columns: 1fr;
     height: auto;
@@ -1332,6 +1398,7 @@ html {
 }
 
 @media (max-width: 780px) {
+  /* 统一移动端容器为全宽，左右内边距统一 16px（清理旧的层层 padding 补丁） */
   .landing-header__inner,
   .landing-section,
   .landing-footer {
@@ -1340,55 +1407,50 @@ html {
 
   .landing-header__inner {
     grid-template-columns: 1fr auto;
-  }
-
-  .landing-header__actions .landing-icon-link {
-    display: none;
-  }
-
-  .landing-header__actions .landing-button {
-    min-width: 44px;
-    width: 44px;
-    padding: 0;
-    overflow: hidden;
-    gap: 0;
-    color: #ffffff;
-    font-size: 0;
-  }
-
-  .landing-header__actions .landing-button svg {
-    min-width: 18px;
-    color: #ffffff;
-    stroke: #ffffff;
-  }
-
-  .landing-header__actions .landing-button--header {
-    background: rgba(255, 255, 255, 0.6);
-    color: #1f2937;
-  }
-
-  .landing-header__actions .landing-button--header svg {
-    color: #1f2937;
-    stroke: currentColor;
-  }
-
-  .landing-header__actions .landing-button--header:hover {
-    background: #111827;
-    color: #ffffff;
-  }
-
-  .landing-header__actions .landing-button--header:hover svg {
-    color: #ffffff;
+    padding: 14px 16px;
   }
 
   .landing-hero,
   .landing-block,
-  .landing-deploy {
+  .landing-deploy,
+  .landing-footer {
     padding-right: 16px;
     padding-left: 16px;
   }
 
-  /* 移动端收窄各卡片内部 padding，提高文字排版可读性与宽度利用率 */
+  /* Hero：紧凑首屏 */
+  .landing-hero {
+    padding-top: 40px;
+    padding-bottom: 48px;
+  }
+
+  .landing-hero h1 {
+    font-size: clamp(34px, 9.6vw, 40px);
+  }
+
+  /* 窄屏允许标题换行，避免主标题被截断溢出 */
+  .landing-hero-title-main {
+    white-space: normal;
+  }
+
+  .landing-hero__lead {
+    font-size: 17px;
+  }
+
+  /* CTA 按钮并排紧凑，不再全宽笨重 */
+  .landing-hero__actions {
+    gap: 12px;
+  }
+
+  .landing-hero__actions .landing-button {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  /* 卡片内边距统一收窄 */
   .landing-pain-card,
   .landing-feature-card,
   .landing-workflow-card,
@@ -1398,37 +1460,7 @@ html {
     padding: 20px;
   }
 
-  /* 覆盖 1180px 断点继承的 28px 左右内边距，收窄移动端主体留白 */
-  .landing-hero {
-    padding-top: 48px;
-    padding-bottom: 48px;
-    padding-right: 16px;
-    padding-left: 16px;
-  }
-
-  .landing-footer {
-    padding-right: 16px;
-    padding-left: 16px;
-  }
-
-  .landing-header__inner {
-    padding-right: 16px;
-    padding-left: 16px;
-  }
-
-  .landing-hero h1 {
-    font-size: clamp(34px, 9.6vw, 40px);
-  }
-
-  .landing-hero__lead {
-    font-size: 17px;
-  }
-
-  .landing-hero__actions,
-  .landing-hero__actions .landing-button {
-    width: 100%;
-  }
-
+  /* ProductPreview 移动精简版：保留中间列表，隐藏侧栏与详情 */
   .landing-preview__shell {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -1439,29 +1471,73 @@ html {
     display: none;
   }
 
+  /* timeline 缩略图改为横向滚动，不再砍裁 */
   .landing-timeline {
-    grid-template-columns: 64px repeat(3, minmax(54px, 1fr));
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
-  .landing-timeline span:nth-of-type(n + 4) {
+  .landing-timeline::-webkit-scrollbar {
     display: none;
+  }
+
+  .landing-timeline button,
+  .landing-timeline span {
+    flex: 0 0 auto;
+    width: 60px;
   }
 
   .landing-timeline p,
   .landing-timeline time {
-    grid-column: 1 / -1;
-    justify-self: start;
+    display: none;
   }
 
-  .landing-feature-grid,
+  /* 卡片网格：内容多的保持单列，providers 维持 2 列以提升信息密度 */
   .landing-pain-grid,
-  .landing-provider-grid {
+  .landing-feature-grid,
+  .landing-workflow-grid,
+  .landing-deploy-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .landing-provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .landing-provider-card {
+    min-height: 0;
+  }
+
+  /* CLI 代码块横向滚动，不撑破窄屏容器 */
+  .landing-terminal-card pre {
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 页脚：品牌居中，链接区紧凑 */
+  .landing-footer {
+    gap: 28px;
+  }
+
+  .landing-footer__brand {
+    text-align: center;
+  }
+
+  .landing-footer__brand > div {
+    justify-content: center;
   }
 
   .landing-footer__links {
     grid-template-columns: repeat(3, minmax(92px, 1fr));
-    gap: 16px;
+    gap: 12px;
   }
 
   .landing-footer__links div {
@@ -1473,9 +1549,8 @@ html {
     font-size: 13px;
   }
 
-  /* 移动端 CTA 改为紧凑栅格，减少无效留白 */
+  /* 移动端 CTA 紧凑栅格，减少无效留白 */
   .landing-footer__cta {
-    display: grid;
     grid-template-columns: auto 1fr auto;
     grid-template-areas:
       "icon title action"
@@ -1486,25 +1561,12 @@ html {
     padding: 14px 12px;
   }
 
-  .landing-footer__cta > svg {
-    grid-area: icon;
-    align-self: start;
-    margin-top: 2px;
-  }
-
-  .landing-footer__cta > strong {
-    grid-area: title;
-  }
-
   .landing-footer__cta > p {
-    grid-area: desc;
-    margin: 0;
     font-size: 12px;
     line-height: 1.5;
   }
 
   .landing-footer__cta .landing-button {
-    grid-area: action;
     height: 36px;
     padding: 0 12px;
     font-size: 12px;
@@ -1515,6 +1577,7 @@ html {
     display: none;
   }
 
+  /* 右侧圆点追踪器移动端隐藏（顶部进度条仍保留） */
   .landing-scroll-tracker {
     display: none;
   }
