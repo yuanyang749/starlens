@@ -1,6 +1,6 @@
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { BrandLogo } from "./brand-logo";
 import ClickSpark from "./click-spark";
 import { LandingInteractions } from "./landing-interactions";
@@ -16,7 +16,6 @@ import {
   FileText,
   Github,
   GitMerge,
-  Play,
   Search,
   ShieldCheck,
   Sparkles,
@@ -106,26 +105,10 @@ const proofItems = [
 ];
 
 const footerColumns = [
-  { title: "产品", links: ["功能", "定价（未来）", "更新日志"] },
-  { title: "资源", links: ["文档", "隐私政策", "使用条款"] },
-  { title: "社区", links: ["GitHub", "讨论区", "贡献指南"] },
+  { title: "产品", links: [["功能", "/docs/features"], ["定价（未来）", "#"], ["更新日志", "/changelog"]] },
+  { title: "资源", links: [["文档", "/docs"], ["隐私政策", "/privacy"], ["使用条款", "/terms"]] },
+  { title: "社区", links: [["GitHub", "https://github.com/yuanyang749/starlens"], ["讨论区", "https://github.com/yuanyang749/starlens/issues"], ["贡献指南", "https://github.com/yuanyang749/starlens/blob/main/CONTRIBUTING.md"]] },
 ];
-
-function footerLinkHref(item: string) {
-  const map: Record<string, string> = {
-    "功能": "/docs/features",
-    "定价（未来）": "#",
-    "更新日志": "/changelog",
-    "文档": "/docs",
-    "隐私政策": "/privacy",
-    "使用条款": "/terms",
-    "GitHub": "https://github.com/yuanyang749/starlens",
-    "讨论区": "https://github.com/yuanyang749/starlens/issues",
-    "贡献指南": "https://github.com/yuanyang749/starlens/blob/main/CONTRIBUTING.md",
-  };
-
-  return map[item] ?? "#";
-}
 
 const primaryLoginLinkClassName =
   "landing-button landing-button--primary h-14 px-6 text-sm font-semibold";
@@ -157,107 +140,6 @@ function WorkspaceLink({
     <Link href="/app" className={className}>
       {children}
     </Link>
-  );
-}
-
-function MiniRepoList() {
-  const repos = [
-    ["microsoft / AutoGen", "AI Agent · Multi-Agent", "18.2k"],
-    ["vercel / next.js", "React · Framework", "121k"],
-    ["sindresorhus / ky", "HTTP · Fetch", "16.3k"],
-    ["docker / docker", "DevOps · Container", "75.1k"],
-    ["tanstack / query", "React · Data", "34.7k"],
-    ["leafac / leaf", "Project Management", "8.3k"],
-  ];
-
-  return (
-    <div className="landing-product-list">
-      {repos.map(([name, meta, stars], index) => (
-        <div className="landing-product-row" key={name}>
-          <span className="landing-radio" />
-          <div>
-            <strong>{name}</strong>
-            <p>{meta}</p>
-          </div>
-          <span>{stars} ★</span>
-          <i style={{ animationDelay: `${index * 180}ms` }} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ProductPreview() {
-  const thumbnails = ["搜索", "过滤", "详情", "打标签", "备注", "AI"];
-
-  return (
-    <div className="landing-preview landing-float-card">
-      <div className="landing-preview__shell">
-        <aside className="landing-preview__sidebar">
-          <div className="landing-preview__brand">
-            <BrandLogo size={20} className="rounded-md" />
-            <span>Starlens</span>
-          </div>
-          {["搜索", "项目", "标签", "收藏", "AI 助手", "设置"].map((item, index) => (
-            <span className={index === 0 ? "is-active" : ""} key={item}>
-              <Search className="h-3.5 w-3.5" />
-              {item}
-            </span>
-          ))}
-          <div className="landing-preview__legend">
-            <p>标签</p>
-            {["AI", "Tool", "Frontend", "Backend", "Library"].map((item, index) => (
-              <span key={item}>
-                <i style={{ background: ["#6366f1", "#ec4899", "#f97316", "#22c55e", "#0ea5e9"][index] }} />
-                {item}
-                <b>{[152, 90, 86, 61, 42][index]}</b>
-              </span>
-            ))}
-          </div>
-        </aside>
-        <section className="landing-preview__main">
-          <div className="landing-preview__topbar">
-            <div className="landing-searchbar">搜索你的 stars...</div>
-            <span />
-            <span />
-            <span className="landing-avatar" />
-          </div>
-          <div className="landing-preview__filters">
-            <span>语言: TypeScript</span>
-            <span>最小 Stars: 1000</span>
-            <span>排序: Stars</span>
-          </div>
-          <MiniRepoList />
-        </section>
-        <aside className="landing-preview__detail">
-          <div className="landing-detail-card">
-            <span>microsoft / AutoGen</span>
-            <b>18.2k</b>
-            <p>A programming framework for building AI agents and applications.</p>
-            <div>
-              <em>AI</em>
-              <em>Agent</em>
-              <em>Multi-Agent</em>
-            </div>
-          </div>
-          <div className="landing-readme-card">
-            <strong>README 摘要</strong>
-            <p>多智能体框架，适合构建复杂自动化流程与 Agent 协作。</p>
-            <button type="button">在 GitHub 中查看</button>
-          </div>
-        </aside>
-      </div>
-      <div className="landing-timeline">
-        <button type="button" aria-label="播放静音演示">
-          <Play className="h-6 w-6 fill-current" />
-        </button>
-        {thumbnails.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-        <p>静音演示：搜索 → 过滤 → 查看详情 → 打标签 → 写备注</p>
-        <time>00:00 / 00:12</time>
-      </div>
-    </div>
   );
 }
 
@@ -356,25 +238,21 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             </div>
           </div>
 
-          <div className="landing-hero__visual" aria-label="Starlens 产品预览">
-            <ProductPreview />
-          </div>
-
           <a href="#pain" className="landing-hero__scroll-hint" aria-label="向下滚动">
             <span>向下滚动</span>
             <ChevronDown className="h-5 w-5" />
           </a>
         </section>
 
-        <section id="demo" className="landing-section landing-block landing-demo">
+        <section id="demo" className="landing-section landing-demo landing-block">
           <div className="landing-section-heading">
             <p className="landing-pill">产品演示</p>
-            <h2>40 秒看懂 Starlens</h2>
+            <h2>45 秒看懂 Starlens</h2>
             <p>从 CLI 检索、自然语言提问，到 Claude Code 通过 MCP 自动整理收藏，完整流程一镜到底。</p>
           </div>
           <div className="landing-demo__stage">
             <div className="landing-demo__aura" aria-hidden="true" />
-            <div className="landing-demo__frame landing-float-card">
+            <div className="landing-demo__frame">
               <div className="landing-demo__screen">
                 <video
                   className="landing-demo__video"
@@ -387,10 +265,6 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
                   aria-label="Starlens 产品演示视频"
                 />
               </div>
-              <span className="landing-demo__corner landing-demo__corner--tl" aria-hidden="true" />
-              <span className="landing-demo__corner landing-demo__corner--tr" aria-hidden="true" />
-              <span className="landing-demo__corner landing-demo__corner--bl" aria-hidden="true" />
-              <span className="landing-demo__corner landing-demo__corner--br" aria-hidden="true" />
             </div>
             <Star className="landing-demo__spark landing-demo__spark--1" aria-hidden="true" />
             <Star className="landing-demo__spark landing-demo__spark--2" aria-hidden="true" />
@@ -452,13 +326,15 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             <article className="landing-workflow-card landing-hover-card">
               <h3>Web 工作台</h3>
               <p>可视化搜索与整理，适合日常浏览与管理。</p>
-              <Image
-                src="/design/starlens-workbench-concept-21x9.png"
-                alt="Starlens Web 工作台截图"
-                width={840}
-                height={360}
-                sizes="(min-width: 1024px) 30vw, 100vw"
-              />
+              <div className="landing-workflow-card__image-container">
+                <Image
+                  src="/design/starlens-workbench-concept-21x9.png"
+                  alt="Starlens Web 工作台截图"
+                  fill
+                  sizes="(min-width: 1024px) 30vw, 100vw"
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
             </article>
             <article className="landing-terminal-card landing-hover-card">
               <div className="landing-terminal-card__title">
@@ -496,7 +372,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             {providerCards.map((provider) => (
               <article className="landing-provider-card landing-hover-card" key={provider.name}>
                 <div>
-                  <img
+                  <Image
                     src={provider.logoUrl}
                     alt={provider.name}
                     width={28}
@@ -568,8 +444,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
           {footerColumns.map((column) => (
             <div key={column.title}>
               <strong>{column.title}</strong>
-              {column.links.map((item) => {
-                const href = footerLinkHref(item);
+              {column.links.map(([item, href]) => {
                 const isExternal = href.startsWith("http");
                 const isDisabled = href === "#";
                 return (
