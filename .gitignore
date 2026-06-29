@@ -18,3 +18,7 @@ node_modules
 crawler/
 .trae
 apps/web/next-env.d.ts
+
+# 工具产生的临时目录（Playwright MCP 截图输出、临时文件等）
+.playwright-mcp/
+.tmp/

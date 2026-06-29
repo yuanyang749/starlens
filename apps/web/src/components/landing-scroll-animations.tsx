@@ -10,6 +10,7 @@ gsap.registerPlugin(useGSAP, ScrollTrigger);
 // 中文注释：右侧滚动追踪器条目，与各 section 的 id 一一对应。
 const trackerItems = [
   { id: "hero", label: "首屏" },
+  { id: "demo", label: "演示" },
   { id: "pain", label: "痛点" },
   { id: "features", label: "功能" },
   { id: "workflow", label: "工作方式" },
@@ -133,6 +134,19 @@ export function LandingScrollAnimations() {
               },
             });
           });
+
+        // c2. 演示视频舞台揭示：进入视口时缩放淡入。
+        gsap.from(".landing-demo__stage", {
+          scale: 0.95,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: "#demo",
+            start: "top 78%",
+            toggleActions: "play none none reverse",
+          },
+        });
 
         // d. 卡片 batch 错落入场：先设初始隐藏态（useGSAP 在 paint 前执行，无 FOUC）。
         const cardSelector =

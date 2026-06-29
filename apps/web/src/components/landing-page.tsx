@@ -366,6 +366,37 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
           </a>
         </section>
 
+        <section id="demo" className="landing-section landing-block landing-demo">
+          <div className="landing-section-heading">
+            <p className="landing-pill">产品演示</p>
+            <h2>40 秒看懂 Starlens</h2>
+            <p>从 CLI 检索、自然语言提问，到 Claude Code 通过 MCP 自动整理收藏，完整流程一镜到底。</p>
+          </div>
+          <div className="landing-demo__stage">
+            <div className="landing-demo__aura" aria-hidden="true" />
+            <div className="landing-demo__frame landing-float-card">
+              <div className="landing-demo__screen">
+                <video
+                  className="landing-demo__video"
+                  src="/demo/starlens-demo.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  aria-label="Starlens 产品演示视频"
+                />
+              </div>
+              <span className="landing-demo__corner landing-demo__corner--tl" aria-hidden="true" />
+              <span className="landing-demo__corner landing-demo__corner--tr" aria-hidden="true" />
+              <span className="landing-demo__corner landing-demo__corner--bl" aria-hidden="true" />
+              <span className="landing-demo__corner landing-demo__corner--br" aria-hidden="true" />
+            </div>
+            <Star className="landing-demo__spark landing-demo__spark--1" aria-hidden="true" />
+            <Star className="landing-demo__spark landing-demo__spark--2" aria-hidden="true" />
+          </div>
+        </section>
+
         <section id="pain" className="landing-section landing-pain landing-block">
           <div className="landing-section-heading">
             <p className="landing-pill">核心痛点</p>

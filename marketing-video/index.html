@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <title>Starlens 推广视频</title>
+  </head>
+  <body>
+    <!-- 根合成：1920x1080，45 秒。composition-id 必须与 window.__timelines 的 key 一致 -->
+    <div data-hf-id="hf-fzv6" id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="40">
+      <!-- ============ 全局背景层（持续 40s）============ -->
+      <div data-hf-id="hf-s01l" id="bg" class="clip" data-start="0" data-duration="40" data-track-index="5">
+        <div data-hf-id="hf-yqqm" class="bg-grid"></div>
+        <div data-hf-id="hf-rc9h" class="bg-glow" id="bg-glow"></div>
+        <canvas data-hf-id="hf-nos6" id="starmap" width="1920" height="1080"></canvas>
+      </div>
+
+      <!-- ============ 顶部进度条（持续 40s，贯穿全片）============ -->
+      <div data-hf-id="hf-prog" id="progress" class="clip" data-start="0" data-duration="40" data-track-index="4">
+        <div data-hf-id="hf-progbar" class="progress-bar" id="progress-bar"></div>
+      </div>
+
+      <!-- ============ S1 开场 (0-4.4s) ============ -->
+      <section data-hf-id="hf-m0gy" id="s1" class="scene clip" data-start="0" data-duration="4.8" data-track-index="0">
+        <div data-hf-id="hf-xb9t" class="scene-content scene-content--center">
+          <div data-hf-id="hf-86l0" class="logo-row" id="s1-logo">
+            <svg data-hf-id="hf-omyb" class="logo-mark" viewBox="0 0 48 48" width="64" height="64" aria-hidden="true">
+              <path data-hf-id="hf-fjz5" d="M24 4l5.6 12.2 13.4 1.3-10 9.1 2.9 13.1L24 33.6 12.1 39.8 15 26.6 5 17.5l13.4-1.3z" fill="#111827" />
+            </svg>
+            <span data-hf-id="hf-pq1h" class="logo-word">Starlens</span>
+          </div>
+          <h1 data-hf-id="hf-to3u" class="hero-title" id="s1-title">你的 GitHub Stars<br data-hf-id="hf-x5px">正在变成一片星海</h1>
+          <p data-hf-id="hf-j71q" class="hero-sub" id="s1-sub">收藏了上千个，想用时却一个都想不起</p>
+        </div>
+        <div data-hf-id="hf-rf01" class="caption-bar" id="s1-cap">开发者平均 Star 过 500+ 仓库，却很少再打开</div>
+      </section>
+
+      <!-- ============ S2 痛点 (4-9.4s) ============ -->
+      <section data-hf-id="hf-0jvp" id="s2" class="scene clip" data-start="4.4" data-duration="5.2" data-track-index="1">
+        <div data-hf-id="hf-rnph" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-ihfc" class="scene-heading" id="s2-heading">三个让人头疼的瞬间</h2>
+          <div data-hf-id="hf-rird" class="pain-grid">
+            <div data-hf-id="hf-mpmj" class="pain-card" id="pain-1">
+              <svg data-hf-id="hf-2xme" class="pain-icon" viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                <circle data-hf-id="hf-wouf" cx="11" cy="11" r="7" fill="none" stroke="#6366f1" stroke-width="2.4" />
+                <path data-hf-id="hf-dkrh" d="M21 21l-4.3-4.3" stroke="#6366f1" stroke-width="2.4" stroke-linecap="round" />
+              </svg>
+              <h3 data-hf-id="hf-p3et">Star 太多，想不起名字</h3>
+              <p data-hf-id="hf-qset">记得它是一个 React 表格、Agent 框架，就是想不起仓库名。</p>
+            </div>
+            <div data-hf-id="hf-e1qo" class="pain-card" id="pain-2">
+              <svg data-hf-id="hf-807u" class="pain-icon" viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                <path data-hf-id="hf-fwf1" d="M12 3l2.6 6.3 6.8.5-5.2 4.4 1.7 6.6L12 17.8 6.1 21.3l1.7-6.6L2.6 9.8l6.8-.5z" fill="none" stroke="#ec4899" stroke-width="2.2" stroke-linejoin="round" />
+              </svg>
+              <h3 data-hf-id="hf-g7ox">最近 Star，很快就断片</h3>
+              <p data-hf-id="hf-zcqz">过几天再回头，很难回忆为什么收藏了这个项目。</p>
+            </div>
+            <div data-hf-id="hf-eteh" class="pain-card" id="pain-3">
+              <svg data-hf-id="hf-8eiv" class="pain-icon" viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+                <rect data-hf-id="hf-6di0" x="4" y="6" width="16" height="13" rx="2" fill="none" stroke="#f97316" stroke-width="2.2" />
+                <path data-hf-id="hf-z3rl" d="M9 11h6M9 14h4" stroke="#f97316" stroke-width="2.2" stroke-linecap="round" />
+              </svg>
+              <h3 data-hf-id="hf-v5tg">Agent 查不到你的收藏</h3>
+              <p data-hf-id="hf-co5y">Stars 躺在浏览器里，开发工具无法直接调用你的知识。</p>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-smyy" class="caption-bar" id="s2-cap">这些痛点，Starlens 一次帮你解决</div>
+      </section>
+
+      <!-- ============ S3 CLI 安装 + search (9-16.5s) ============ -->
+      <section data-hf-id="hf-3qsv" id="s3" class="scene clip" data-start="9.2" data-duration="6.8" data-track-index="0">
+        <div data-hf-id="hf-sumk" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-eor7" class="scene-heading scene-heading--sm" id="s3-heading">用 CLI 把 Stars 变成知识库</h2>
+          <div data-hf-id="hf-f5qv" class="terminal-window" id="term-1">
+            <div data-hf-id="hf-px2o" class="terminal-titlebar">
+              <span data-hf-id="hf-iaii" class="dot dot--red"></span>
+              <span data-hf-id="hf-jjap" class="dot dot--yellow"></span>
+              <span data-hf-id="hf-d1q2" class="dot dot--green"></span>
+              <span data-hf-id="hf-s49t" class="terminal-title">starlens — zsh</span>
+            </div>
+            <div data-hf-id="hf-vv39" class="terminal-body">
+              <!-- 命令 1：安装 -->
+              <div data-hf-id="hf-tyf9" class="term-line">
+                <span data-hf-id="hf-aspo" class="cmd-text"><span data-hf-id="hf-99ip" class="prompt">$</span> npm install -g @starlens-app/cli</span>
+              </div>
+              <div data-hf-id="hf-9abo" class="term-output" id="s3-out-1">
+                <span data-hf-id="hf-vcrz" class="out-ok">added 1 package</span> in 2.3s
+              </div>
+              <!-- 命令 2：search -->
+              <div data-hf-id="hf-twxu" class="term-line term-line--gap">
+                <span data-hf-id="hf-k22g" class="cmd-text"><span data-hf-id="hf-yo2t" class="prompt">$</span> stars search "react hooks" --language TypeScript</span>
+              </div>
+              <div data-hf-id="hf-sbyr" class="term-table" id="s3-out-2">
+                <div data-hf-id="hf-q0wi" class="term-row term-row--head">
+                  <span data-hf-id="hf-3ckh">Repository</span><span data-hf-id="hf-cro9">Lang</span><span data-hf-id="hf-twnm">Stars</span>
+                </div>
+                <div data-hf-id="hf-8oah" class="term-row">
+                  <span data-hf-id="hf-qdyh">facebook/react</span><span data-hf-id="hf-n8kb" class="t-blue">TypeScript</span><span data-hf-id="hf-r9si">231k</span>
+                </div>
+                <div data-hf-id="hf-1sjx" class="term-row">
+                  <span data-hf-id="hf-oa53">tanstack/query</span><span data-hf-id="hf-ub8b" class="t-blue">TypeScript</span><span data-hf-id="hf-kerm">34.7k</span>
+                </div>
+                <div data-hf-id="hf-2zh0" class="term-row">
+                  <span data-hf-id="hf-ovqt">streamich/react-use</span><span data-hf-id="hf-twxa" class="t-blue">TypeScript</span><span data-hf-id="hf-bc6j">8.9k</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-n1cz" class="caption-bar" id="s3-cap">装好就能按语言、关键词秒搜收藏</div>
+      </section>
+
+      <!-- ============ S4 CLI ask (16.5-24s) ============ -->
+      <section data-hf-id="hf-6fha" id="s4" class="scene clip" data-start="15.6" data-duration="6.4" data-track-index="1">
+        <div data-hf-id="hf-sgbj" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-u8tr" class="scene-heading scene-heading--sm" id="s4-heading">用自然语言问你的收藏</h2>
+          <div data-hf-id="hf-6hv0" class="terminal-window" id="term-2">
+            <div data-hf-id="hf-fs08" class="terminal-titlebar">
+              <span data-hf-id="hf-ffxa" class="dot dot--red"></span>
+              <span data-hf-id="hf-jeqt" class="dot dot--yellow"></span>
+              <span data-hf-id="hf-vna6" class="dot dot--green"></span>
+              <span data-hf-id="hf-cq0l" class="terminal-title">starlens — zsh</span>
+            </div>
+            <div data-hf-id="hf-fl2x" class="terminal-body">
+              <div data-hf-id="hf-vye1" class="term-line">
+                <span data-hf-id="hf-cgql" class="cmd-text"><span data-hf-id="hf-zuzw" class="prompt">$</span> stars ask "哪些 starred repos 适合做本地 RAG？"</span>
+              </div>
+              <div data-hf-id="hf-u7r2" class="term-spinner" id="s4-spinner">
+                <span data-hf-id="hf-rugi" class="spinner-dot"></span>思考中…
+              </div>
+              <div data-hf-id="hf-epd9" class="term-ai" id="s4-ai">
+                <p data-hf-id="hf-z8i1" class="ai-answer">根据你收藏的仓库，<span data-hf-id="hf-8qnn" class="ai-hl">chromadb/chroma</span> 和 <span data-hf-id="hf-803o" class="ai-hl">run-llama/llama_index</span> 最适合本地 RAG 原型：都支持本地嵌入 + 向量检索，社区活跃。</p>
+                <div data-hf-id="hf-6xgq" class="term-table term-table--ai">
+                  <div data-hf-id="hf-hlxy" class="term-row term-row--head">
+                    <span data-hf-id="hf-k87d">候选仓库</span><span data-hf-id="hf-hlq4">推荐理由</span>
+                  </div>
+                  <div data-hf-id="hf-2l5z" class="term-row">
+                    <span data-hf-id="hf-39ag">chromadb/chroma</span><span data-hf-id="hf-t5v6" class="t-purple">嵌入式向量库，零配置</span>
+                  </div>
+                  <div data-hf-id="hf-3s32" class="term-row">
+                    <span data-hf-id="hf-88f3">run-llama/llama_index</span><span data-hf-id="hf-09h2" class="t-purple">RAG 框架，文档完善</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-jq96" class="caption-bar" id="s4-cap">不记得仓库名？描述需求就能找到</div>
+      </section>
+
+      <!-- ============ S5 Claude Code 调用 (24-36s) ============ -->
+      <section data-hf-id="hf-8zdr" id="s5cc" class="scene clip" data-start="21.6" data-duration="8" data-track-index="0">
+        <div data-hf-id="hf-ufuo" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-sikh" class="scene-heading scene-heading--sm" id="s5cc-heading">让 Claude Code 帮你自动整理</h2>
+          <div data-hf-id="hf-t9to" class="terminal-window" id="term-cc">
+            <div data-hf-id="hf-el35" class="terminal-titlebar">
+              <span data-hf-id="hf-fu8b" class="dot dot--red"></span>
+              <span data-hf-id="hf-klnw" class="dot dot--yellow"></span>
+              <span data-hf-id="hf-w1l7" class="dot dot--green"></span>
+              <span data-hf-id="hf-688h" class="terminal-title">claude-code — zsh</span>
+            </div>
+            <div data-hf-id="hf-gs00" class="terminal-body">
+              <!-- 启动 Claude Code -->
+              <div data-hf-id="hf-x5b4" class="term-line">
+                <span data-hf-id="hf-dzhr" class="cmd-text"><span data-hf-id="hf-zgov" class="prompt">$</span> claude</span>
+              </div>
+              <div data-hf-id="hf-x2nb" class="term-output term-output--cc">
+                <span data-hf-id="hf-7hyo" class="cc-brand">✶ Claude Code</span> v1.0.0  ·  MCP 已连接: starlens
+              </div>
+              <!-- 用户提问 -->
+              <div data-hf-id="hf-ygdi" class="term-line term-line--gap">
+                <span data-hf-id="hf-asin" class="cc-prompt">❯</span>
+                <span data-hf-id="hf-ezcj" class="cmd-text cc-user">把收藏里的 Rust 命令行工具整理出来，加上 rust-cli 标签</span>
+              </div>
+              <!-- Claude 调用工具：搜索 + 打标签 -->
+              <div data-hf-id="hf-sms0" class="cc-tool" id="cc-tool">
+                <p data-hf-id="hf-lej4" class="cc-tool-line"><span data-hf-id="hf-3n4o" class="cc-arrow">↳</span> 调用工具 <span data-hf-id="hf-8wjf" class="cc-tool-name">starlens_search → starlens_tag</span></p>
+                <p data-hf-id="hf-brs2" class="cc-tool-args">查询: "CLI" · 语言: Rust · 打标签: "rust-cli"</p>
+              </div>
+              <!-- Claude 回答 -->
+              <div data-hf-id="hf-lk4w" class="cc-answer" id="cc-answer">
+                <p data-hf-id="hf-kvqq">已为收藏里 <span data-hf-id="hf-2bgb" class="ai-hl">3 个</span> Rust 命令行工具打上 rust-cli 标签：</p>
+                <div data-hf-id="hf-3zqm" class="term-table term-table--ai">
+                  <div data-hf-id="hf-i08z" class="term-row term-row--head">
+                    <span data-hf-id="hf-zi7z">仓库</span><span data-hf-id="hf-8hfw">操作</span>
+                  </div>
+                  <div data-hf-id="hf-3ds1" class="term-row">
+                    <span data-hf-id="hf-gqbk">sharkdp/bat</span><span data-hf-id="hf-txtw" class="t-green">已打标签 ✓</span>
+                  </div>
+                  <div data-hf-id="hf-4kp4" class="term-row">
+                    <span data-hf-id="hf-inx6">BurntSushi/ripgrep</span><span data-hf-id="hf-fa8e" class="t-green">已打标签 ✓</span>
+                  </div>
+                  <div data-hf-id="hf-46e3" class="term-row">
+                    <span data-hf-id="hf-r551">clap-rs/clap</span><span data-hf-id="hf-fbk1" class="t-green">已打标签 ✓</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-pfhp" class="caption-bar" id="s5cc-cap">通过 MCP，Agent 读取并自动整理你的 Stars</div>
+      </section>
+
+      <!-- ============ S6 多端集成 (36-42s) ============ -->
+      <section data-hf-id="hf-b5b1" id="s5" class="scene clip" data-start="29.2" data-duration="6.4" data-track-index="1">
+        <div data-hf-id="hf-tn8m" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-edsz" class="scene-heading scene-heading--sm" id="s5-heading">随处可用，多端打通</h2>
+          <div data-hf-id="hf-goj0" class="s5-shot" id="s5-shot">
+            <img data-hf-id="hf-rrnw" src="assets/starlens-workbench-concept-21x9.png" alt="Starlens 工作台界面" crossorigin="anonymous">
+          </div>
+          <div data-hf-id="hf-nudi" class="platform-grid platform-grid--inline">
+            <div data-hf-id="hf-r5ln" class="platform-card" id="plat-1">
+              <svg data-hf-id="hf-df8r" viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                <rect data-hf-id="hf-tyct" x="6" y="8" width="36" height="26" rx="2" fill="none" stroke="#0ea5e9" stroke-width="2.4" />
+                <path data-hf-id="hf-6yl8" d="M16 40h16" stroke="#0ea5e9" stroke-width="2.4" stroke-linecap="round" />
+              </svg>
+              <span data-hf-id="hf-k9s5">Web</span>
+            </div>
+            <div data-hf-id="hf-ga40" class="platform-card" id="plat-2">
+              <svg data-hf-id="hf-3z2j" viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                <rect data-hf-id="hf-4vvi" x="14" y="4" width="20" height="40" rx="4" fill="none" stroke="#22c55e" stroke-width="2.4" />
+                <path data-hf-id="hf-uhep" d="M20 8h8" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" />
+              </svg>
+              <span data-hf-id="hf-xt83">Mobile</span>
+            </div>
+            <div data-hf-id="hf-h1rt" class="platform-card" id="plat-3">
+              <svg data-hf-id="hf-3kri" viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                <rect data-hf-id="hf-hwrs" x="6" y="8" width="36" height="28" rx="2" fill="none" stroke="#6366f1" stroke-width="2.4" />
+                <path data-hf-id="hf-smsc" d="M14 18l5 5-5 5M24 28h10" stroke="#6366f1" stroke-width="2.4" stroke-linecap="round" fill="none" />
+              </svg>
+              <span data-hf-id="hf-teqd">CLI</span>
+            </div>
+            <div data-hf-id="hf-8dvy" class="platform-card" id="plat-4">
+              <svg data-hf-id="hf-36gh" viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+                <circle data-hf-id="hf-vtu4" cx="24" cy="24" r="6" fill="none" stroke="#f97316" stroke-width="2.4" />
+                <path data-hf-id="hf-gwqa" d="M24 4v8M24 36v8M4 24h8M36 24h8M10 10l6 6M32 32l6 6M38 10l-6 6M16 32l-6 6" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" />
+              </svg>
+              <span data-hf-id="hf-hd3j">MCP</span>
+            </div>
+          </div>
+          <div data-hf-id="hf-cejs" class="provider-row" id="providers">
+            <span data-hf-id="hf-unbz" class="provider-chip">OpenAI</span>
+            <span data-hf-id="hf-hruv" class="provider-chip">Anthropic</span>
+            <span data-hf-id="hf-stlu" class="provider-chip">Gemini</span>
+            <span data-hf-id="hf-07l3" class="provider-chip">DeepSeek</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ S7 CTA (42-45s) ============ -->
+      <section data-hf-id="hf-2xjy" id="s6" class="scene scene--final clip" data-start="35.2" data-duration="4.8" data-track-index="0">
+        <div data-hf-id="hf-t8xl" class="scene-content scene-content--center">
+          <div data-hf-id="hf-ih0x" class="logo-row" id="s6-logo">
+            <svg data-hf-id="hf-abi3" class="logo-mark" viewBox="0 0 48 48" width="80" height="80" aria-hidden="true">
+              <path data-hf-id="hf-kqnp" d="M24 4l5.6 12.2 13.4 1.3-10 9.1 2.9 13.1L24 33.6 12.1 39.8 15 26.6 5 17.5l13.4-1.3z" fill="#111827" />
+            </svg>
+            <span data-hf-id="hf-nrva" class="logo-word logo-word--lg">Starlens</span>
+          </div>
+          <h2 data-hf-id="hf-unh1" class="cta-title" id="s6-title">开始整理你的 GitHub Stars</h2>
+          <div data-hf-id="hf-96pd" class="cta-button" id="s6-btn">
+            <span data-hf-id="hf-kp3u">立即开始</span>
+            <svg data-hf-id="hf-kxah" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+              <path data-hf-id="hf-suol" d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div>
+        <div data-hf-id="hf-v5w3" class="caption-bar" id="s6-cap">立即免费开始，三分钟整理好收藏</div>
+      </section>
+
+      <style>
+        /* ===== 全局 ===== */
+        #root {
+          position: relative;
+          width: 1920px;
+          height: 1080px;
+          overflow: hidden;
+          background: #fcfdff;
+          color: #101722;
+          font-family: "Inter", "Helvetica Neue", system-ui, sans-serif;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== 背景层 ===== */
+        #bg {
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+        }
+        .bg-grid {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+          background-size: 24px 24px;
+        }
+        .bg-glow {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(800px 500px at 20% 25%, rgba(99, 102, 241, 0.08), transparent 70%),
+            radial-gradient(700px 500px at 80% 75%, rgba(14, 165, 233, 0.08), transparent 70%);
+        }
+        #starmap {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+        }
+
+        /* ===== 场景容器 ===== */
+        .scene {
+          position: absolute;
+          inset: 0;
+          z-index: 10;
+        }
+        .scene-content {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          padding: 120px 160px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 36px;
+        }
+        .scene-content--center {
+          justify-content: center;
+        }
+
+        /* ===== 字幕条 ===== */
+        .caption-bar {
+          position: absolute;
+          bottom: 56px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 22px 52px;
+          background: rgba(17, 24, 39, 0.94);
+          color: #ffffff;
+          font-size: 36px;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          border-radius: 16px;
+          white-space: nowrap;
+          z-index: 20;
+          box-shadow: 0 16px 40px -16px rgba(15, 23, 42, 0.4);
+        }
+
+        /* ===== S1 开场 ===== */
+        .logo-row {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+        .logo-word {
+          font-size: 56px;
+          font-weight: 800;
+          color: #111827;
+          letter-spacing: -0.02em;
+        }
+        .logo-word--lg {
+          font-size: 96px;
+        }
+        .hero-title {
+          font-size: 84px;
+          font-weight: 800;
+          line-height: 1.1;
+          color: #020617;
+          text-align: center;
+          margin: 0;
+          letter-spacing: -0.03em;
+        }
+        .hero-sub {
+          font-size: 40px;
+          font-weight: 400;
+          color: #64748b;
+          margin: 0;
+        }
+
+        /* ===== S2 痛点 ===== */
+        .scene-heading {
+          font-size: 64px;
+          font-weight: 700;
+          color: #020617;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        .scene-heading--sm {
+          font-size: 48px;
+        }
+        .pain-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 32px;
+          width: 100%;
+          max-width: 1560px;
+        }
+        .pain-card {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.86);
+          border-radius: 20px;
+          padding: 44px 40px;
+          box-shadow: 0 24px 60px -20px rgba(15, 23, 42, 0.18);
+        }
+        .pain-card h3 {
+          font-size: 36px;
+          font-weight: 700;
+          color: #101722;
+          margin: 20px 0 14px;
+        }
+        .pain-card p {
+          font-size: 26px;
+          color: #64748b;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        /* ===== macOS 终端 ===== */
+        .terminal-window {
+          width: 1480px;
+          background: #1e1e2e;
+          border-radius: 14px;
+          box-shadow: 0 40px 80px -30px rgba(15, 23, 42, 0.5);
+          overflow: hidden;
+          font-family: "JetBrains Mono", "Menlo", monospace;
+        }
+        .terminal-titlebar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          height: 52px;
+          padding: 0 20px;
+          background: #181825;
+        }
+        .dot {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        .dot--red { background: #ff5f56; }
+        .dot--yellow { background: #ffbd2e; }
+        .dot--green { background: #27c93f; }
+        .terminal-title {
+          margin-left: auto;
+          margin-right: auto;
+          color: #6c7086;
+          font-size: 22px;
+          font-family: "Inter", sans-serif;
+        }
+        .terminal-body {
+          padding: 36px 44px;
+          color: #e5e7eb;
+          font-size: 30px;
+          line-height: 1.7;
+          /* 去掉 420px 固定高度：窗口贴合内容，消除打字阶段下方大片空黑。
+             220px 兜底防止内容极少时窗口过矮 */
+          min-height: 220px;
+        }
+        .term-line {
+          display: flex;
+          gap: 14px;
+          align-items: baseline;
+        }
+        .term-line--gap {
+          margin-top: 24px;
+        }
+        .prompt {
+          color: #22c55e;
+          font-weight: 700;
+        }
+        .cmd-text {
+          color: #f9fafc;
+          font-weight: 500;
+          /* 打字效果：初始 clip-path 隐藏，GSAP 动画揭开 */
+          clip-path: inset(0 100% 0 0);
+        }
+        .term-output {
+          color: #94a3b8;
+          font-size: 26px;
+          padding-left: 28px;
+          opacity: 0;
+        }
+        .out-ok {
+          color: #22c55e;
+        }
+        .term-table {
+          margin-top: 16px;
+          padding-left: 28px;
+          opacity: 0;
+          font-size: 26px;
+        }
+        .term-row {
+          display: grid;
+          grid-template-columns: 2.4fr 1fr 1fr;
+          gap: 24px;
+          padding: 8px 0;
+          color: #cbd5e1;
+        }
+        .term-row--head {
+          color: #6c7086;
+          border-bottom: 1px solid #313244;
+          padding-bottom: 12px;
+          margin-bottom: 8px;
+        }
+        .term-table--ai .term-row {
+          grid-template-columns: 1.6fr 2fr;
+        }
+        .t-blue { color: #60a5fa; }
+        .t-purple { color: #a78bfa; }
+
+        .term-spinner {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding-left: 28px;
+          color: #fbbf24;
+          font-size: 26px;
+          opacity: 0;
+        }
+        .spinner-dot {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          border: 3px solid rgba(251, 191, 36, 0.28);
+          border-top-color: #fbbf24;
+          background: transparent;
+          display: inline-block;
+          box-sizing: border-box;
+        }
+        .term-ai {
+          margin-top: 16px;
+          padding-left: 28px;
+          opacity: 0;
+        }
+        .ai-answer {
+          font-size: 27px;
+          line-height: 1.6;
+          color: #e5e7eb;
+          margin: 0 0 18px;
+        }
+        .ai-hl {
+          color: #a78bfa;
+          font-weight: 600;
+        }
+
+        /* ===== S5 Claude Code 场景专用 ===== */
+        .term-output--cc {
+          color: #94a3b8;
+          padding-left: 0;
+        }
+        .cc-brand {
+          color: #d97706;
+          font-weight: 700;
+        }
+        .cc-prompt {
+          color: #d97706;
+          font-weight: 700;
+        }
+        .cc-user {
+          color: #fbbf24;
+        }
+        .cc-tool {
+          margin-top: 18px;
+          padding-left: 28px;
+          opacity: 0;
+          border-left: 3px solid #6366f1;
+          padding-left: 20px;
+          margin-left: 8px;
+        }
+        .cc-tool-line {
+          margin: 0 0 6px;
+          color: #cbd5e1;
+          font-size: 26px;
+        }
+        .cc-arrow {
+          color: #6366f1;
+          margin-right: 8px;
+        }
+        .cc-tool-name {
+          color: #60a5fa;
+          font-weight: 600;
+        }
+        .cc-tool-args {
+          margin: 0;
+          color: #64748b;
+          font-size: 24px;
+          padding-left: 24px;
+        }
+        .cc-answer {
+          margin-top: 18px;
+          padding-left: 28px;
+          opacity: 0;
+        }
+        .cc-answer > p {
+          font-size: 27px;
+          line-height: 1.6;
+          color: #e5e7eb;
+          margin: 0 0 14px;
+        }
+
+        /* ===== S6 多端 ===== */
+        .platform-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 40px;
+          width: 100%;
+          max-width: 1400px;
+        }
+        .platform-card {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.86);
+          border-radius: 20px;
+          padding: 48px 24px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 22px;
+          box-shadow: 0 24px 60px -20px rgba(15, 23, 42, 0.18);
+        }
+        .platform-card span {
+          font-size: 34px;
+          font-weight: 700;
+          color: #101722;
+        }
+        /* S5 工作台截图容器：按图片真实宽高比 2:1 显示，不裁切。
+           宽度收窄到 960，压低整列高度，避免底部 provider chips 沉入字幕条被遮挡 */
+        .s5-shot {
+          width: 1000px;
+          aspect-ratio: 2 / 1;
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid rgba(226, 232, 240, 0.86);
+          box-shadow: 0 30px 70px -25px rgba(15, 23, 42, 0.25);
+          background: #ffffff;
+        }
+        .s5-shot img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          object-position: center;
+        }
+        /* S5 紧凑横排图标 */
+        .platform-grid--inline {
+          display: flex;
+          gap: 24px;
+          max-width: 1200px;
+          width: 100%;
+        }
+        .platform-grid--inline .platform-card {
+          flex: 1;
+          padding: 24px 16px;
+          gap: 12px;
+          border-radius: 16px;
+        }
+        .platform-grid--inline .platform-card span {
+          font-size: 26px;
+        }
+        .platform-grid--inline .platform-card svg {
+          width: 40px;
+          height: 40px;
+        }
+        .provider-row {
+          display: flex;
+          gap: 18px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .provider-chip {
+          padding: 12px 28px;
+          border-radius: 999px;
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          color: #1f2937;
+          font-size: 26px;
+          font-weight: 600;
+        }
+
+        /* ===== S6 CTA ===== */
+        .cta-title {
+          font-size: 76px;
+          font-weight: 800;
+          color: #020617;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        .cta-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 14px;
+          padding: 24px 48px;
+          background: #111827;
+          color: #ffffff;
+          border-radius: 12px;
+          font-size: 36px;
+          font-weight: 700;
+          box-shadow: 0 20px 50px -20px rgba(17, 24, 39, 0.5);
+        }
+
+        /* ===== 顶部进度条（贯穿全片，scaleX 随时间推进）===== */
+        #progress {
+          position: absolute;
+          inset: 0;
+          z-index: 30;
+          pointer-events: none;
+        }
+        .progress-bar {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 6px;
+          transform: scaleX(0);
+          transform-origin: left center;
+          background: linear-gradient(90deg, #111827, #4b5563);
+        }
+
+        /* 终端 AI 操作列：绿色完成态（区别于 S4 紫色推荐理由）*/
+        .t-green { color: #22c55e; }
+      </style>
+
+      <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+      <script>
+        // ===== 星空背景：确定性生成 + 基于时间轴的闪烁/漂移 =====
+        // 星点位置/相位用 seeded PRNG 一次性生成；每帧亮度与位移是 t 的纯函数，
+        // 因此对任意 seek 时间都确定可复现（无 Math.random / Date.now / 真实时钟）。
+        const starCanvas = document.getElementById("starmap");
+        const starCtx = starCanvas.getContext("2d");
+        const SW = starCanvas.width;
+        const SH = starCanvas.height;
+        const TAU = Math.PI * 2;
+        let seed = 0x2f9e1;
+        const rand = () => {
+          seed |= 0;
+          seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        // 180 颗微光星点：各自的闪烁频率 tw、相位 ph、漂移幅度 dx、漂移频率 df
+        const stars = [];
+        for (let i = 0; i < 180; i++) {
+          stars.push({
+            x: rand() * SW, y: rand() * SH,
+            r: rand() * 1.6 + 0.4,
+            a: rand() * 0.5 + 0.15,
+            tw: rand() * 0.8 + 0.4,
+            ph: rand() * TAU,
+            dx: rand() * 10 + 4,
+            df: rand() * 0.15 + 0.05,
+          });
+        }
+        // 12 颗高亮星，呼吸式明暗
+        const brights = [];
+        for (let i = 0; i < 12; i++) {
+          brights.push({ x: rand() * SW, y: rand() * SH, ph: rand() * TAU, tw: rand() * 0.6 + 0.3 });
+        }
+        function drawStars(t) {
+          starCtx.clearRect(0, 0, SW, SH);
+          for (const s of stars) {
+            const tw = 0.55 + 0.45 * Math.sin(t * s.tw + s.ph);
+            const ox = Math.sin(t * s.df + s.ph) * s.dx;
+            const oy = Math.cos(t * s.df * 0.8 + s.ph) * s.dx * 0.5;
+            starCtx.beginPath();
+            starCtx.arc(s.x + ox, s.y + oy, s.r, 0, TAU);
+            starCtx.fillStyle = `rgba(99, 102, 241, ${(s.a * tw).toFixed(3)})`;
+            starCtx.fill();
+          }
+          for (const b of brights) {
+            const tw = 0.5 + 0.5 * Math.sin(t * b.tw + b.ph);
+            starCtx.beginPath();
+            starCtx.arc(b.x, b.y, 2.4, 0, TAU);
+            starCtx.fillStyle = `rgba(14, 165, 233, ${(0.4 + 0.4 * tw).toFixed(3)})`;
+            starCtx.fill();
+          }
+        }
+        drawStars(0);
+
+        // ===== 主时间轴 =====
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
+
+        // ----- 背景层（全程 40s，可 seek）-----
+        // 顶部进度条：scaleX 线性推进
+        tl.to("#progress-bar", { scaleX: 1, duration: 40, ease: "none" }, 0);
+        // 星空：proxy 时钟驱动 canvas 重绘，t 与时间轴同步 → seek 确定
+        const starClock = { t: 0 };
+        tl.to(starClock, { t: 40, duration: 40, ease: "none", onUpdate: () => drawStars(starClock.t) }, 0);
+        // 氛围光晕缓慢呼吸位移（有限 yoyo repeat，周期 10s 覆盖 40s）
+        tl.to("#bg-glow", { xPercent: 4, yPercent: -3, scale: 1.08, opacity: 0.72, duration: 10, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+
+        // ----- S1 开场 (0-4.8s) -----
+        // 转场：新场景淡入覆盖（符合"转场即出场"规则，旧场景不做 gsap.to opacity:0）
+        tl.from("#s1", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 0);
+        tl.from("#s1-logo", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 0.2);
+        // logo 星形旋转弹入，呼应「Starlens / 星海」主题
+        tl.from("#s1-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 0.25);
+        tl.from("#s1-title", { y: 56, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.5);
+        tl.from("#s1-sub", { y: 32, opacity: 0, duration: 0.5, ease: "power2.out" }, 1.0);
+        tl.from("#s1-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 1.3);
+
+        // ----- S2 痛点 (4.4-9.6s) -----
+        tl.from("#s2", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 4.4);
+        tl.from("#s2-heading", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 4.6);
+        tl.from("#pain-1", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 4.95);
+        tl.from("#pain-2", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 5.15);
+        tl.from("#pain-3", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 5.35);
+        tl.from("#s2-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 5.6);
+
+        // ----- S3 CLI 安装 + search (9.2-16.0s) -----
+        tl.from("#s3", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 9.2);
+        tl.from("#s3-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 9.4);
+        tl.from("#term-1", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 9.5);
+        tl.from("#s3-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 9.7);
+        // 命令 1 打字（提速 1.8→1.0）：$ 符号随命令一起揭开
+        tl.fromTo("#s3 .term-line:nth-child(1) .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 1.0, ease: "none" },
+          10.2
+        );
+        tl.to("#s3-out-1", { opacity: 1, duration: 0.3, ease: "power2.out" }, 11.4);
+        // 命令 2 打字（提速 2.2→1.2）
+        tl.fromTo("#s3 .term-line--gap .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 1.2, ease: "none" },
+          11.9
+        );
+        // 表格逐行流入（先显容器，再 stagger 每行，像真实数据返回）
+        tl.set("#s3-out-2", { opacity: 1 }, 13.3);
+        tl.from("#s3-out-2 .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 13.3);
+
+        // ----- S4 CLI ask (15.6-22.0s) -----
+        tl.from("#s4", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 15.6);
+        tl.from("#s4-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 15.8);
+        tl.from("#term-2", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 15.9);
+        tl.from("#s4-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 16.1);
+        // ask 命令打字（提速 2.4→1.4）
+        tl.fromTo("#s4 .term-line .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 1.4, ease: "none" },
+          16.6
+        );
+        // spinner 出现并真旋转（rotation 有限 repeat，转两圈）
+        tl.to("#s4-spinner", { opacity: 1, duration: 0.3, ease: "power2.out" }, 18.1);
+        tl.to("#s4-spinner .spinner-dot", { rotation: 360, duration: 0.7, ease: "none", repeat: 1 }, 18.2);
+        tl.to("#s4-spinner", { opacity: 0, duration: 0.25, ease: "power2.in" }, 19.7);
+        // AI 答案 + 表格逐行（缩短空等：答案比原版提前约 2s 出现）
+        tl.fromTo("#s4-ai", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 19.9);
+        tl.set("#s4-ai .term-table", { opacity: 1 }, 20.2);
+        tl.from("#s4-ai .term-table .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 20.2);
+
+        // ----- S5 Claude Code 调用 (21.6-29.6s) -----
+        tl.from("#s5cc", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 21.6);
+        tl.from("#s5cc-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 21.8);
+        tl.from("#term-cc", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 21.9);
+        tl.from("#s5cc-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 22.1);
+        // 启动命令 claude 打字（提速 1.0→0.8）
+        tl.fromTo("#s5cc .term-line:nth-child(1) .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 0.8, ease: "none" },
+          22.6
+        );
+        tl.to(".term-output--cc", { opacity: 1, duration: 0.4, ease: "power2.out" }, 23.5);
+        // 用户提问打字（提速 2.6→1.6）
+        tl.fromTo("#s5cc .term-line--gap .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 1.6, ease: "none" },
+          24.0
+        );
+        // Claude 调用工具
+        tl.to("#cc-tool", { opacity: 1, duration: 0.4, ease: "power2.out" }, 25.8);
+        tl.from("#cc-tool .cc-tool-line", { x: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 25.8);
+        tl.from("#cc-tool .cc-tool-args", { x: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 26.05);
+        // Claude 回答 + 表格逐行
+        tl.fromTo("#cc-answer", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 26.6);
+        tl.set("#cc-answer .term-table", { opacity: 1 }, 26.9);
+        tl.from("#cc-answer .term-table .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 26.9);
+
+        // ----- S6 多端+截图 (29.2-35.6s) -----
+        tl.from("#s5", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 29.2);
+        tl.from("#s5-heading", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 29.4);
+        tl.from("#s5-shot", { y: 50, scale: 0.97, opacity: 0, duration: 0.7, ease: "power3.out" }, 29.6);
+        tl.from("#s5-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 29.7);
+        tl.from("#plat-1", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.3);
+        tl.from("#plat-2", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.45);
+        tl.from("#plat-3", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.6);
+        tl.from("#plat-4", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.75);
+        tl.from("#providers", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 31.1);
+        // provider chips 错峰
+        tl.from(".provider-chip", { y: 20, opacity: 0, duration: 0.4, stagger: 0.08, ease: "power2.out" }, 31.3);
+
+        // ----- S7 CTA (35.2-40.0s) -----
+        tl.from("#s6", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 35.2);
+        // logo 星形旋转弹入，与开场呼应
+        tl.from("#s6-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 35.4);
+        tl.from("#s6-logo .logo-word", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 35.65);
+        tl.from("#s6-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 35.95);
+        tl.from("#s6-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 36.0);
+        tl.from("#s6-btn", { y: 24, opacity: 0, duration: 0.5, ease: "back.out(1.5)" }, 36.35);
+        // CTA 召唤动作：按钮脉冲 + 箭头滑动（有限 yoyo repeat）
+        tl.to("#s6-btn", { scale: 1.06, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 37.1);
+        tl.to("#s6-btn svg", { x: 8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 37.1);
+        // 最后场景允许淡出（规则唯一例外）
+        tl.to("#s6 .scene-content", { opacity: 0, duration: 0.5, ease: "power2.in" }, 39.4);
+
+        // 注册时间轴：key 必须等于根 composition 的 data-composition-id
+        window.__timelines["root"] = tl;
+      </script>
+    </div>
+  </body>
+</html>

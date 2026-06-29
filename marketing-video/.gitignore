@@ -1,0 +1,5 @@
+# HyperFrames 工具缓存与渲染产物（均可由 index.html 重新生成）
+.thumbnails/
+.hyperframes/
+renders/
+.DS_Store

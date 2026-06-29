@@ -8,6 +8,7 @@ import { GitHubSignInButton } from "./github-sign-in-button";
 
 // 中文注释：导航条目集中在此处，桌面横向导航与移动端下拉菜单共用同一份数据。
 const navItems = [
+  { href: "#demo", label: "演示" },
   { href: "#pain", label: "痛点" },
   { href: "#features", label: "功能" },
   { href: "#workflow", label: "工作方式" },
