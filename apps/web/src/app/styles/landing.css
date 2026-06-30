@@ -208,7 +208,7 @@ html {
 }
 
 /* 悬浮时，圆标侧向平滑展开成胶囊按钮喵～ */
-.landing-button-circle:hover {
+.landing-button-circle:hover:not(.is-submitting) {
   width: 96px;
   border-color: #111827;
   background: #111827;
@@ -216,18 +216,93 @@ html {
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
 }
 
-.landing-button-circle:hover .landing-button-circle__inner {
+.landing-button-circle:hover:not(.is-submitting) .landing-button-circle__inner {
   gap: 6px;
 }
 
-.landing-button-circle:hover .landing-button-circle__text {
+.landing-button-circle:hover:not(.is-submitting) .landing-button-circle__text {
   opacity: 1;
   max-width: 50px;
   margin-left: 2px;
 }
 
-.landing-button-circle:active {
+.landing-button-circle:active:not(.is-submitting) {
   transform: scale(0.96);
+}
+
+/* GitHub 小猫（Octocat）简笔画线条描边与尾巴摇摆动效喵～ */
+@keyframes octocat-dash {
+  0% {
+    stroke-dashoffset: 120;
+  }
+  70% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -120;
+  }
+}
+
+@keyframes octocat-tail-wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-12deg) translateY(0.5px);
+  }
+}
+
+@keyframes octocat-pulse {
+  0%, 100% {
+    transform: scale(0.94);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(79, 70, 229, 0.3));
+  }
+}
+
+.github-octocat-loading {
+  display: block;
+  transform-origin: center;
+  animation: octocat-pulse 2.8s ease-in-out infinite;
+}
+
+.github-octocat-loading .octocat-path-body {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 120;
+  animation: octocat-dash 3.2s linear infinite;
+}
+
+.github-octocat-loading .octocat-path-tail {
+  transform-origin: 9px 18px;
+  animation: octocat-tail-wiggle 1.2s ease-in-out infinite;
+}
+
+.github-sign-in-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.landing-button-circle.is-submitting {
+  width: 42px !important;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(17, 24, 39, 0.15);
+  color: #64748b;
+  box-shadow: none;
+}
+
+.landing-button-circle.is-submitting .github-octocat-loading {
+  color: #111827;
+}
+
+.landing-button-circle .github-sign-in-loading__text {
+  display: none;
 }
 
 /* 移动端汉堡菜单按钮：桌面隐藏，≤1180px 显示 */
@@ -683,6 +758,7 @@ html {
   font-weight: 800;
   line-height: 1.28;
   letter-spacing: 0;
+  min-height: 59px;
 }
 
 .landing-pain-card p {
@@ -690,6 +766,7 @@ html {
   color: #526070;
   font-size: 15px;
   line-height: 1.78;
+  min-height: 53.4px;
 }
 
 .landing-pain-card span {
@@ -701,6 +778,7 @@ html {
   font-size: 14px;
   font-weight: 700;
   line-height: 1.65;
+  min-height: 65px;
 }
 
 .landing-detail-card {
@@ -831,9 +909,10 @@ html {
 .landing-feature-card {
   position: relative;
   overflow: hidden;
-  min-height: 320px;
-  border-radius: 8px;
-  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  padding: 24px;
 }
 
 .landing-hover-card {
@@ -850,7 +929,7 @@ html {
 }
 
 .landing-card-mock {
-  min-height: 128px;
+  height: 150px;
   border-radius: 8px;
   padding: 18px;
   background:
@@ -934,17 +1013,33 @@ html {
 }
 
 .landing-feature-card__body {
-  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  margin-top: 24px;
 }
 
-.landing-feature-card__body > svg {
-  color: #334155;
+.landing-feature-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #111827;
 }
 
-.landing-feature-card h3,
+.landing-feature-card__header svg {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.landing-feature-card__header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+}
+
 .landing-workflow-card h3,
 .landing-agent-card h3,
-.landing-provider-card h3,
 .landing-deploy-grid h3 {
   margin: 12px 0 0;
   color: #111827;
@@ -964,17 +1059,65 @@ html {
   line-height: 1.75;
 }
 
-.landing-feature-card__body div,
-.landing-provider-card div:last-child {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  margin-top: 18px;
+.landing-feature-card p,
+.landing-workflow-card p,
+.landing-agent-card p,
+.landing-provider-card p,
+.landing-deploy-grid p {
+  min-height: 52.5px;
 }
 
-.landing-feature-card__body span,
+.landing-feature-card p {
+  margin: 12px 0 0;
+}
+
+.landing-feature-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.landing-feature-card__chips span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.landing-feature-card__chips span:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.landing-provider-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
 .landing-provider-card em {
-  padding: 7px 11px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.landing-provider-card em:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .landing-workflow-grid {
@@ -1065,27 +1208,16 @@ html {
 .landing-provider-card {
   position: relative;
   overflow: hidden;
-  min-height: 190px;
-  border-radius: 8px;
-  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  padding: 24px;
 }
 
-.landing-provider-card div:first-child {
+.landing-provider-card__header {
   display: flex;
   align-items: center;
   gap: 14px;
-}
-
-.landing-provider-card div:first-child span,
-.landing-provider-logo {
-  display: inline-flex;
-  min-width: 38px;
-  height: 38px;
-  align-items: center;
-  justify-content: center;
-  color: #101827;
-  font-size: 24px;
-  font-weight: 850;
 }
 
 .landing-provider-logo {
@@ -1093,12 +1225,17 @@ html {
   width: 32px;
   height: 32px;
   object-fit: contain;
-  /* Simple Icons 为黑色 SVG，用 filter 适配深色背景时可翻白 */
 }
 
-.landing-provider-card h3 {
+.landing-provider-card__header h3 {
   margin: 0;
   font-size: 19px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.landing-provider-card p {
+  margin: 14px 0 0;
 }
 
 .landing-security-note {

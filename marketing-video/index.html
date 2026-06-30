@@ -5,17 +5,17 @@
     <title>Starlens 推广视频</title>
   </head>
   <body>
-    <!-- 根合成：1920x1080，45 秒。composition-id 必须与 window.__timelines 的 key 一致 -->
-    <div data-hf-id="hf-fzv6" id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="40">
-      <!-- ============ 全局背景层（持续 40s）============ -->
-      <div data-hf-id="hf-s01l" id="bg" class="clip" data-start="0" data-duration="40" data-track-index="5">
+    <!-- 根合成：1920x1080，38 秒。composition-id 必须与 window.__timelines 的 key 一致 -->
+    <div data-hf-id="hf-fzv6" id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="38">
+      <!-- ============ 全局背景层（持续 38s）============ -->
+      <div data-hf-id="hf-s01l" id="bg" class="clip" data-start="0" data-duration="38" data-track-index="5">
         <div data-hf-id="hf-yqqm" class="bg-grid"></div>
         <div data-hf-id="hf-rc9h" class="bg-glow" id="bg-glow"></div>
         <canvas data-hf-id="hf-nos6" id="starmap" width="1920" height="1080"></canvas>
       </div>
 
-      <!-- ============ 顶部进度条（持续 40s，贯穿全片）============ -->
-      <div data-hf-id="hf-prog" id="progress" class="clip" data-start="0" data-duration="40" data-track-index="4">
+      <!-- ============ 顶部进度条（持续 38s，贯穿全片）============ -->
+      <div data-hf-id="hf-prog" id="progress" class="clip" data-start="0" data-duration="38" data-track-index="4">
         <div data-hf-id="hf-progbar" class="progress-bar" id="progress-bar"></div>
       </div>
 
@@ -169,8 +169,7 @@
               </div>
               <!-- 用户提问 -->
               <div data-hf-id="hf-ygdi" class="term-line term-line--gap">
-                <span data-hf-id="hf-asin" class="cc-prompt">❯</span>
-                <span data-hf-id="hf-ezcj" class="cmd-text cc-user">把收藏里的 Rust 命令行工具整理出来，加上 rust-cli 标签</span>
+                <span data-hf-id="hf-ezcj" class="cmd-text cc-user"><span data-hf-id="hf-asin" class="cc-prompt">❯</span>把收藏里的 Rust 命令行工具整理出来，加上 rust-cli 标签</span>
               </div>
               <!-- Claude 调用工具：搜索 + 打标签 -->
               <div data-hf-id="hf-sms0" class="cc-tool" id="cc-tool">
@@ -202,7 +201,7 @@
       </section>
 
       <!-- ============ S6 多端集成 (36-42s) ============ -->
-      <section data-hf-id="hf-b5b1" id="s5" class="scene clip" data-start="29.2" data-duration="6.4" data-track-index="1">
+      <section data-hf-id="hf-b5b1" id="s5" class="scene clip" data-start="29.2" data-duration="4.4" data-track-index="1">
         <div data-hf-id="hf-tn8m" class="scene-content scene-content--center">
           <h2 data-hf-id="hf-edsz" class="scene-heading scene-heading--sm" id="s5-heading">随处可用，多端打通</h2>
           <div data-hf-id="hf-goj0" class="s5-shot" id="s5-shot">
@@ -248,7 +247,7 @@
       </section>
 
       <!-- ============ S7 CTA (42-45s) ============ -->
-      <section data-hf-id="hf-2xjy" id="s6" class="scene scene--final clip" data-start="35.2" data-duration="4.8" data-track-index="0">
+      <section data-hf-id="hf-2xjy" id="s6" class="scene scene--final clip" data-start="33.2" data-duration="4.8" data-track-index="0">
         <div data-hf-id="hf-t8xl" class="scene-content scene-content--center">
           <div data-hf-id="hf-ih0x" class="logo-row" id="s6-logo">
             <svg data-hf-id="hf-abi3" class="logo-mark" viewBox="0 0 48 48" width="80" height="80" aria-hidden="true">
@@ -318,7 +317,7 @@
           position: relative;
           width: 100%;
           height: 100%;
-          padding: 120px 160px;
+          padding: 80px 160px 180px;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
@@ -336,16 +335,33 @@
           bottom: 56px;
           left: 50%;
           transform: translateX(-50%);
-          padding: 22px 52px;
-          background: rgba(17, 24, 39, 0.94);
-          color: #ffffff;
+          padding: 20px 48px 20px 56px;
+          background: rgba(255, 255, 255, 0.72);
+          backdrop-filter: blur(20px) saturate(165%);
+          -webkit-backdrop-filter: blur(20px) saturate(165%);
+          color: #0f172a;
           font-size: 36px;
           font-weight: 600;
-          letter-spacing: 0.02em;
-          border-radius: 16px;
+          letter-spacing: 0.01em;
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.85);
           white-space: nowrap;
           z-index: 20;
-          box-shadow: 0 16px 40px -16px rgba(15, 23, 42, 0.4);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 20px 50px -20px rgba(79, 70, 229, 0.35),
+            0 8px 24px -14px rgba(15, 23, 42, 0.2);
+        }
+        .caption-bar::before {
+          content: "";
+          position: absolute;
+          left: 24px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 5px;
+          height: 26px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, #6366f1, #0ea5e9);
         }
 
         /* ===== S1 开场 ===== */
@@ -558,6 +574,7 @@
         .cc-prompt {
           color: #d97706;
           font-weight: 700;
+          margin-right: 14px;
         }
         .cc-user {
           color: #fbbf24;
@@ -629,19 +646,20 @@
            宽度收窄到 960，压低整列高度，避免底部 provider chips 沉入字幕条被遮挡 */
         .s5-shot {
           width: 1000px;
-          aspect-ratio: 2 / 1;
+          aspect-ratio: 3736 / 1860;
           border-radius: 16px;
           overflow: hidden;
           border: 1px solid rgba(226, 232, 240, 0.86);
           box-shadow: 0 30px 70px -25px rgba(15, 23, 42, 0.25);
-          background: #ffffff;
+          background: #f8fafc;
+          padding: 20px;
+          box-sizing: border-box;
         }
         .s5-shot img {
           display: block;
           width: 100%;
           height: 100%;
           object-fit: contain;
-          object-position: center;
         }
         /* S5 紧凑横排图标 */
         .platform-grid--inline {
@@ -783,13 +801,13 @@
         window.__timelines = window.__timelines || {};
         const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
 
-        // ----- 背景层（全程 40s，可 seek）-----
+        // ----- 背景层（全程 38s，可 seek）-----
         // 顶部进度条：scaleX 线性推进
-        tl.to("#progress-bar", { scaleX: 1, duration: 40, ease: "none" }, 0);
+        tl.to("#progress-bar", { scaleX: 1, duration: 38, ease: "none" }, 0);
         // 星空：proxy 时钟驱动 canvas 重绘，t 与时间轴同步 → seek 确定
         const starClock = { t: 0 };
-        tl.to(starClock, { t: 40, duration: 40, ease: "none", onUpdate: () => drawStars(starClock.t) }, 0);
-        // 氛围光晕缓慢呼吸位移（有限 yoyo repeat，周期 10s 覆盖 40s）
+        tl.to(starClock, { t: 38, duration: 38, ease: "none", onUpdate: () => drawStars(starClock.t) }, 0);
+        // 氛围光晕缓慢呼吸位移（有限 yoyo repeat，周期 10s 覆盖 38s）
         tl.to("#bg-glow", { xPercent: 4, yPercent: -3, scale: 1.08, opacity: 0.72, duration: 10, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
 
         // ----- S1 开场 (0-4.8s) -----
@@ -892,19 +910,19 @@
         // provider chips 错峰
         tl.from(".provider-chip", { y: 20, opacity: 0, duration: 0.4, stagger: 0.08, ease: "power2.out" }, 31.3);
 
-        // ----- S7 CTA (35.2-40.0s) -----
-        tl.from("#s6", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 35.2);
+        // ----- S7 CTA (33.2-38.0s) -----
+        tl.from("#s6", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 33.2);
         // logo 星形旋转弹入，与开场呼应
-        tl.from("#s6-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 35.4);
-        tl.from("#s6-logo .logo-word", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 35.65);
-        tl.from("#s6-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 35.95);
-        tl.from("#s6-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 36.0);
-        tl.from("#s6-btn", { y: 24, opacity: 0, duration: 0.5, ease: "back.out(1.5)" }, 36.35);
+        tl.from("#s6-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 33.4);
+        tl.from("#s6-logo .logo-word", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 33.65);
+        tl.from("#s6-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 33.95);
+        tl.from("#s6-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 34.0);
+        tl.from("#s6-btn", { y: 24, opacity: 0, duration: 0.5, ease: "back.out(1.5)" }, 34.35);
         // CTA 召唤动作：按钮脉冲 + 箭头滑动（有限 yoyo repeat）
-        tl.to("#s6-btn", { scale: 1.06, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 37.1);
-        tl.to("#s6-btn svg", { x: 8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 37.1);
+        tl.to("#s6-btn", { scale: 1.06, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 35.1);
+        tl.to("#s6-btn svg", { x: 8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 35.1);
         // 最后场景允许淡出（规则唯一例外）
-        tl.to("#s6 .scene-content", { opacity: 0, duration: 0.5, ease: "power2.in" }, 39.4);
+        tl.to("#s6 .scene-content", { opacity: 0, duration: 0.5, ease: "power2.in" }, 37.4);
 
         // 注册时间轴：key 必须等于根 composition 的 data-composition-id
         window.__timelines["root"] = tl;

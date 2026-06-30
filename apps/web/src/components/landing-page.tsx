@@ -29,20 +29,20 @@ import { GitHubSignInButton } from "./github-sign-in-button";
 const painCards = [
   {
     title: "Star 太多，想用时想不起名字",
-    body: "你可能记得它是一个 React 表格、一个 Agent 框架、一个部署工具，但就是想不起仓库名、作者名或准确关键词。",
-    proof: "用自然语言、标签、README 摘要和个人备注，把模糊记忆重新映射到具体仓库。",
+    body: "只隐约记得它是一个 React 表格或 Agent 框架，但死活想不起具体的仓库名称或关键字。",
+    proof: "支持通过自然语言、多级标签、README 摘要和个人备注，帮您快速找回模糊的记忆。",
     icon: Search,
   },
   {
     title: "最近 Star 了什么，很快就断片",
-    body: "GitHub 原生收藏更像时间线和列表，过几天再回头，很难快速回忆最近收藏的项目为什么值得看。",
-    proof: "按最近 Star、语言、主题、Stars 和整理状态筛选，让新收藏及时进入你的工作流。",
+    body: "GitHub 原生收藏只有一长串列表，几天不看就完全忘记了当时为什么要 Star 这个项目。",
+    proof: "提供最近收藏、编程语言、Stars 数量和整理状态等维度过滤，让新收藏不再迷失。",
     icon: Star,
   },
   {
     title: "Claude Code、Codex 和 Agent 查不到你的收藏",
-    body: "开发工具需要上下文时，GitHub Stars 仍然躺在浏览器里，Agent 无法直接把你收藏过的项目变成可调用知识。",
-    proof: "通过 CLI、HTTP API、Cursor MCP 和个人 token，让开发工具也能检索、引用、整理你的 Stars。",
+    body: "当开发工具需要上下文时，收藏的项目仍躺在浏览器里，AI 助手无法直接检索和使用它们。",
+    proof: "提供 CLI 工具、Cursor MCP 和 HTTP API，让 AI 助手也能随时检索和调用你的 Stars。",
     icon: Bot,
   },
 ];
@@ -50,21 +50,21 @@ const painCards = [
 const featureCards = [
   {
     title: "精准搜索与过滤",
-    body: "支持关键词、语言、Stars、更新时间的多维过滤，快速定位你需要的项目。",
+    body: "支持关键词、语言、Stars 和更新时间等多维过滤，帮你快速从万千收藏中定位目标项目。",
     chips: ["关键词搜索", "多维过滤", "智能排序"],
     icon: Search,
     mock: "filters",
   },
   {
     title: "标签、备注、收藏",
-    body: "用标签体系、个人备注和收藏夹，构建属于你自己的项目知识库。",
+    body: "通过多级标签体系、个性化备注和分类收藏夹，构建一套井井有条的个人开源项目知识库。",
     chips: ["多级标签", "个人备注", "收藏管理"],
     icon: Tags,
     mock: "notes",
   },
   {
     title: "AI 助手理解项目",
-    body: "AI 帮你提炼项目要点、对比候选、总结 README，让你更快判断是否值得深入。",
+    body: "利用 AI 自动提炼项目要点、分析潜在风险并总结 README，帮你在几秒钟内读懂项目。",
     chips: ["项目摘要", "对比分析", "智能问答"],
     icon: Bot,
     mock: "ai",
@@ -74,25 +74,25 @@ const featureCards = [
 const providerCards = [
   {
     name: "OpenAI 兼容",
-    body: "兼容 OpenAI API 协议，可接入各类 OpenAI 兼容服务。",
+    body: "完美兼容 OpenAI 接口规范，支持接入各大兼容厂商的服务。",
     logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/openai.svg",
     chips: ["兼容广泛", "易于接入"],
   },
   {
     name: "Anthropic",
-    body: "支持 Anthropic 原生协议，使用 Claude 系列模型。",
+    body: "支持 Anthropic 原生接口，可调用性能强大的 Claude 模型。",
     logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/anthropic.svg",
     chips: ["原生协议", "安全可靠"],
   },
   {
     name: "Gemini",
-    body: "支持 Gemini 原生协议，使用 Google Gemini 模型。",
+    body: "支持 Google Gemini 原生接口，利用多模态及超长上下文优势。",
     logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/googlegemini.svg",
     chips: ["原生协议", "多模态"],
   },
   {
     name: "DeepSeek",
-    body: "支持 DeepSeek 原生协议，使用 DeepSeek 系列推理与对话模型。",
+    body: "支持 DeepSeek 原生接口，调用性价比极高的高性能对话模型。",
     logoUrl: "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/deepseek.svg",
     chips: ["原生协议", "高性价比"],
   },
@@ -116,32 +116,7 @@ const primaryLoginLinkClassName =
 const secondaryLinkClassName =
   "landing-button landing-button--secondary h-14 px-6 text-sm font-semibold";
 
-function WorkspaceLink({
-  children,
-  className,
-  githubAuthEnabled,
-}: {
-  children: ReactNode;
-  className: string;
-  githubAuthEnabled: boolean;
-}) {
-  if (!githubAuthEnabled) {
-    return (
-      <span
-        title="当前本地环境尚未配置 GitHub OAuth。"
-        className={`${className} cursor-not-allowed opacity-55`}
-      >
-        {children}
-      </span>
-    );
-  }
 
-  return (
-    <Link href="/app" className={className}>
-      {children}
-    </Link>
-  );
-}
 
 function FeatureMock({ type }: { type: string }) {
   if (type === "filters") {
@@ -247,7 +222,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
         <section id="demo" className="landing-section landing-demo landing-block">
           <div className="landing-section-heading">
             <p className="landing-pill">产品演示</p>
-            <h2>45 秒看懂 Starlens</h2>
+            <h2>40 秒看懂 Starlens</h2>
             <p>从 CLI 检索、自然语言提问，到 Claude Code 通过 MCP 自动整理收藏，完整流程一镜到底。</p>
           </div>
           <div className="landing-demo__stage">
@@ -302,10 +277,12 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
               <article className="landing-feature-card landing-hover-card" key={title}>
                 <FeatureMock type={mock} />
                 <div className="landing-feature-card__body">
-                  <Icon className="h-5 w-5" />
-                  <h3>{title}</h3>
+                  <div className="landing-feature-card__header">
+                    <Icon className="h-5 w-5" />
+                    <h3>{title}</h3>
+                  </div>
                   <p>{body}</p>
-                  <div>
+                  <div className="landing-feature-card__chips">
                     {chips.map((chip) => (
                       <span key={chip}>{chip}</span>
                     ))}
@@ -325,7 +302,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
           <div className="landing-workflow-grid">
             <article className="landing-workflow-card landing-hover-card">
               <h3>Web 工作台</h3>
-              <p>可视化搜索与整理，适合日常浏览与管理。</p>
+              <p>提供直观的可视化操作界面，支持快捷搜索、打标签与备注，方便日常浏览和管理。</p>
               <div className="landing-workflow-card__image-container">
                 <Image
                   src="/design/starlens-workbench-concept-21x9.png"
@@ -354,7 +331,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             </article>
             <article className="landing-agent-card landing-hover-card">
               <h3>Agent 集成</h3>
-              <p>Agent 通过 HTTP API 直连 Starlens，终端 coding CLI、Cursor 和 IDE 通过 MCP 使用同一组能力。</p>
+              <p>支持 HTTP API 直连与 Cursor/IDE MCP 协议，让各种 AI 智能体也能轻松检索。</p>
               {["Claude Code / Codex / opencode", "Starlens HTTP API", "Cursor MCP"].map((item) => (
                 <span key={item}>{item}</span>
               ))}
@@ -371,7 +348,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
           <div className="landing-provider-grid">
             {providerCards.map((provider) => (
               <article className="landing-provider-card landing-hover-card" key={provider.name}>
-                <div>
+                <div className="landing-provider-card__header">
                   <Image
                     src={provider.logoUrl}
                     alt={provider.name}
@@ -382,7 +359,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
                   <h3>{provider.name}</h3>
                 </div>
                 <p>{provider.body}</p>
-                <div>
+                <div className="landing-provider-card__chips">
                   {provider.chips.map((chip) => (
                     <em key={chip}>{chip}</em>
                   ))}
@@ -406,7 +383,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             <article>
               <Github className="h-9 w-9" />
               <h3>完全开源</h3>
-              <p>代码完全开源，透明可审计，欢迎贡献与共建。</p>
+              <p>项目代码完全开源，所有逻辑均透明可审计，欢迎社区共同建设与贡献。</p>
               <a href="https://github.com/yuanyang749/starlens" target="_blank" rel="noreferrer">
                 查看 GitHub 仓库 <ArrowRight className="h-4 w-4" />
               </a>
@@ -414,7 +391,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             <article>
               <Database className="h-9 w-9" />
               <h3>数据由你掌控</h3>
-              <p>使用你自己的 PostgreSQL，项目、标签、备注和配置都在你的环境中。</p>
+              <p>使用你自己的 PostgreSQL 数据库，所有项目、标签和备注完全由你掌控。</p>
               <a href="/docs/architecture">
                 了解数据库模型 <ArrowRight className="h-4 w-4" />
               </a>
@@ -422,7 +399,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             <article>
               <Cloud className="h-9 w-9" />
               <h3>灵活部署</h3>
-              <p>支持 Docker 自托管部署，也支持直接运行 Node.js 服务。</p>
+              <p>支持 Docker 容器化一键部署，也支持在各种环境中直接运行 Node.js。</p>
               <a href="/docs/deployment">
                 查看部署文档 <ArrowRight className="h-4 w-4" />
               </a>
@@ -438,7 +415,7 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
             <strong>Starlens</strong>
           </div>
           <p>从收藏到理解，让好项目真正为你所用。</p>
-          <span>© 2025 Starlens. All rights reserved.</span>
+          <span>© 2026 Starlens. All rights reserved.</span>
         </div>
         <div className="landing-footer__links">
           {footerColumns.map((column) => (
@@ -467,13 +444,13 @@ $ stars note add microsoft/autogen "多代理框架"`}</pre>
           <FileText className="h-5 w-5" />
           <strong>开始使用 Starlens</strong>
           <p>使用 GitHub 登录，搜索你的 Stars。</p>
-          <WorkspaceLink
+          <GitHubSignInButton
             githubAuthEnabled={githubAuthEnabled}
             className="landing-button landing-button--primary h-10 px-4 text-xs font-semibold"
           >
             <Github className="h-4 w-4" />
             进入工作台
-          </WorkspaceLink>
+          </GitHubSignInButton>
         </div>
         </footer>
       </div>
