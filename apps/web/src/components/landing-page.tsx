@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { BrandLogo } from "./brand-logo";
@@ -157,6 +159,13 @@ function FeatureMock({ type }: { type: string }) {
 }
 
 export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText("npm install -g @starlens-app/cli");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <ClickSpark
       sparkColor="#000000"
@@ -203,6 +212,26 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
                 查看 GitHub 仓库
               </a>
             </div>
+
+            <div className="landing-hero__cli">
+              <div className="landing-hero__cli-inner" onClick={handleCopy}>
+                <TerminalSquare className="h-4 w-4 landing-hero__cli-icon" />
+                <span className="landing-hero__cli-code">
+                  npm install -g @starlens-app/cli
+                </span>
+                <button
+                  type="button"
+                  className="landing-hero__cli-copy"
+                  aria-label="复制安装命令"
+                >
+                  {copied ? "已复制！" : "复制"}
+                </button>
+              </div>
+              <p className="landing-hero__cli-tip">
+                安装后运行 <code>stars install-skill</code> 即可一键对接你的 AI 助手
+              </p>
+            </div>
+
             <div className="landing-proof-row" aria-label="产品特性">
               {proofItems.map(({ label, icon: Icon }) => (
                 <span key={label}>
