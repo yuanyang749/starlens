@@ -56,11 +56,20 @@
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.docs-top-nav a:hover {
+.docs-top-nav a:hover,
+.docs-top-nav a.active {
   color: var(--foreground);
   background: var(--accent-soft);
+}
+
+.docs-sidebar a.active {
+  border-color: var(--accent);
+  color: var(--foreground);
+  background: rgba(233, 241, 255, 0.58);
 }
 
 .docs-app-link {
@@ -280,6 +289,18 @@
 }
 
 @media (max-width: 860px) {
+  /* For documentation pages with sidebar, hide duplicate top nav and make header a neat row */
+  .docs-shell--with-sidebar .docs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .docs-shell--with-sidebar .docs-top-nav {
+    display: none;
+  }
+
   .docs-header {
     grid-template-columns: 1fr;
     justify-items: start;
