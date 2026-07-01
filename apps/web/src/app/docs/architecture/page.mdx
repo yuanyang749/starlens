@@ -77,6 +77,8 @@ Starlens 同时支持浏览器会话和 Bearer Token：
 
 服务端会基于当前用户 ID 隔离所有数据查询。个人访问令牌只保存 SHA-256 哈希，明文只在创建时返回一次。
 
+个人访问令牌当前是**账号级完整权限**，没有只读或按能力划分的 scope 机制——持有一个 Token 等同于拥有该账号浏览器会话的全部权限（仓库读写、AI Provider 配置增删改查含 API Key、触发同步、备注与标签）。这是当前版本的既有设计，不是遗漏；分发或存放 Token 时请按"完整账号凭据"的敏感级别对待。
+
 ## GitHub 同步细节
 
 同步任务会调用 `https://api.github.com/user/starred?sort=created&direction=desc&per_page=100`，并通过 GitHub `Link` 响应头追踪下一页。
