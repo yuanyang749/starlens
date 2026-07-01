@@ -2,11 +2,23 @@ import "server-only";
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
+// 中文注释：密钥派生目前是单轮无盐 SHA-256（不是 PBKDF2/scrypt/HKDF），
+// 暴力破解没有额外的迭代成本抵消。真正的防线是保证 TOKEN_ENCRYPTION_SECRET 本身熵足够，
+// 所以这里强制最短长度，而不是更换派生算法——换算法需要给已加密数据做版本化迁移，
+// 现在只加一道零迁移成本的长度校验。
+const MIN_SECRET_LENGTH = 32;
+
 function getKey() {
   const secret = process.env.TOKEN_ENCRYPTION_SECRET;
 
   if (!secret) {
     throw new Error("TOKEN_ENCRYPTION_SECRET is required to encrypt secrets.");
+  }
+
+  if (secret.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      `TOKEN_ENCRYPTION_SECRET must be at least ${MIN_SECRET_LENGTH} characters long.`,
+    );
   }
 
   return createHash("sha256").update(secret).digest();

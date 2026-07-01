@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGitHubStarredRepo } from "@/server/github/normalize";
-import { findUnstarredRepoIds } from "@/server/github/sync-utils";
+import { normalizeGitHubStarredRepo } from "@starlens/server/server/github/normalize";
+import { findUnstarredRepoIds } from "@starlens/server/server/github/sync-utils";
 
 describe("GitHub sync utilities", () => {
   it("normalizes star media responses with starred_at", () => {

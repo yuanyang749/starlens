@@ -7,11 +7,11 @@ const { getSessionUserMock, verifyPersonalApiTokenMock } = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/server/auth/session", () => ({
+vi.mock("@starlens/server/server/auth/session", () => ({
   getSessionUser: getSessionUserMock,
 }));
 
-vi.mock("@/server/auth/personal-tokens", () => ({
+vi.mock("@starlens/server/server/auth/personal-tokens", () => ({
   verifyPersonalApiToken: verifyPersonalApiTokenMock,
 }));
 
@@ -21,7 +21,7 @@ describe("API user resolution", () => {
   });
 
   it("uses bearer tokens before browser session auth", async () => {
-    const { getApiUser } = await import("@/server/auth/api-user");
+    const { getApiUser } = await import("@starlens/server/server/auth/api-user");
     getSessionUserMock.mockResolvedValue({ id: "session-user" });
     verifyPersonalApiTokenMock.mockResolvedValue({ id: "token-user" });
 
@@ -31,13 +31,13 @@ describe("API user resolution", () => {
       }),
     );
 
-    expect(user).toEqual({ id: "token-user" });
+    expect(user).toEqual({ id: "token-user", email: null });
     expect(verifyPersonalApiTokenMock).toHaveBeenCalledWith("stl_test_token");
     expect(getSessionUserMock).not.toHaveBeenCalled();
   });
 
   it("does not fall back to session auth when an invalid bearer token is present", async () => {
-    const { getApiUser } = await import("@/server/auth/api-user");
+    const { getApiUser } = await import("@starlens/server/server/auth/api-user");
     getSessionUserMock.mockResolvedValue({ id: "session-user" });
     verifyPersonalApiTokenMock.mockResolvedValue(null);
 

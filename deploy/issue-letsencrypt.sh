@@ -4,7 +4,7 @@ set -euo pipefail
 DOMAIN="${DOMAIN:-}"
 PUBLIC_IP="${PUBLIC_IP:-}"
 ACME_EMAIL="${ACME_EMAIL:-admin@example.com}"
-OPENRESTY_CONTAINER="${OPENRESTY_CONTAINER:-1Panel-openresty-oXOm}"
+OPENRESTY_CONTAINER="${OPENRESTY_CONTAINER:-openresty}"
 OPENRESTY_ROOT="${OPENRESTY_ROOT:-/opt/1panel/apps/openresty/openresty/root}"
 OPENRESTY_SSL_DIR="${OPENRESTY_SSL_DIR:-/opt/1panel/apps/openresty/openresty/conf/ssl/${DOMAIN}}"
 ACME_HOME="${ACME_HOME:-$HOME/.acme.sh}"

@@ -4,7 +4,7 @@ import {
   buildRepoSummaryDetails,
   buildSearchDocument,
   extractReadmeExcerpt,
-} from "@/server/repos/text";
+} from "@starlens-app/core";
 
 describe("repo text utilities", () => {
   it("extracts a compact README excerpt without markdown noise", () => {
