@@ -40,6 +40,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Lint Web app: `corepack pnpm lint`
 - Lint Mobile app: `corepack pnpm lint:mobile`
 
+### API Shim Consistency
+
+- Check Web vs Mobile API shim parity: `node scripts/check-api-shims.mjs` — reports routes that exist under `apps/web/src/app/api` but are missing an equivalent shim under `apps/mobile/src/app/api` (excluding routes explicitly listed as web-only in the script).
+
 ## High-Level Architecture
 
 ### Repository Layout
@@ -69,3 +73,12 @@ Starlens is structured as a monorepo workspace managed by `pnpm`.
    - CLI/Agent endpoints use personal API tokens (Bearer Token). All checks route through `getApiUser` in `packages/server/src/server/auth/api-user.ts`.
 4. **Agent Tools Adapter**:
    - The MCP stdio server (`apps/mcp`), the serverless MCP route (`apps/web/src/app/api/mcp`), and the CLI (`apps/cli`) all delegate tool execution to `callAgentTool` from `packages/agent-tools` over HTTP.
+   - Tool schemas are defined once in `packages/agent-tools` and shared verbatim across the MCP stdio server, the HTTP MCP route, and the CLI — do not redefine tool argument shapes per-app.
+
+### Code Conventions
+
+- **Business logic lives in `packages/server`.** `apps/web/src/app/api/*` routes should stay thin: most either `export * from "@starlens/server/routes/<path>/route"` directly, or add app-specific concerns (e.g. the MCP transport in `apps/web/src/app/api/mcp/route.ts`) around a call into `packages/server`.
+- **Comments in Chinese** are intentional for business logic in `packages/server` and route files; English is fine elsewhere. Don't "fix" this.
+- **`"server-only"` import guard** at the top of DB and auth files in `packages/server` — preserve it when editing those files.
+- **No mocks for DB tests** — integration tests hit real DB state where possible.
+- **KISS over generality.** This project explicitly excludes vector search/embeddings/full RAG, multi-provider fallback, multi-user collaboration, and a generic arbitrary-provider adapter for `v1`. Don't introduce these unless asked.
