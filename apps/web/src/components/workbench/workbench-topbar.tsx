@@ -32,6 +32,7 @@ export function WorkbenchTopbar({
   userAvatarUrl,
 }: WorkbenchTopbarProps) {
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const canShowAvatarImage = Boolean(userAvatarUrl) && !avatarFailed;
 
   return (
@@ -108,9 +109,14 @@ export function WorkbenchTopbar({
           <RefreshCw className={syncing ? "h-4 w-4 workbench-button__spinner" : "h-4 w-4"} />
           {syncing ? "同步中..." : "立即同步"}
         </button>
-        <SignOutButton className="workbench-button workbench-button--ghost" />
-        <div className="workbench-user-pill" aria-label={userName}>
-          <span className="workbench-user-pill__avatar">
+        <div className="workbench-topbar__avatar-container">
+          <button
+            type="button"
+            className="workbench-avatar-button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+            aria-label="用户菜单"
+          >
             {canShowAvatarImage ? (
               <Image
                 src={userAvatarUrl ?? ""}
@@ -124,8 +130,40 @@ export function WorkbenchTopbar({
             ) : (
               userName.slice(0, 1).toUpperCase()
             )}
-          </span>
-          <span className="workbench-user-pill__label">{userName}</span>
+          </button>
+
+          {menuOpen && (
+            <>
+              <div
+                className="workbench-avatar-menu-backdrop"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="workbench-avatar-menu">
+                <div className="workbench-avatar-menu__user-info">
+                  <span className="workbench-avatar-menu__avatar">
+                    {canShowAvatarImage ? (
+                      <Image
+                        src={userAvatarUrl ?? ""}
+                        alt={userName}
+                        fill
+                        sizes="36px"
+                        unoptimized
+                        className="workbench-user-pill__avatar-image"
+                        onError={() => setAvatarFailed(true)}
+                      />
+                    ) : (
+                      userName.slice(0, 1).toUpperCase()
+                    )}
+                  </span>
+                  <div className="workbench-avatar-menu__username" title={userName}>
+                    {userName}
+                  </div>
+                </div>
+                <div className="workbench-avatar-menu__divider" />
+                <SignOutButton className="workbench-button workbench-button--ghost w-full justify-center" />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

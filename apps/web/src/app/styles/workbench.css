@@ -1203,3 +1203,103 @@
   font-style: italic;
   opacity: 0.85;
 }
+
+/* Avatar Dropdown Menu Styles */
+.workbench-topbar__avatar-container {
+  position: relative;
+  display: inline-flex;
+}
+
+.workbench-avatar-button {
+  position: relative;
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
+  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(219, 226, 234, 0.5);
+  transition: all 180ms ease;
+  padding: 0;
+}
+
+.workbench-avatar-button:hover {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  transform: scale(1.02);
+}
+
+.workbench-avatar-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent;
+}
+
+.workbench-avatar-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 50;
+  width: 200px;
+  padding: 14px;
+  border: 1px solid rgba(219, 226, 234, 0.95);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: workbench-menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes workbench-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.workbench-avatar-menu__user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workbench-avatar-menu__avatar {
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
+  font-weight: 700;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.workbench-avatar-menu__username {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-avatar-menu__divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 2px 0;
+}
