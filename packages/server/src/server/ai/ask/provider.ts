@@ -3,6 +3,7 @@
 
 import { type AiRuntimeConfig } from "@starlens/server/server/ai/configs";
 import { trackAiUsage } from "@starlens/server/server/ai/usage-buffer";
+import { guardedFetch } from "@starlens/server/server/security/url-guard";
 import {
   type Candidate,
   type ChatRuntimeConfig,
@@ -50,7 +51,7 @@ export async function callAIWithPrompt({
 }): Promise<string | null> {
   if (!config) return null;
   try {
-    const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+    const response = await guardedFetch(resolveChatCompletionsUrl(config.baseUrl), {
       method: "POST",
       headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
@@ -72,7 +73,7 @@ export async function callAIWithPrompt({
 export async function expandQuestionTermsWithProvider(question: string, config: ChatRuntimeConfig | null, userId?: string) {
   if (!config) return [];
 
-  const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+  const response = await guardedFetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
     headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
@@ -119,7 +120,7 @@ export async function pickCandidatesWithProvider(question: string, pool: Candida
     note: item.userNote || undefined,
   }));
 
-  const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+  const response = await guardedFetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
     headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
@@ -162,7 +163,7 @@ export async function askProvider(question: string, candidates: Candidate[], con
 
   const topCandidates = candidates.slice(0, ANSWER_CANDIDATE_LIMIT);
 
-  const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+  const response = await guardedFetch(resolveChatCompletionsUrl(config.baseUrl), {
     method: "POST",
     headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({

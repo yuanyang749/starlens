@@ -26,6 +26,13 @@ vi.mock("@starlens/server/server/ai/configs", () => ({
   resolveAiRuntimeConfig: resolveAiRuntimeConfigMock,
 }));
 
+// 中文注释：provider.ts 里的 guardedFetch 会做真实 DNS 校验，测试环境里没有网络，
+// 这里透传给（测试里已 stub 的）全局 fetch，避免测试依赖真实 DNS 解析。
+vi.mock("@starlens/server/server/security/url-guard", () => ({
+  assertSafeOutboundUrl: vi.fn().mockResolvedValue(undefined),
+  guardedFetch: (url: string, init?: RequestInit) => fetch(url, init),
+}));
+
 function repo(id: string, fullName: string) {
   return {
     id,

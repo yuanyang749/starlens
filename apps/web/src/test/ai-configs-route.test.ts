@@ -97,6 +97,48 @@ describe("AI config API routes", () => {
     });
   });
 
+  it("returns a 400 with the validation message when creating a config is rejected (e.g. unsafe baseUrl)", async () => {
+    const { POST } = await import("@/app/api/ai/configs/route");
+    createAiConfigMock.mockRejectedValue(new Error("Outbound requests to private or reserved address are not allowed."));
+
+    const response = await POST(
+      new Request("https://starlens.test/api/ai/configs", {
+        method: "POST",
+        body: JSON.stringify({
+          displayName: "Internal",
+          providerType: "openai_compatible",
+          model: "test-model",
+          baseUrl: "http://169.254.169.254/",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(json(response)).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_ai_config" },
+    });
+  });
+
+  it("returns a 400 with the validation message when updating a config is rejected (e.g. unsafe baseUrl)", async () => {
+    const route = await import("@/app/api/ai/configs/[id]/route");
+    updateAiConfigMock.mockRejectedValue(new Error("Outbound requests to private or reserved address are not allowed."));
+
+    const response = await route.PATCH(
+      new Request("https://starlens.test/api/ai/configs/ai-1", {
+        method: "PATCH",
+        body: JSON.stringify({ baseUrl: "http://127.0.0.1/" }),
+      }),
+      { params: Promise.resolve({ id: "ai-1" }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(json(response)).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_ai_config" },
+    });
+  });
+
   it("updates and deletes configs within the current user scope", async () => {
     const route = await import("@/app/api/ai/configs/[id]/route");
     updateAiConfigMock.mockResolvedValue({ id: "ai-1", displayName: "Edited" });

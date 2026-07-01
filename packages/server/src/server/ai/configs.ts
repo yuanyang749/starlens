@@ -5,6 +5,7 @@ import type { AiConfig, ProviderType } from "@starlens-app/core";
 import { getDb } from "../../db/client";
 import { userAiConfigs } from "../../db/schema";
 import { decryptSecret, encryptSecret } from "../crypto/secrets";
+import { assertSafeOutboundUrl, guardedFetch } from "../security/url-guard";
 import {
   cleanString,
   normalizeProviderType,
@@ -155,6 +156,12 @@ export async function createAiConfig(userId: string, input: AiConfigInput) {
     throw new Error("Display name, provider type, and model are required.");
   }
 
+  // 中文注释：防 SSRF —— 只校验用户自己填的 baseUrl，provider 预置默认值是硬编码常量不需要校验
+  const userBaseUrl = cleanString(input.baseUrl);
+  if (userBaseUrl) {
+    await assertSafeOutboundUrl(userBaseUrl);
+  }
+
   if (input.isDefault) {
     await clearDefaultConfig(userId);
   }
@@ -166,7 +173,7 @@ export async function createAiConfig(userId: string, input: AiConfigInput) {
       displayName,
       providerType,
       model,
-      baseUrl: cleanString(input.baseUrl) ?? providerDefaults[providerType],
+      baseUrl: userBaseUrl ?? providerDefaults[providerType],
       apiKeyEncrypted: cleanString(input.apiKey)
         ? encryptSecret(cleanString(input.apiKey)!)
         : null,
@@ -203,7 +210,12 @@ export async function updateAiConfig(userId: string, id: string, input: AiConfig
   if (input.displayName !== undefined) patch.displayName = cleanString(input.displayName);
   if (input.model !== undefined) patch.model = cleanString(input.model);
   if (input.baseUrl !== undefined) {
-    patch.baseUrl = cleanString(input.baseUrl) ?? providerDefaults[nextProviderType];
+    // 中文注释：防 SSRF —— 只校验用户自己填的 baseUrl，provider 预置默认值是硬编码常量不需要校验
+    const userBaseUrl = cleanString(input.baseUrl);
+    if (userBaseUrl) {
+      await assertSafeOutboundUrl(userBaseUrl);
+    }
+    patch.baseUrl = userBaseUrl ?? providerDefaults[nextProviderType];
   }
   if (providerType) patch.providerType = providerType;
   if (input.enabled !== undefined) patch.enabled = input.enabled;
@@ -275,7 +287,7 @@ async function fetchProviderModels(config: AiConfigRow) {
     headers.authorization = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch(url, { headers });
+  const response = await guardedFetch(url, { headers });
   if (!response.ok) {
     throw new Error(`Provider validation failed with status ${response.status}.`);
   }

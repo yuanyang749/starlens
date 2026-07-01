@@ -467,6 +467,16 @@ function MobileSettings({
             <span className="mobile-settings-item__label">构建信息</span>
             <span className="mobile-settings-item__value">Starlens Mobile 0.1.1</span>
           </article>
+          <div className="mt-6 px-1">
+            <button
+              type="button"
+              onClick={() => void signOut({ callbackUrl: "/" })}
+              className="mobile-button mobile-button--danger w-full flex items-center justify-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              退出登录
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -639,11 +649,26 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
                 <ChevronUp className={searchCollapsed ? "h-5 w-5 mobile-rotate" : "h-5 w-5"} />
               </button>
             ) : null}
-            <button type="button" className="mobile-avatar-button" aria-label="退出登录" onClick={() => void signOut({ callbackUrl: "/" })}>
+            <button
+              type="button"
+              className="mobile-avatar-button"
+              aria-label="查看设置"
+              onClick={() => actions.setMode("settings")}
+            >
               {userAvatarUrl && !avatarFailed ? (
-                <Image src={userAvatarUrl} alt={userName} width={36} height={36} className="rounded-full" unoptimized onError={() => setAvatarFailed(true)} />
+                <Image
+                  src={userAvatarUrl}
+                  alt={userName}
+                  width={36}
+                  height={36}
+                  className="rounded-full"
+                  unoptimized
+                  onError={() => setAvatarFailed(true)}
+                />
               ) : (
-                <LogOut className="h-4 w-4" />
+                <span className="mobile-avatar-fallback">
+                  {userName.slice(0, 1).toUpperCase()}
+                </span>
               )}
             </button>
           </div>

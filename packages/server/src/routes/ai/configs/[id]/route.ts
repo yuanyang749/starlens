@@ -12,13 +12,19 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const { id } = await context.params;
   const body = await request.json().catch(() => ({}));
-  const config = await updateAiConfig(user.id, id, body);
 
-  if (!config) {
-    return fail("ai_config_not_found", "AI config was not found.", 404);
+  try {
+    const config = await updateAiConfig(user.id, id, body);
+
+    if (!config) {
+      return fail("ai_config_not_found", "AI config was not found.", 404);
+    }
+
+    return ok(config);
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : "Failed to update AI config.";
+    return fail("invalid_ai_config", message);
   }
-
-  return ok(config);
 }
 
 export async function DELETE(request: Request, context: RouteContext) {

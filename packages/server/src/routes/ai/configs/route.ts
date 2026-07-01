@@ -23,5 +23,10 @@ export async function POST(request: Request) {
     return fail("invalid_ai_config", "Display name, provider type, and model are required.");
   }
 
-  return ok(await createAiConfig(user.id, body));
+  try {
+    return ok(await createAiConfig(user.id, body));
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : "Failed to create AI config.";
+    return fail("invalid_ai_config", message);
+  }
 }
