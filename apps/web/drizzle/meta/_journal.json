@@ -43,6 +43,13 @@
       "when": 1781860799428,
       "tag": "0005_perfect_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783002693564,
+      "tag": "0006_ai_readonly_role_and_rls",
+      "breakpoints": true
     }
   ]
 }

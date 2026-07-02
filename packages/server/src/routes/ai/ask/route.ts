@@ -1,13 +1,12 @@
-// AI 问答路由入口 — 瘦身后的 HTTP 层
-// 职责：鉴权、参数校验、运行时配置装配、限流、意图识别、分支分发
+// AI 问答路由入口
+// 职责：鉴权、参数校验、运行时配置装配、限流、Agent 检索
 
 import { fail, ok, unauthorized } from "@starlens/server/lib/api-response";
 import { resolveAiRuntimeConfig } from "@starlens/server/server/ai/configs";
 import { checkRateLimit } from "@starlens/server/server/ai/rate-limit";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { asChatRuntimeConfig } from "@starlens/server/server/ai/ask/provider";
-import { detectQueryIntent } from "@starlens/server/server/ai/ask/intent";
-import { handleAskBranch } from "@starlens/server/server/ai/ask/answer";
+import { answerWithAgent } from "@starlens/server/server/ai/ask/agent/index";
 import { MAX_QUESTION_LENGTH } from "@starlens/server/server/ai/ask/types";
 
 export async function POST(request: Request) {
@@ -35,11 +34,16 @@ export async function POST(request: Request) {
     return fail("rate_limit_exceeded", `Too many requests. Retry in ${rateCheck.retryAfterSeconds}s.`, 429);
   }
 
-  // ─── 意图识别：AI 结构化提取，无 AI 时正则兜底 ────────────────────────────────
-  const intent = await detectQueryIntent(question, chatConfig);
+  if (!chatConfig) {
+    return fail("no_ai_provider", "No AI provider is configured. Set one up in AI Provider settings first.", 422);
+  }
 
-  // ─── 分支分发与回答拼装 ───────────────────────────────────────────────────────
-  const result = await handleAskBranch(intent, question, user.id, chatConfig);
+  // 中文注释：主人明确要求不做兜底——Agent 检索失败/判定不支持 tool-calling/超时都直接
+  // 返回明确的失败态，让用户换个问法重试，而不是拼凑一个不确定的答案。
+  const result = await answerWithAgent(question, user.id, chatConfig);
+  if (!result) {
+    return fail("ask_failed", "Could not find a confident answer. Try rephrasing your question.", 422);
+  }
 
   return ok({
     answer: result.answer,
