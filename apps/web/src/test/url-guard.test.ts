@@ -102,5 +102,43 @@ describe("url-guard", () => {
         expect.objectContaining({ redirect: "manual", headers: { authorization: "Bearer x" } }),
       );
     });
+
+    it("follows a same-origin-safe redirect after re-validating the Location target", async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(
+          new Response(null, { status: 305, headers: { location: "https://8.8.4.4/v1/chat/completions" } }),
+        )
+        .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+      const { guardedFetch } = await import("@starlens/server/server/security/url-guard");
+
+      const response = await guardedFetch("https://8.8.8.8/v1/chat/completions");
+
+      expect(response.status).toBe(200);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenNthCalledWith(2, "https://8.8.4.4/v1/chat/completions", expect.objectContaining({ redirect: "manual" }));
+    });
+
+    it("rejects when a redirect Location points at a private/internal address", async () => {
+      const fetchMock = vi.fn().mockResolvedValueOnce(
+        new Response(null, { status: 302, headers: { location: "http://169.254.169.254/latest/meta-data/" } }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      const { guardedFetch } = await import("@starlens/server/server/security/url-guard");
+
+      await expect(guardedFetch("https://8.8.8.8/v1/chat/completions")).rejects.toThrow();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("gives up after too many redirect hops instead of looping forever", async () => {
+      const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+        const next = url === "https://8.8.8.8/" ? "https://8.8.4.4/" : "https://8.8.8.8/";
+        return new Response(null, { status: 302, headers: { location: next } });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const { guardedFetch } = await import("@starlens/server/server/security/url-guard");
+
+      await expect(guardedFetch("https://8.8.8.8/")).rejects.toThrow(/too many redirects/i);
+    });
   });
 });

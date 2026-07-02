@@ -4,6 +4,7 @@
 import type { ChatRuntimeConfig, QueryIntent, StructuredIntent } from "./types";
 import { resolveChatCompletionsUrl, stripThinkBlocks, wrapUserQuestion } from "./provider";
 import type { OpenAiCompatibleResponse } from "./types";
+import { guardedFetch } from "@starlens/server/server/security/url-guard";
 
 // AI 结构化意图提取
 async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig): Promise<QueryIntent> {
@@ -64,7 +65,7 @@ async function detectQueryIntentByAI(question: string, config: ChatRuntimeConfig
 "今天star了哪些，都是做什么的" → {"starredAfter":"${today}","sort":"recent"}`;
 
   try {
-    const response = await fetch(resolveChatCompletionsUrl(config.baseUrl), {
+    const response = await guardedFetch(resolveChatCompletionsUrl(config.baseUrl), {
       method: "POST",
       headers: { ...config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({

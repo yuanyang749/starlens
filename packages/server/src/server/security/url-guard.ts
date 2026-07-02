@@ -114,6 +114,8 @@ function assertAllowedIp(ip: string): void {
   }
 }
 
+let warnedAboutSkippedDnsCheck = false;
+
 export async function assertSafeOutboundUrl(rawUrl: string): Promise<void> {
   let url: URL;
   try {
@@ -133,13 +135,48 @@ export async function assertSafeOutboundUrl(rawUrl: string): Promise<void> {
     return;
   }
 
+  // 中文注释：部分本地开发环境（企业 VPN / 网络安全代理等）会把所有域名的 DNS 应答
+  // 重写成一个占位 IP（实际 TCP 连接仍然透明转发到真实目标），这种情况下按解析结果
+  // 做私网校验会把所有域名都误判成内网地址。只在 `next dev`（NODE_ENV=development）
+  // 下跳过 DNS 解析这一步 —— 测试环境（vitest 的 NODE_ENV=test）和生产部署
+  // （Dockerfile 里固定 NODE_ENV=production）都不受影响，仍然强制校验。
+  if (process.env.NODE_ENV === "development") {
+    if (!warnedAboutSkippedDnsCheck) {
+      warnedAboutSkippedDnsCheck = true;
+      console.warn(
+        "[url-guard] NODE_ENV is not \"production\" — skipping DNS-based private-IP validation for outbound AI provider requests.",
+      );
+    }
+    return;
+  }
+
   const records = await lookup(hostname, { all: true });
   for (const record of records) {
     assertAllowedIp(record.address);
   }
 }
 
+const MAX_REDIRECTS = 5;
+
+// 中文注释：不能简单地跟随自动跳转（会给攻击者一个"先过校验的公网地址，再 30x 跳到内网"的
+// 绕过口子），也不能一刀切拒绝跳转（真实存在的 Provider 网关会用 30x 做请求转发，
+// 完全禁用会直接把这类 Provider 打挂）。这里手动跟跳转，但每一跳都重新过一次
+// assertSafeOutboundUrl，跳转次数封顶，两头都不牺牲。
 export async function guardedFetch(rawUrl: string, init: RequestInit = {}): Promise<Response> {
-  await assertSafeOutboundUrl(rawUrl);
-  return fetch(rawUrl, { ...init, redirect: "manual" });
+  let currentUrl = rawUrl;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    await assertSafeOutboundUrl(currentUrl);
+    const response = await fetch(currentUrl, { ...init, redirect: "manual" });
+
+    const isRedirect = response.status >= 300 && response.status < 400;
+    const location = isRedirect ? response.headers.get("location") : null;
+    if (!location) {
+      return response;
+    }
+
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+
+  throw new Error(`Too many redirects (>${MAX_REDIRECTS}) while fetching outbound URL.`);
 }
