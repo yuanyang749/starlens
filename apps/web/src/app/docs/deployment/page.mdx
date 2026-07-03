@@ -83,7 +83,7 @@ cp deploy/.env.production.example deploy/.env.production
 | 变量 | 说明 |
 | --- | --- |
 | `NEXTAUTH_URL` | 对外访问地址，例如 `https://starlens.example.com` |
-| `DATABASE_URL` | PostgreSQL 连接串；1Panel 同网络容器可使用 `1Panel-postgresql-xIiE:5432` |
+| `DATABASE_URL` | PostgreSQL 连接串；1Panel 同网络容器可使用 `1Panel-postgresql:5432` |
 | `AUTH_SECRET` | NextAuth 会话密钥 |
 | `AUTH_GITHUB_ID` | GitHub OAuth Client ID |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth Client Secret |
@@ -119,8 +119,8 @@ http://服务器地址:3333
 
 ```bash
 cp deploy/openresty-starlens.conf.example /opt/1panel/www/conf.d/starlens.example.com.conf
-docker exec 1Panel-openresty-oXOm nginx -t
-docker exec 1Panel-openresty-oXOm nginx -s reload
+docker exec 1Panel-openresty nginx -t
+docker exec 1Panel-openresty nginx -s reload
 ```
 
 正式域名上线前，需要在 Cloudflare 创建 DNS 记录：
@@ -158,6 +158,28 @@ corepack pnpm db:migrate:neon
 ```
 
 迁移前建议确认目标 `DATABASE_URL` 指向正确环境，避免把开发迁移误打到生产库。
+
+## DBA 脚本(管理员操作)
+
+部分数据库变更属于 DBA 级操作(创建角色、行级安全策略),需要 `CREATEROLE` 权限,应用迁移用户不具备。这类操作独立放在 `apps/web/dba/` 目录,由数据库超管在首次部署或环境初始化时执行一次,不随 `drizzle-kit migrate` 自动运行。
+
+当前包含:
+
+- `0006_ai_readonly_role_and_rls.sql` —— 为 AI Agent 的自由 SQL 检索工具建立 `starlens_ai_readonly` 只读角色和 RLS 策略。对应的 drizzle 迁移 `0006` 已置为空操作占位,仅维持迁移序号一致。
+
+执行方式(用数据库超管账号,脚本幂等可重复执行):
+
+```bash
+# 生产 / 自托管(PostgreSQL 在容器内)
+docker cp apps/web/dba/0006_ai_readonly_role_and_rls.sql <pg容器>:/tmp/0006.sql
+docker exec <pg容器> psql -U <超管用户> -d <库名> -v ON_ERROR_STOP=1 -f /tmp/0006.sql
+
+# 本地开发
+psql -U postgres -d starlens_dev -v ON_ERROR_STOP=1 \
+  -f apps/web/dba/0006_ai_readonly_role_and_rls.sql
+```
+
+新环境部署顺序:先用超管执行 `dba/` 下的脚本,再跑 drizzle 迁移,最后启动 Web 服务。若跳过 DBA 脚本,应用本身可正常启动,但 AI Agent 的自由 SQL 检索功能会因角色不存在而报错。
 
 ## AI 功能启用
 

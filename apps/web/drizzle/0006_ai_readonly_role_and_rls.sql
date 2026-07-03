@@ -1,50 +1,11 @@
--- 中文注释：给 AI Agent 的"自由 SQL 检索"工具用的只读角色 + 行级安全隔离。
--- 目标：即使 AI 生成的 SQL 完全没写 WHERE user_id = ...，Postgres 自己也只会返回当前会话
--- 绑定用户的数据；对 users / github_accounts / personal_api_tokens / user_ai_configs 这些敏感表
--- 完全不授权（默认拒绝），不是靠 prompt 里"请不要查"这种软约束。
-
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'starlens_ai_readonly') THEN
-    CREATE ROLE starlens_ai_readonly NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
-  END IF;
-END
-$$;
-
--- 让当前连接用的应用角色（本地/生产都是这条连接字符串里的那个用户）能 SET ROLE 切进去
-GRANT starlens_ai_readonly TO CURRENT_USER;
-
--- 角色级默认查询超时，就算调用方代码忘了显式 SET LOCAL statement_timeout 也有兜底
-ALTER ROLE starlens_ai_readonly SET statement_timeout = '3000';
--- 只读会话，禁止这条连接内出现任何写操作（哪怕权限系统本身出现配置疏漏也有这层兜底）
-ALTER ROLE starlens_ai_readonly SET default_transaction_read_only = on;
-
-GRANT USAGE ON SCHEMA public TO starlens_ai_readonly;
-
--- 仅这三张表跟"仓库检索"相关，且都不含敏感数据
-GRANT SELECT ON starred_repos, repo_tags, repo_notes TO starlens_ai_readonly;
-
-ALTER TABLE starred_repos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repo_tags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repo_notes ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS ai_readonly_user_isolation ON starred_repos;
-CREATE POLICY ai_readonly_user_isolation ON starred_repos
-  FOR SELECT
-  TO starlens_ai_readonly
-  USING (user_id = current_setting('app.current_user_id', true)::uuid);
-
-DROP POLICY IF EXISTS ai_readonly_user_isolation ON repo_tags;
-CREATE POLICY ai_readonly_user_isolation ON repo_tags
-  FOR SELECT
-  TO starlens_ai_readonly
-  USING (user_id = current_setting('app.current_user_id', true)::uuid);
-
-DROP POLICY IF EXISTS ai_readonly_user_isolation ON repo_notes;
-CREATE POLICY ai_readonly_user_isolation ON repo_notes
-  FOR SELECT
-  TO starlens_ai_readonly
-  USING (user_id = current_setting('app.current_user_id', true)::uuid);
-
--- 中文注释：users / github_accounts / personal_api_tokens / user_ai_configs / ai_usage_logs
--- 故意不给 starlens_ai_readonly 任何授权——Postgres 默认拒绝，不需要显式 REVOKE。
+-- 此迁移原有的 DBA 级操作(创建 starlens_ai_readonly 角色 + RLS 策略)已移至
+-- apps/web/dba/0006_ai_readonly_role_and_rls.sql,由数据库超管单独执行。
+--
+-- 原因:CREATE ROLE / GRANT ROLE / ALTER ROLE 需要 CREATEROLE 权限,而应用迁移
+-- 用户(DATABASE_URL 中的用户)出于最小权限原则不具备该权限,留在 drizzle 迁移里
+-- 会导致 `drizzle-kit migrate` 失败。
+--
+-- 本文件保留为空操作,以维持 drizzle 迁移序号和 __drizzle_migrations 记录的一致性。
+-- 新环境部署时:先用超管执行 dba/0006 脚本,再跑 drizzle 迁移(此文件为空操作)。
+-- 详见部署文档"DBA 脚本"小节。
+-- (此文件不包含任何 SQL 语句,故意留空。)
