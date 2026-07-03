@@ -21,6 +21,7 @@ import {
   readStdin,
   readToken,
   hasToken,
+  saveToken,
   writeAgentEnv,
   agentEnvExists,
 } from "../token.mjs";
@@ -286,6 +287,16 @@ export async function runInstallSkillWizard(args, config, env) {
         }
         if (!token) {
           console.log("⚠  No token provided. Config snippet will show placeholder stl_xxx; replace it manually.");
+        }
+
+        // 持久化 token 到 CLI token 文件，让 hosted 与 self-hosted 模式下次都能复用（对称）。
+        // self-hosted stdio 模式额外仍会写 ~/.starlens/agent.env（运行时 source 所需）。
+        if (token) {
+          try {
+            await saveToken(config.tokenPath, token);
+          } catch {
+            /* 写入失败不致命，MCP 配置已含 token，仍可工作 */
+          }
         }
 
         // 写入 agent.env（仅 stdio 模式，HTTP 模式不需要）
