@@ -122,6 +122,13 @@ test("version prints the CLI package version", async () => {
   assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+/);
 });
 
+test("version --format json emits a json object", async () => {
+  const result = await runCli(["version", "--format", "json"]);
+  assert.equal(result.code, 0, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  assert.match(parsed.version, /^\d+\.\d+\.\d+/);
+});
+
 test("search calls /api/search with a Bearer token and emits json results", async () => {
   const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
   const tokenPath = join(dir, "token");
@@ -242,7 +249,7 @@ test("show fetches a repo by id and renders json", async () => {
   }
 });
 
-test("open can resolve owner/repo through search and print the repository url", async () => {
+test("open --print prints the repository url without opening a browser", async () => {
   const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
   const tokenPath = join(dir, "token");
   await runCli(["login", "--token", "stl_open_token", "--token-path", tokenPath]);
@@ -250,7 +257,7 @@ test("open can resolve owner/repo through search and print the repository url", 
   try {
     await withApiServer((request, response) => {
       response.setHeader("Content-Type", "application/json");
-      // owner/repo 格式现在直接走搜索，不再先尝试 ID 查询
+      // owner/repo 格式直接走搜索，不再先尝试 ID 查询
       assert.match(request.url, /^\/api\/search\?/);
       response.end(JSON.stringify({
         ok: true,
@@ -552,60 +559,196 @@ test("unknown command exits with code 1 and prints error", async () => {
   assert.match(result.stderr, /Unknown command/);
 });
 
-test("install-skill --hosted --client claude --token writes MCP config without interactive prompts", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "starlens-installskill-"));
-  const claudeConfigPath = join(dir, ".claude.json");
+// ── 回归测试：针对本次重构修复的 Bug ──────────────────────────────────────────
 
-  // 写入一个空的 .claude.json 以便合并
-  const { writeFile: wf } = await import("node:fs/promises");
-  await wf(claudeConfigPath, JSON.stringify({ mcpServers: {} }));
+test("tag with extra arguments exits with an error (fix #32)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_tag_extra_token", "--token-path", tokenPath]);
 
   try {
-    // 用 HOME 重定向到临时目录，这样 mergeJson 会写到 dir/.claude.json
-    const result = await runCli(
-      ["install-skill", "--client", "claude", "--hosted", "--token", "stl_test_ci"],
-      { HOME: dir, STARLENS_API_BASE_URL: "https://starlens.520ai.xin" },
-    );
-    // 非交互模式下不应卡住，应成功退出（skill 文件在 npm 全局包不存在时会 warn，但不会 fail）
-    assert.notEqual(result.code, undefined, result.stderr);
+    const result = await runCli(["tag", "add", "repo-1", "mobile", "extra", "--token-path", tokenPath]);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /accepts exactly one repo and one tag/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });
 
-test("appendTomlSection is idempotent: running install-skill twice does not duplicate [mcp_servers.starlens]", async () => {
-  const { appendTomlSection: _appendTomlSection } = await import(
-    new URL("../index.mjs", import.meta.url).href + "?t=" + Date.now()
-  ).catch(() => ({ appendTomlSection: null }));
-
-  // 直接用临时文件验证 appendTomlSection 幂等性
-  const dir = await mkdtemp(join(tmpdir(), "starlens-toml-"));
-  const tomlPath = join(dir, "config.toml");
+test("--sort with invalid value exits with a friendly error (fix #23)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_sort_token", "--token-path", tokenPath]);
 
   try {
-    const { writeFile: wf, readFile: rf } = await import("node:fs/promises");
-    const section = `[mcp_servers.starlens]\nurl = "https://starlens.520ai.xin/mcp"\nenabled = true`;
-    // 写入两次
-    await wf(tomlPath, "");
-    // 手动模拟 appendTomlSection 的逻辑
-    const existing1 = "";
-    await wf(tomlPath, existing1 + "\n" + section + "\n");
-    const content1 = await rf(tomlPath, "utf8");
-    const count1 = (content1.match(/\[mcp_servers\.starlens\]/g) ?? []).length;
-    assert.equal(count1, 1, "第一次写入后应只有 1 个节");
+    const result = await runCli(["search", "react", "--sort", "bogus", "--token-path", tokenPath]);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /--sort must be one of/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
-    // 模拟第二次写入（覆盖逻辑）
-    const existing2 = content1;
-    const escaped = "mcp_servers\\.starlens";
-    const regex = new RegExp(`(\\n|^)\\[${escaped}\\][\\s\\S]*?(?=\\n\\[|$)`);
-    const newSection = `[mcp_servers.starlens]\nurl = "https://new.example.com/mcp"\nenabled = true`;
-    if (regex.test(existing2)) {
-      await wf(tomlPath, existing2.replace(regex, "\n" + newSection).trimStart() + "\n");
-    }
-    const content2 = await rf(tomlPath, "utf8");
-    const count2 = (content2.match(/\[mcp_servers\.starlens\]/g) ?? []).length;
-    assert.equal(count2, 1, "第二次写入（覆盖）后仍应只有 1 个节");
-    assert.match(content2, /new\.example\.com/, "新内容应该覆盖旧内容");
+test("--favorite with non-boolean value exits with a friendly error (fix #23)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_fav_token", "--token-path", tokenPath]);
+
+  try {
+    const result = await runCli(["search", "react", "--favorite", "maybe", "--token-path", tokenPath]);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /--favorite must be true or false/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("--timeout-ms below minimum exits with an error (fix #36)", async () => {
+  const result = await runCli(["status", "--timeout-ms", "1"]);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /--timeout-ms must be an integer greater than or equal to 1000/);
+});
+
+test("install-skill --hosted and --local are mutually exclusive (fix #12)", async () => {
+  const result = await runCli(["install-skill", "--hosted", "--local", "--client", "claude"]);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /mutually exclusive/);
+});
+
+test("install-skill with invalid --client value exits with an error", async () => {
+  const result = await runCli(["install-skill", "--client", "nope"]);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /no valid value/);
+});
+
+// 写操作在搜索结果不精确匹配时拒绝静默命中（fix #4）
+test("favorite refuses ambiguous single-result search match for write operations", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_ambig_token", "--token-path", tokenPath]);
+
+  try {
+    await withApiServer((request, response) => {
+      response.setHeader("Content-Type", "application/json");
+      const url = request.url ?? "";
+      // 写操作会先 PATCH /api/repos/<输入>，resolveRepo 也会先 GET /api/repos/<输入>。
+      // 对裸词 "react" 的直接仓库查询返回 404，强制走 /api/search 回退路径，
+      // 这样写操作才能在 requireExact 下拒绝"搜索唯一但非精确匹配"的结果。
+      if (url.startsWith("/api/repos/react") && !url.includes("/tags")) {
+        response.statusCode = 404;
+        response.end(JSON.stringify({ ok: false, error: { code: "not_found", message: "Repository not found" } }));
+        return;
+      }
+      // 搜索返回 1 条结果，但 fullName 与输入不精确匹配
+      response.end(JSON.stringify({
+        ok: true,
+        data: {
+          items: [{ id: "repo-9", fullName: "someone/react-utils", htmlUrl: "https://github.com/someone/react-utils" }],
+          page: 1,
+          pageSize: 10,
+          total: 1,
+          hasMore: false,
+        },
+      }));
+    }, async (apiBaseUrl) => {
+      const result = await runCli(["favorite", "react", "--api-base-url", apiBaseUrl, "--token-path", tokenPath]);
+      assert.equal(result.code, 1);
+      // 写操作要求精确匹配，不应静默标星错误的仓库
+      assert.match(result.stderr, /Multiple repositories matched|Repository was not found/);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+// 5xx 重试：服务端返回 503 时应重试（fix #2）
+test("apiRequest retries on 5xx responses (fix #2)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
+  const tokenPath = join(dir, "token");
+  await runCli(["login", "--token", "stl_retry_token", "--token-path", tokenPath]);
+
+  try {
+    let calls = 0;
+    await withApiServer((request, response) => {
+      calls += 1;
+      response.setHeader("Content-Type", "application/json");
+      if (calls === 1) {
+        // 第一次返回 503 + 带 message（原先会被正则漏判）
+        response.statusCode = 503;
+        response.end(JSON.stringify({ ok: false, error: { message: "Service unavailable" } }));
+      } else {
+        response.end(JSON.stringify({
+          ok: true,
+          data: { items: [], page: 1, pageSize: 20, total: 0, hasMore: false },
+        }));
+      }
+    }, async (apiBaseUrl, requests) => {
+      const result = await runCli(["search", "test", "--api-base-url", apiBaseUrl, "--token-path", tokenPath, "--retries", "2", "--format", "json"]);
+      assert.equal(result.code, 0, result.stderr);
+      assert.ok(requests.length >= 2, `expected at least 2 requests, got ${requests.length}`);
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+// ── 单元测试：纯函数 ──────────────────────────────────────────────────────
+
+test("appendTomlSection is idempotent and creates parent dirs (fix #19, #29)", async () => {
+  const { appendTomlSection } = await import("../install-skill/mcp-config.mjs");
+  const dir = await mkdtemp(join(tmpdir(), "starlens-toml-"));
+  // 故意使用嵌套路径，验证 dirname() 创建父目录（原正则切目录在 / 上会失败）
+  const tomlPath = join(dir, "nested", "deep", "config.toml");
+
+  try {
+    const section1 = `[mcp_servers.starlens]\nurl = "https://starlens.520ai.xin/mcp"\nenabled = true`;
+    await appendTomlSection(tomlPath, "mcp_servers.starlens", section1);
+    const content1 = await readFile(tomlPath, "utf8");
+    assert.equal((content1.match(/\[mcp_servers\.starlens\]/g) ?? []).length, 1, "first write: 1 section");
+
+    // 第二次写入（覆盖）：仍应只有 1 个节
+    const section2 = `[mcp_servers.starlens]\nurl = "https://new.example.com/mcp"\nenabled = true`;
+    await appendTomlSection(tomlPath, "mcp_servers.starlens", section2);
+    const content2 = await readFile(tomlPath, "utf8");
+    assert.equal((content2.match(/\[mcp_servers\.starlens\]/g) ?? []).length, 1, "second write: still 1 section");
+    assert.match(content2, /new\.example\.com/, "second write overwrites old content");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("displayWidth counts CJK and emoji as width 2 (fix #25)", async () => {
+  const { displayWidth, truncate } = await import("../output.mjs");
+  assert.equal(displayWidth("abc"), 3, "ascii width 1 each");
+  assert.equal(displayWidth("中文"), 4, "CJK width 2 each");
+  assert.equal(displayWidth("a中"), 2 + 1, "mixed");
+  assert.equal(displayWidth("🚀"), 2, "emoji width 2");
+  // truncate 不应劈开代理对
+  const t = truncate("中文字abc", 5);
+  assert.ok(!t.includes("\uFFFD"), "no replacement char from split surrogate");
+  assert.ok(t.endsWith("…"));
+});
+
+test("wizardPromptSecret uses explicit control char escapes (fix #1 smoke)", async () => {
+  // 仅验证模块可加载且常量已导出（控制字符行为需 TTY，无法在 CI 单测）
+  const mod = await import("../install-skill/prompts.mjs");
+  assert.equal(typeof mod.wizardPromptSecret, "function");
+  assert.equal(typeof mod.maskToken, "function");
+  assert.equal(mod.maskToken("stl_abcdef1234"), "stl_...234");
+  assert.equal(mod.maskToken("short"), "***");
+});
+
+// install-skill 非交互烟雾测试：跳过 skill 与 mcp，验证能干净退出
+test("install-skill --client claude skips cleanly when answering n to prompts", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-installskill-"));
+  try {
+    const result = await runCli(
+      ["install-skill", "--client", "claude", "--hosted", "--token", "stl_test_ci"],
+      { HOME: dir, STARLENS_API_BASE_URL: "https://starlens.520ai.xin" },
+      "n\nn\n", // 跳过 skill 安装；跳过 mcp 配置
+    );
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Setup complete/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
