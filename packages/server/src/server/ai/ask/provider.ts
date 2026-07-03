@@ -76,7 +76,15 @@ export async function callChatCompletionsWithTools(opts: {
       signal: AbortSignal.timeout(12_000),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // 记录非 2xx 响应，方便排查 provider 鉴权失败 / 配额超限 / 模型不可用等问题。
+      // 只读前 500 字符避免日志爆炸，不打印 apiKey。
+      const body = await response.text().catch(() => "");
+      console.warn(
+        `[ai/ask] provider returned non-2xx: status=${response.status} model=${opts.config.model} baseUrl=${opts.config.baseUrl} body=${body.slice(0, 500)}`,
+      );
+      return null;
+    }
 
     const payload = (await response.json()) as OpenAiCompatibleResponse & {
       choices?: Array<{ message?: { content?: string | null; tool_calls?: AgentToolCallPayload[] } }>;
@@ -89,7 +97,10 @@ export async function callChatCompletionsWithTools(opts: {
     if (!message) return null;
 
     return { content: message.content ?? null, tool_calls: message.tool_calls };
-  } catch {
+  } catch (error) {
+    // 网络错误 / 超时 / JSON 解析失败等——记录原因，不打印 apiKey
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[ai/ask] provider request failed: model=${opts.config.model} baseUrl=${opts.config.baseUrl} error=${msg}`);
     return null;
   }
 }
