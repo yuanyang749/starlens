@@ -2,7 +2,7 @@
 import { access, chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { CliError } from "./errors.mjs";
-import { agentEnvPath } from "./config.mjs";
+import { agentEnvPath, cliConfigPath } from "./config.mjs";
 
 // 从 token 文件读取 bearer token。
 export async function readToken(tokenPath) {
@@ -92,4 +92,20 @@ export async function agentEnvExists() {
   } catch {
     return false;
   }
+}
+
+// 写入 CLI 配置文件（~/.config/starlens/config.json），持久化 install-skill 选择的 apiBaseUrl，
+// 让 ask/search/sync 等命令自动使用同一服务地址，无需每次传 --api-base-url。
+export async function saveCliConfig(updates) {
+  const path = cliConfigPath();
+  let existing = {};
+  try {
+    existing = JSON.parse(await readFile(path, "utf8"));
+  } catch {
+    /* 文件不存在或格式错误则从空对象开始 */
+  }
+  const merged = { ...existing, ...updates };
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, JSON.stringify(merged, null, 2) + "\n", { mode: 0o600 });
+  return path;
 }

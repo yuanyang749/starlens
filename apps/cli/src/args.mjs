@@ -7,6 +7,7 @@ import {
   DEFAULT_PAGE_SIZE,
   MIN_TIMEOUT_MS,
   defaultTokenPath,
+  readCliConfig,
 } from "./config.mjs";
 
 export const VALID_FORMATS = ["table", "json"];
@@ -81,7 +82,10 @@ export function parseGlobalOptions(args, env = process.env) {
     throw new CliError(`--format must be one of: ${VALID_FORMATS.join(", ")}.`);
   }
 
-  const apiBaseUrl = (option("--api-base-url") ?? env.STARLENS_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+  // apiBaseUrl 优先级：--api-base-url > STARLENS_API_BASE_URL env > CLI 配置文件 > DEFAULT_API_BASE_URL
+  // CLI 配置文件由 install-skill 写入，让 ask/search 等命令自动使用 install-skill 配置的服务地址
+  const cliConfig = readCliConfig();
+  const apiBaseUrl = (option("--api-base-url") ?? env.STARLENS_API_BASE_URL ?? cliConfig.apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
   const tokenPath = option("--token-path") ?? env.STARLENS_TOKEN_PATH ?? defaultTokenPath();
   const timeoutMs = parseNumber(
     option("--timeout-ms") ?? env.STARLENS_TIMEOUT_MS,

@@ -12,12 +12,13 @@ const LF = "\n";
 
 export function createReadlineInterface() {
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
-  // 非 TTY 管道模式下，readline 在一个 data chunk 到达时会同步解析出所有行并逐条 emit 'line'。
-  // 若第二个 question 尚未挂起，第二行就会被 emit 给一个不存在的 'line' 监听器而丢失；
-  // 随后 stdin EOF 触发 'close'，第二个 question 永远不会 resolve，进程因事件循环空转而以 0 退出。
-  // 这里维护一个行缓冲队列：有 waiter 就交付，否则入队；close 时用空串唤醒所有 waiter（走默认值）。
-  const state = { queue: [], waiters: [], closed: false };
+  // 行缓冲队列：有 waiter 就交付，否则入队；close 时用空串唤醒所有 waiter（走默认值）。
+  // suppress 标志：wizardPromptSecret 在 TTY raw mode 读取时，readline 也会收到字符并 emit
+  // 伪 'line' 事件（含 token 明文）。设 suppress=true 让 'line' handler 丢弃这些事件，
+  // 防止 token 内容污染后续 wizardPrompt 的输入队列。
+  const state = { queue: [], waiters: [], closed: false, suppress: false };
   rl.on("line", (line) => {
+    if (state.suppress) return;
     if (state.waiters.length > 0) state.waiters.shift()(line);
     else state.queue.push(line);
   });
@@ -51,7 +52,11 @@ export async function wizardPrompt(rl, question, defaultValue) {
 // 隐藏输入的密钥提示（TTY 下关闭回显）。
 // 修复 #1：Ctrl+C 正确退出，Backspace/DEL 正确删除。
 // 修复 #13：非 TTY 复用传入的 rl，避免与主 readline 抢占 stdin。
+// 修复：TTY 模式结束后 resume stdin（而非 pause），否则后续 wizardPrompt 读不到输入；
+//       同时设 suppress 标志，防止 readline 在 raw mode 期间收到 token 明文并 emit 伪 'line' 事件。
 export async function wizardPromptSecret(question, rl) {
+  const state = rl?._starlensPromptState;
+
   // TTY：raw mode 逐字符读取
   if (typeof process.stdin.setRawMode === "function") {
     return new Promise((resolve) => {
@@ -60,20 +65,29 @@ export async function wizardPromptSecret(question, rl) {
       const wasRaw = stdin.isRaw;
       let input = "";
 
+      // 抑制 readline 的伪 'line' 事件（raw mode 下 readline 会收到 token 明文）
+      if (state) state.suppress = true;
+
       stdin.setRawMode(true);
       stdin.resume();
       stdin.setEncoding("utf8");
 
+      const restore = () => {
+        stdin.setRawMode(wasRaw ?? false);
+        stdin.removeListener("data", onData);
+        // resume（而非 pause）让后续 wizardPrompt 能继续读取 stdin
+        stdin.resume();
+        if (state) state.suppress = false;
+      };
+
       const onData = (char) => {
         if (char === CR || char === LF) {
-          stdin.setRawMode(wasRaw ?? false);
-          stdin.removeListener("data", onData);
-          stdin.pause();
+          restore();
           process.stdout.write("\n");
           resolve(input.trim());
         } else if (char === CTRL_C) {
           // Ctrl+C：恢复终端模式后退出
-          stdin.setRawMode(wasRaw ?? false);
+          restore();
           process.stdout.write("\n");
           process.exit(1);
         } else if (char === DEL || char === BS) {
@@ -93,7 +107,6 @@ export async function wizardPromptSecret(question, rl) {
     throw new CliError("wizardPromptSecret requires a readline interface in non-TTY mode.");
   }
   process.stdout.write(`${question}: `);
-  const state = rl._starlensPromptState;
   const line = await new Promise((resolve) => {
     if (state) {
       if (state.queue.length > 0) resolve(state.queue.shift());

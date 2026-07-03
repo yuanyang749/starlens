@@ -22,6 +22,7 @@ import {
   readToken,
   hasToken,
   saveToken,
+  saveCliConfig,
   writeAgentEnv,
   agentEnvExists,
 } from "../token.mjs";
@@ -265,6 +266,13 @@ export async function runInstallSkillWizard(args, config, env) {
         }
 
         const useHttpTransport = isHostedUrl(apiBaseUrl);
+
+        // 持久化 apiBaseUrl 到 CLI 配置文件，让 ask/search 等命令自动使用同一服务地址
+        try {
+          await saveCliConfig({ apiBaseUrl });
+        } catch {
+          /* 写入失败不致命 */
+        }
 
         // Token（支持历史复用，脱敏展示）
         console.log("");
