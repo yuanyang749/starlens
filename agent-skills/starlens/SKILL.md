@@ -33,7 +33,8 @@ Use StarLens as the user's searchable memory of GitHub starred repositories. Thi
 
 ### Scenario 1: Coding Task Reference
 触发条件：用户开始一个编码任务（写新功能、技术选型、调研技术方案、实现某个需求）。
-推荐调用：`recommend_for_task`（`POST /api/ai/recommend`）优先；若用户已给出具体仓库名 → `find_related`（`POST /api/ai/related`）发现关联收藏。
+推荐调用：`recommend_for_task`（`POST /api/repos/recommend-data`）优先；若用户已给出具体仓库名 → `find_related`（`POST /api/repos/related-data`）发现关联收藏。
+说明：这两个数据端点不调后端 AI——返回原始候选 + ts_rank / recallReasons，由 agent 自行重排与判断相关性。CLI/Web（无 agent 包裹）走 `POST /api/ai/recommend` / `POST /api/ai/related` 的 AI 版本。
 
 ### Scenario 2: Answer Enhancement
 触发条件：用户问"X 库怎么样"、"有没有好的 Y 工具"、"Z 和 W 哪个好"，或提到某个 topic / owner / 技术名。
@@ -49,8 +50,9 @@ Use StarLens as the user's searchable memory of GitHub starred repositories. Thi
 
 ### Scenario 5: Repo Analysis & Smart Tagging
 触发条件：用户丢一个仓库（`owner/repo`）让分析，或问"这个仓库适合做什么"、"它适合用什么场景"。
-推荐调用：`analyze_repo`（`POST /api/ai/analyze`）。已 star 仓库用本地数据 + AI 分析；未 star 仓库实时拉 GitHub。
-应用建议：默认 `applySuggestions=false`，agent 先呈现建议（`suggestedTags` / `suggestedNote`）给用户，用户确认后再调用一次 `applySuggestions=true` 应用，避免擅自修改用户数据。
+推荐调用：`analyze_repo`（`POST /api/repos/analyze-data`）。返回原始 README 摘要、topics、repoSummary——由 agent 自行分析后生成 `suggestedTags` / `suggestedNote`。
+应用建议：数据端点不应用任何建议（`applySuggestions` 被忽略）。agent 分析后基于返回的原始数据，调用 `add_star_tag` / `set_star_note` 工具应用——必须先呈现给用户、用户确认后再写回。
+说明：CLI/Web（无 agent 包裹）走 `POST /api/ai/analyze` 的 AI 版本（后端调 AI 生成 summary/suitableFor/tags/note）。
 
 ### Scenario 6: Real GitHub Star Management
 触发条件：用户明确要求"star 这个仓库"、"取消收藏"、"从 GitHub 上移除 star"，或在清理/整理收藏（Scenario 3）之后要求把确认的仓库真正从 GitHub 取消收藏。
@@ -102,11 +104,11 @@ CLI 的 `install-skill` 向导已按 agent 类型分发配置，本 Skill 不维
 2. Normalize the user's intent into one of these operations: search, inspect, sync, favorite, note, tag, star, unstar, ask, recommend, related, suggest, summary, analyze.
 3. Use `GET /api/search` first when the user gives a repository topic, keyword, language, tag, owner, or partial repository name.
 4. Use `GET /api/repos/{idOrFullName}` when the user gives a concrete repository id or `owner/repo`.
-5. Use `POST /api/ai/recommend` when the user starts a coding task and needs prior art from their stars.
-6. Use `POST /api/ai/related` when the user names a repo and wants related stars.
+5. Use `POST /api/repos/recommend-data` (agent/MCP data endpoint) when the user starts a coding task and needs prior art from their stars. CLI/Web 用 `POST /api/ai/recommend` 走后端 AI 重排。
+6. Use `POST /api/repos/related-data` (agent/MCP data endpoint) when the user names a repo and wants related stars. CLI/Web 用 `POST /api/ai/related` 走后端 AI 重排。
 7. Use `GET /api/repos/suggestions` when the user mentions organizing / cleaning up.
 8. Use `GET /api/sync/summary` for "what's new" since last sync.
-9. Use `POST /api/ai/analyze` when the user drops a repo for analysis.
+9. Use `POST /api/repos/analyze-data` (agent/MCP data endpoint) when the user drops a repo for analysis. CLI/Web 用 `POST /api/ai/analyze` 走后端 AI 分析。
 10. Use write endpoints only when the user clearly asks to modify StarLens state, such as adding a note, tagging a repo, or marking a favorite.
 11. Use `POST /api/repos/star` / `POST /api/repos/unstar` only when the user explicitly wants to change their REAL GitHub star status (not just the local favorite flag). Confirm the target repo(s) with the user first — especially before a bulk unstar.
 12. Use `POST /api/ai/ask` when the user asks for synthesis across starred repositories.
@@ -124,7 +126,8 @@ Read `references/http-api.md` when you need exact endpoint parameters, request b
 - Do not create API tokens. Token management is browser-session only.
 - Do not use MCP for Hermes/OpenClaw-style runtimes unless the user explicitly says that runtime supports MCP and wants it.
 - 主动调用时向用户说明"我从你的 StarLens 收藏中找到了…"，让用户知道结果来源是个人 starred repos 而非通用网络。
-- `analyze_repo` 与 `suggest_organization` 返回的标签 / 备注建议默认不自动应用；先呈现，用户确认后再写回。
+- `analyze_repo` / `recommend_for_task` / `find_related`（agent/MCP 数据端点）返回原始数据：repo metadata、README 摘要、ts_rank 排序的候选、recallReasons——agent 应自行分析、重排、判断相关性，不依赖后端 AI。`suggest_organization` 同样只返回建议，不修改数据。
+- 标签 / 备注建议默认不自动应用；先呈现给用户，用户确认后再调用 `add_star_tag` / `set_star_note` / `remove_star_tag` 写回。
 - 冷启动（用户从未同步）时，`recommend_for_task` / `find_related` / `suggest_organization` 会返回 `meta.empty: true`，agent 应引导用户先调用 `sync_stars`。
 - `star_repo`/`unstar_repo` 操作的是 GitHub 上的真实 star 状态，不是 Starlens 本地标记，无法通过 Starlens 撤销。批量 unstar（例如清理过期收藏）前必须先列出完整清单让用户确认，不要静默批量执行。
 - 如果 `star_repo`/`unstar_repo` 返回 403/`forbidden_scope`，告诉用户这是因为 GitHub 授权缺少 `public_repo` 权限，需要退出重新登录 Starlens 以重新授权。
@@ -137,6 +140,18 @@ Read `references/http-api.md` when you need exact endpoint parameters, request b
 ## Common Examples
 
 ### Scenario 1: 编码任务参考（recommend_for_task）
+
+agent / MCP 调用数据端点（不调后端 AI，返回原始 ts_rank 排序候选）：
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/recommend-data" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"taskDescription":"实现一个本地 RAG 原型，需要向量检索和 embedding","limit":10}'
+```
+
+CLI / Web（无 agent 包裹）调用 AI 版本：
 
 ```bash
 curl -X POST "$STARLENS_API_BASE_URL/api/ai/recommend" \
@@ -180,7 +195,19 @@ curl "$STARLENS_API_BASE_URL/api/sync/summary" \
 
 ### Scenario 5: 仓库分析 + 智能标注（analyze_repo）
 
-先获取建议（不修改数据）：
+agent / MCP 调用数据端点（不调后端 AI，返回原始 README / topics / repoSummary，agent 自行分析）：
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/analyze-data" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"vercel/next.js"}'
+```
+
+agent 分析后基于返回的原始数据生成 suggestedTags / suggestedNote，呈现给用户、用户确认后调用 `add_star_tag` / `set_star_note` 工具应用。
+
+CLI / Web（无 agent 包裹）调用 AI 版本（后端调 AI 生成 summary / suitableFor / tags / note）：
 
 ```bash
 curl -X POST "$STARLENS_API_BASE_URL/api/ai/analyze" \

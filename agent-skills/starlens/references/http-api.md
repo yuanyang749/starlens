@@ -308,6 +308,190 @@ Response:
 
 Use this endpoint when the user drops a repository for analysis, or asks "what is this repo good for". For unstarred repos, the live GitHub fetch result is NOT persisted; to save tags/notes, star the repo first.
 
+## Data Endpoints (Agent / MCP)
+
+以下 3 个数据端点专为 **MCP / agent skill** 场景设计：调用方（Claude Code、Hermes、Cursor 等）自带 AI 模型，再调一次 Starlens 后端 AI 是重复设计。数据端点只返回原始 DB / GitHub API 数据，由 agent 自行分析、重排、生成建议。
+
+**与 AI 版本的区别**：
+- 不调 `callChatCompletionsWithTools`，不消耗 AI 配额
+- 无 `meta.rateLimit` 字段
+- 不应用任何建议（`applySuggestions` 被忽略）——agent 应基于返回的原始数据自行生成 suggestedTags / suggestedNote，并通过 `add_star_tag` / `set_star_note` 工具应用
+- 返回原始 `readmeExcerpt`、`repoSummary`、`tsRank`、`recallReasons` 等字段，让 agent 拥有完整上下文
+
+CLI / Web 入口（无 agent 包裹）仍走 `POST /api/ai/*` 的 AI 版本。
+
+### Analyze Repo Data
+
+`POST /api/repos/analyze-data`
+
+数据版仓库分析。复用 `resolveStarredRepo` / `fetchRepoFromGitHub` 拉取原始数据，不调 AI、不应用建议。
+
+Request body:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `repo` | string | yes | `owner/repo` 或 StarLens repository id。 |
+| `applySuggestions` | boolean | no | 兼容字段，数据端点忽略此值（永不应用建议）。 |
+
+Example request:
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/analyze-data" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"vercel/next.js"}'
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "repo": {
+      "id": "123",
+      "fullName": "vercel/next.js",
+      "description": "The React Framework for the Web",
+      "htmlUrl": "https://github.com/vercel/next.js",
+      "stargazersCount": 120000,
+      "language": "TypeScript",
+      "topics": ["react", "ssr", "framework"],
+      "readmeExcerpt": "Next.js is a React framework ...",
+      "repoSummary": "Next.js — The React Framework for the Web"
+    },
+    "isStarred": true,
+    "applied": false
+  },
+  "meta": { "empty": false },
+  "suggestedNextActions": [
+    { "tool": "add_star_tag", "args": { "repo": "vercel/next.js" }, "reason": "agent 分析后可基于 topics / README 自行生成标签并应用。" },
+    { "tool": "set_star_note", "args": { "repo": "vercel/next.js" }, "reason": "agent 分析后可基于 README / description 生成备注并应用。" }
+  ],
+  "reasoningHints": "已 star 仓库，基于本地存储的 README、topics 和 repoSummary。agent 可基于这些数据自行分析。"
+}
+```
+
+错误码：`repo_not_found` (404) / `github_not_connected` (422) / `analyze_failed` (500) / `invalid_repo` (400) / `repo_too_long` (400)。
+
+### Recommend For Task Data
+
+`POST /api/repos/recommend-data`
+
+数据版任务推荐。基于任务描述调 `searchReposRanked` 召回（不乘 3，因为不做 AI 重排），返回 ts_rank 排序的候选 + 原始 repoSummary / tags / note。
+
+Request body:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `taskDescription` | string | yes | 任务描述，自然语言。 |
+| `limit` | integer | no | 默认 `10`，最大 `30`。 |
+
+Example request:
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/recommend-data" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"taskDescription":"实现一个本地 RAG 原型","limit":10}'
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "items": [
+      {
+        "id": "456",
+        "fullName": "chroma-core/chroma",
+        "description": "the AI-native open-source embedding database",
+        "htmlUrl": "https://github.com/chroma-core/chroma",
+        "stargazersCount": 12000,
+        "language": "Python",
+        "topics": ["vector-database", "embeddings", "rag"],
+        "tags": ["rag"],
+        "note": "",
+        "repoSummary": "Chroma — embedding database",
+        "tsRank": 0.123
+      }
+    ]
+  },
+  "meta": { "empty": false },
+  "suggestedNextActions": [
+    { "tool": "show_star", "args": { "repo": "456" }, "reason": "查看最相关仓库的详情（README、备注、标签等）以辅助决策。" }
+  ],
+  "reasoningHints": "全文检索召回 1 个候选，未做 AI 重排，由 agent 自行判断相关性。"
+}
+```
+
+冷启动（用户从未同步）时返回 `meta.empty: true` + `hint`，`suggestedNextActions` 包含 `sync_stars`。
+
+错误码：`invalid_task_description` (400) / `task_description_too_long` (400) / `invalid_limit` (400) / `recommend_failed` (500)。
+
+### Find Related Data
+
+`POST /api/repos/related-data`
+
+数据版关联仓库。并行调用 `recallByOwner` / `recallByLanguage` / `recallByTopics` 三维度召回，去重时记录召回原因到 `recallReasons`。不做 AI 重排，按召回顺序返回（owner 优先、language 次之、topics 最后）。
+
+Request body:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `repo` | string | yes | `owner/repo` 或 StarLens repository id。 |
+| `limit` | integer | no | 默认 `10`，最大 `30`。 |
+
+Example request:
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/related-data" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"chroma-core/chroma","limit":10}'
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "target": {
+      "id": "456",
+      "fullName": "chroma-core/chroma",
+      "language": "Python",
+      "topics": ["vector-database", "embeddings", "rag"],
+      "description": "the AI-native open-source embedding database"
+    },
+    "items": [
+      {
+        "id": "789",
+        "fullName": "langchain-ai/langchain",
+        "description": "Build context-aware reasoning applications",
+        "htmlUrl": "https://github.com/langchain-ai/langchain",
+        "stargazersCount": 85000,
+        "language": "Python",
+        "topics": ["rag", "llm"],
+        "recallReasons": ["同 language", "同 topic"]
+      }
+    ]
+  },
+  "meta": { "empty": false },
+  "suggestedNextActions": [
+    { "tool": "show_star", "args": { "repo": "789" }, "reason": "查看最相关仓库的详情以确认是否真的相关。" }
+  ],
+  "reasoningHints": "从 owner/language/topic 三维度召回 1 个候选，未做 AI 重排，按召回顺序返回前 1 个。"
+}
+```
+
+目标仓库未在本地 starred_repos 找到时返回 `data.target: null` + `meta.empty: true`。
+
+错误码：`invalid_repo` (400) / `repo_too_long` (400) / `invalid_limit` (400) / `related_failed` (500)。
+
 ## Repo Suggestions
 
 `GET /api/repos/suggestions`

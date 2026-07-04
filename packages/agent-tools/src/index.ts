@@ -176,7 +176,7 @@ export const agentTools: AgentToolDefinition[] = [
   {
     name: "analyze_repo",
     description:
-      "Call this tool when the user drops a repository (owner/repo) for analysis and you want to surface what the repo is good for and suggest tags/notes. Triggers when the user says 'analyze this repo', 'what is X good for', or pastes a GitHub URL and asks for a summary. Works for both starred and unstarred repos; for unstarred repos it fetches live GitHub data without persisting it.",
+      "Call this tool when the user drops a repository (owner/repo) for analysis and you want to surface what the repo is good for and suggest tags/notes. Triggers when the user says 'analyze this repo', 'what is X good for', or pastes a GitHub URL and asks for a summary. Works for both starred and unstarred repos; for unstarred repos it fetches live GitHub data without persisting it. Returns raw repo metadata, README excerpt, and topics. The agent should analyze this data itself to generate suitability assessment, suggested tags, and suggested note — do NOT expect pre-computed AI analysis in the response.",
     inputSchema: {
       type: "object",
       properties: {
@@ -184,7 +184,7 @@ export const agentTools: AgentToolDefinition[] = [
         applySuggestions: {
           type: "boolean",
           description:
-            "Whether to automatically apply suggested tags/note to the user's starred repo. Defaults to false. Set to true only after the user has confirmed the suggestions. Has no effect on unstarred repos.",
+            "Whether to automatically apply suggested tags/note to the user's starred repo. Defaults to false. Set to true only after the user has confirmed the suggestions. Has no effect on unstarred repos. Note: the data endpoint ignores this flag and never applies suggestions — the agent must call add_star_tag / set_star_note itself after analyzing the returned data.",
         },
       },
       required: ["repo"],
@@ -194,7 +194,7 @@ export const agentTools: AgentToolDefinition[] = [
   {
     name: "recommend_for_task",
     description:
-      "Call this tool when the user starts a coding task (new feature, tech selection, research, library comparison) and you want to find relevant libraries or prior art from their GitHub starred repos BEFORE writing code. Triggers when the user says 'I'm going to build X', 'help me pick a library for Y', or describes a task that would benefit from prior starred knowledge.",
+      "Call this tool when the user starts a coding task (new feature, tech selection, research, library comparison) and you want to find relevant libraries or prior art from their GitHub starred repos BEFORE writing code. Triggers when the user says 'I'm going to build X', 'help me pick a library for Y', or describes a task that would benefit from prior starred knowledge. Returns candidate repos ranked by full-text search (ts_rank). The agent should re-rank them by relevance to the task itself — do NOT expect pre-computed AI ranking or reasons in the response.",
     inputSchema: {
       type: "object",
       properties: {
@@ -211,7 +211,7 @@ export const agentTools: AgentToolDefinition[] = [
   {
     name: "find_related",
     description:
-      "Call this tool when the user mentions a specific repository (owner/repo) and wants to discover related repos they have already starred. Triggers when the user says 'find repos like X', 'what else do I have similar to Y', or when after showing a repo detail the user wants to explore its neighborhood. Returns repos sharing the same owner, language, or topics, ranked by AI semantic similarity.",
+      "Call this tool when the user mentions a specific repository (owner/repo) and wants to discover related repos they have already starred. Triggers when the user says 'find repos like X', 'what else do I have similar to Y', or when after showing a repo detail the user wants to explore its neighborhood. Returns candidate repos recalled by same owner / language / topics dimensions, with recall reasons. The agent should judge semantic relatedness itself — do NOT expect pre-computed AI relation descriptions in the response.",
     inputSchema: {
       type: "object",
       properties: {
@@ -450,10 +450,13 @@ export async function callAgentTool(
         method: "POST",
       }));
     // 5 个主动型工具（spec 第 6.1 节）：均通过 apiRequest 复用鉴权/错误处理链。
+    // 中文注释：3 个 AI 工具走 /api/repos/*-data 数据端点（不调后端 AI，由 agent 自带模型分析）；
+    // /api/ai/* 端点保留给 CLI/Web（无 agent 包裹的场景）。
     case "analyze_repo": {
       // applySuggestions 默认 false——agent 必须先呈现建议给用户、用户确认后才能传 true。
+      // 数据端点会忽略 applySuggestions（永不应用），agent 应基于返回的原始数据自行生成建议后调用 add_star_tag/set_star_note。
       const applySuggestions = typeof args.applySuggestions === "boolean" ? args.applySuggestions : false;
-      return textResult(await apiRequest("/api/ai/analyze", {
+      return textResult(await apiRequest("/api/repos/analyze-data", {
         body: { repo: stringArg(args, "repo"), applySuggestions },
         context,
         method: "POST",
@@ -463,7 +466,7 @@ export async function callAgentTool(
       const limit = typeof args.limit === "number" && Number.isFinite(args.limit)
         ? Math.min(30, Math.max(1, Math.trunc(args.limit)))
         : undefined;
-      return textResult(await apiRequest("/api/ai/recommend", {
+      return textResult(await apiRequest("/api/repos/recommend-data", {
         body: { taskDescription: stringArg(args, "taskDescription"), ...(limit ? { limit } : {}) },
         context,
         method: "POST",
@@ -473,7 +476,7 @@ export async function callAgentTool(
       const limit = typeof args.limit === "number" && Number.isFinite(args.limit)
         ? Math.min(30, Math.max(1, Math.trunc(args.limit)))
         : undefined;
-      return textResult(await apiRequest("/api/ai/related", {
+      return textResult(await apiRequest("/api/repos/related-data", {
         body: { repo: stringArg(args, "repo"), ...(limit ? { limit } : {}) },
         context,
         method: "POST",

@@ -108,7 +108,8 @@ function toSnapshot(row: typeof starredRepos.$inferSelect): RepoSnapshot {
 
 // 实时调 GitHub API 拉取未 star 仓库的元数据 + README。
 // 元数据拉取逻辑复用 github/client.ts 的 fetchGithubRepoMetadata（star_repo 收藏全新仓库时也要用到）。
-async function fetchRepoFromGitHub(userId: string, owner: string, repo: string): Promise<RepoSnapshot> {
+/** @internal 数据端点复用——测试可见，不是公共 API */
+export async function fetchRepoFromGitHub(userId: string, owner: string, repo: string): Promise<RepoSnapshot> {
   const { token } = await getGitHubAccessToken(userId);
 
   const meta = await fetchGithubRepoMetadata(token, owner, repo).catch((error: unknown) => {

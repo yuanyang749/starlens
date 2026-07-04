@@ -183,7 +183,7 @@ describe("agent tools", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://starlens.test/api/ai/analyze",
+      "https://starlens.test/api/repos/analyze-data",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ repo: "owner/repo", applySuggestions: false }),
@@ -201,7 +201,7 @@ describe("agent tools", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://starlens.test/api/ai/analyze",
+      "https://starlens.test/api/repos/analyze-data",
       expect.objectContaining({
         body: JSON.stringify({ repo: "owner/repo", applySuggestions: true }),
       }),
@@ -218,7 +218,7 @@ describe("agent tools", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://starlens.test/api/ai/recommend",
+      "https://starlens.test/api/repos/recommend-data",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ taskDescription: "build a chat UI", limit: 30 }),
@@ -236,7 +236,7 @@ describe("agent tools", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://starlens.test/api/ai/recommend",
+      "https://starlens.test/api/repos/recommend-data",
       expect.objectContaining({
         body: JSON.stringify({ taskDescription: "build a chat UI" }),
       }),
@@ -253,7 +253,7 @@ describe("agent tools", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://starlens.test/api/ai/related",
+      "https://starlens.test/api/repos/related-data",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ repo: "owner/repo", limit: 5 }),
