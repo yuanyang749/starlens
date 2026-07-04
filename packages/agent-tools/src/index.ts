@@ -184,7 +184,7 @@ export const agentTools: AgentToolDefinition[] = [
         applySuggestions: {
           type: "boolean",
           description:
-            "Whether to automatically apply suggested tags/note to the user's starred repo. Defaults to false. Set to true only after the user has confirmed the suggestions. Has no effect on unstarred repos. Note: the data endpoint ignores this flag and never applies suggestions — the agent must call add_star_tag / set_star_note itself after analyzing the returned data.",
+            "Deprecated — has no effect on the data endpoint. Kept for backward compatibility. The agent should analyze the returned raw data (README excerpt, topics, description) and then call add_star_tag / set_star_note directly to apply any tags or notes.",
         },
       },
       required: ["repo"],
@@ -453,11 +453,10 @@ export async function callAgentTool(
     // 中文注释：3 个 AI 工具走 /api/repos/*-data 数据端点（不调后端 AI，由 agent 自带模型分析）；
     // /api/ai/* 端点保留给 CLI/Web（无 agent 包裹的场景）。
     case "analyze_repo": {
-      // applySuggestions 默认 false——agent 必须先呈现建议给用户、用户确认后才能传 true。
-      // 数据端点会忽略 applySuggestions（永不应用），agent 应基于返回的原始数据自行生成建议后调用 add_star_tag/set_star_note。
-      const applySuggestions = typeof args.applySuggestions === "boolean" ? args.applySuggestions : false;
+      // 中文注释：数据端点不应用建议——agent 应基于返回的原始数据自行生成建议后调用 add_star_tag/set_star_note。
+      // applySuggestions 参数已 deprecated，不再透传给数据端点。
       return textResult(await apiRequest("/api/repos/analyze-data", {
-        body: { repo: stringArg(args, "repo"), applySuggestions },
+        body: { repo: stringArg(args, "repo") },
         context,
         method: "POST",
       }));

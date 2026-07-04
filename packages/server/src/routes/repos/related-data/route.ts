@@ -132,11 +132,14 @@ export async function POST(request: Request) {
       }));
 
     // 5. suggestedNextActions：建议 agent 用 show_star 查看最相关仓库的详情。
-    const suggestedNextActions: SuggestedNextAction[] = [{
-      tool: "show_star",
-      args: { repo: items[0]!.id },
-      reason: "查看最相关仓库的详情以确认是否真的相关。",
-    }];
+    const suggestedNextActions: SuggestedNextAction[] = [];
+    if (items.length > 0) {
+      suggestedNextActions.push({
+        tool: "show_star",
+        args: { repo: items[0].id },
+        reason: "查看最相关仓库的详情以确认是否真的相关。",
+      });
+    }
 
     const reasoningHints = `从 owner/language/topic 三维度召回 ${candidateMap.size} 个候选，未做 AI 重排，按召回顺序返回前 ${items.length} 个。`;
 

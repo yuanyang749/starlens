@@ -100,11 +100,14 @@ export async function POST(request: Request) {
     }));
 
     // 4. suggestedNextActions：建议 agent 用 show_star 查看排名最高仓库的详情。
-    const suggestedNextActions: SuggestedNextAction[] = [{
-      tool: "show_star",
-      args: { repo: items[0]!.id },
-      reason: "查看最相关仓库的详情（README、备注、标签等）以辅助决策。",
-    }];
+    const suggestedNextActions: SuggestedNextAction[] = [];
+    if (items.length > 0) {
+      suggestedNextActions.push({
+        tool: "show_star",
+        args: { repo: items[0].id },
+        reason: "查看最相关仓库的详情（README、备注、标签等）以辅助决策。",
+      });
+    }
 
     const reasoningHints = `全文检索召回 ${candidates.length} 个候选，未做 AI 重排，由 agent 自行判断相关性。`;
 

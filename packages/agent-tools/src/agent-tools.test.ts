@@ -173,7 +173,8 @@ describe("agent tools", () => {
   });
 
   // 5 个主动型工具的薄路由调用测试（spec 第 6.1 节）。
-  it("analyze_repo posts to the analyze API with applySuggestions defaulting to false", async () => {
+  // 中文注释：analyze_repo 走数据端点（/api/repos/analyze-data），不传 applySuggestions（已 deprecated）。
+  it("analyze_repo posts to the analyze-data endpoint with only repo in body", async () => {
     const fetchMock = vi.fn(async () => apiResponse({ repo: { fullName: "owner/repo" }, isStarred: true }));
 
     await callAgentTool(
@@ -186,13 +187,13 @@ describe("agent tools", () => {
       "https://starlens.test/api/repos/analyze-data",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ repo: "owner/repo", applySuggestions: false }),
+        body: JSON.stringify({ repo: "owner/repo" }),
       }),
     );
   });
 
-  it("analyze_repo forwards applySuggestions=true when explicitly requested", async () => {
-    const fetchMock = vi.fn(async () => apiResponse({ repo: { fullName: "owner/repo" }, applied: true }));
+  it("analyze_repo ignores applySuggestions arg (deprecated, not forwarded to data endpoint)", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ repo: { fullName: "owner/repo" }, isStarred: true }));
 
     await callAgentTool(
       "analyze_repo",
@@ -200,10 +201,11 @@ describe("agent tools", () => {
       { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
     );
 
+    // applySuggestions 不应出现在 body 中——数据端点不应用建议
     expect(fetchMock).toHaveBeenCalledWith(
       "https://starlens.test/api/repos/analyze-data",
       expect.objectContaining({
-        body: JSON.stringify({ repo: "owner/repo", applySuggestions: true }),
+        body: JSON.stringify({ repo: "owner/repo" }),
       }),
     );
   });
