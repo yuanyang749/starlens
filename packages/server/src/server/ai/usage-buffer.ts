@@ -24,8 +24,11 @@ async function flush() {
   const entries = buffer.splice(0);
   try {
     await getDb().insert(aiUsageLogs).values(entries);
-  } catch {
-    // usage 追踪是非关键路径，写库失败静默忽略，不影响主流程
+  } catch (error) {
+    // usage 追踪是非关键路径，写库失败静默忽略，不影响主流程。
+    // 但加日志，DB 长时间故障时运营侧能从日志察觉 usage 持续丢失，而非统计突然归零却无信号。
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[usage-buffer] flush failed: count=${entries.length} error=${msg}`);
   }
 }
 

@@ -85,6 +85,10 @@ export function TokensSettingsView() {
   const [activeTab, setActiveTab] = useState<"cli" | "agent" | "mcp">("cli");
   const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  // 中文注释:防双击状态——createToken 是异步 POST,连点会创建重复 Token。
+  // revokeToken 是 DELETE 幂等但连点会发重复请求 + UI 闪烁。
+  const [creating, setCreating] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
   const canCreateToken = noteDraft.trim().length > 0;
 
   const loadTokens = async (signal?: AbortSignal) => {
@@ -107,11 +111,12 @@ export function TokensSettingsView() {
   }, []);
 
   const createToken = async () => {
+    if (creating) return;
     if (!canCreateToken) {
       setError("请填写 Token 用途备注。");
       return;
     }
-
+    setCreating(true);
     const name = `Token ${new Date().toISOString().slice(0, 16).replace("T", " ")}`;
     try {
       const token = await fetchApi<CreatedToken>("/api/tokens", {
@@ -128,10 +133,14 @@ export function TokensSettingsView() {
       setToast("Token 创建成功。");
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Token 创建失败。");
+    } finally {
+      setCreating(false);
     }
   };
 
   const revokeToken = async (id: string) => {
+    if (revokingId) return;
+    setRevokingId(id);
     try {
       await fetchApi<{ revoked: true }>(`/api/tokens/${id}`, { method: "DELETE" });
       setCopyableTokens((current) => {
@@ -143,6 +152,8 @@ export function TokensSettingsView() {
       setToast("Token 已撤销。");
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Token 撤销失败。");
+    } finally {
+      setRevokingId(null);
     }
   };
 
@@ -217,10 +228,10 @@ export function TokensSettingsView() {
         <button
           type="button"
           onClick={createToken}
-          disabled={!canCreateToken}
+          disabled={!canCreateToken || creating}
           className="inline-flex h-11 items-center gap-2 rounded-full bg-[color:var(--foreground)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
         >
-          <Plus className="h-4 w-4" />新建 Token
+          <Plus className="h-4 w-4" />{creating ? "创建中…" : "新建 Token"}
         </button>
       </div>
 
@@ -256,7 +267,13 @@ export function TokensSettingsView() {
                         {copiedTokenId === token.id ? "已复制" : "复制"}
                       </button>
                     ) : null}
-                    <button onClick={() => revokeToken(token.id)} className="text-sm text-red-500 underline cursor-pointer">撤销</button>
+                    <button
+                      onClick={() => revokeToken(token.id)}
+                      disabled={revokingId === token.id}
+                      className="text-sm text-red-500 underline cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {revokingId === token.id ? "撤销中…" : "撤销"}
+                    </button>
                   </div>
                 </div>
               </article>

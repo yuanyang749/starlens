@@ -127,7 +127,13 @@ async function upsertSyncedRepo(
     !existing ||
     existing.pushedAtGithub?.getTime() !== repo.pushedAtGithub?.getTime();
   const readmeExcerpt = shouldRefreshReadme
-    ? await fetchReadmeExcerpt(token, repo.ownerLogin, repo.name).catch(() => "")
+    ? await fetchReadmeExcerpt(token, repo.ownerLogin, repo.name).catch((error: unknown) => {
+        // README 拉取失败（rate limit / 网络 / 404 路径错误）不致命——空 readme 会让 repoSummary
+        // 和 searchDocument 质量下降、搜索召回率静默劣化。记录原因便于排查持续 rate limit 等场景。
+        const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        console.warn(`[github/sync] fetchReadmeExcerpt failed: owner=${repo.ownerLogin} repo=${repo.name} error=${msg}`);
+        return "";
+      })
     : existing.readmeExcerpt;
   const repoSummary = summarizeSyncedRepo({
     description: repo.description,

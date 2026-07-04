@@ -6,11 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { PaginatedResult, RepoSummary } from "@starlens-app/core";
-import {
-  type AiAskResult,
-  type SyncResult,
-  apiJson,
-} from "./workbench-api";
+import { type SyncResult, apiJson } from "./workbench-api";
 import { formatDateTime } from "./workbench-formatters";
 
 export type WorkbenchQueryState = {
@@ -45,50 +41,59 @@ export function useWorkbenchData(
   const hasAutoSyncedRef = useRef(false);
   const syncNowRef = useRef<() => Promise<void>>(async () => {});
 
+  // 中文注释：fetchList 是纯请求逻辑，不设置 loading 状态。
+  // 这样 effect 调用时不会触发 set-state-in-effect 警告（stale-while-revalidate 模式）。
+  // 外部调用（syncNow、手动搜索）通过 refreshList 包装层显式设置 loading=true。
+  const fetchList = useCallback(
+    (signal: AbortSignal) => {
+      return apiJson<PaginatedResult<RepoSummary>>(
+        `/api/search?${searchParams.toString()}`,
+        { signal },
+      )
+        .then((data) => {
+          setRepos(data.items);
+          setTotal(data.total);
+          if (typeof data.allStarsTotal === "number") {
+            setAllStarsTotal(data.allStarsTotal);
+          } else if (!favoritesOnly && !aiSearchMode && !query.trim() && !language && !tagFilter) {
+            setAllStarsTotal(data.total);
+          }
+          setPageSize(data.pageSize);
+          setError(null);
+          setSelectedId((current) =>
+            data.items.some((repo) => repo.id === current)
+              ? current
+              : data.items[0]?.id ?? null,
+          );
+
+          if (data.items.length === 0) {
+            setSelectedRepo(null);
+            setNoteDraft("");
+          }
+          setLoading(false);
+        })
+        .catch((caught: unknown) => {
+          if (caught instanceof DOMException && caught.name === "AbortError") {
+            return;
+          }
+
+          setError(
+            caught instanceof Error
+              ? `列表请求失败：${caught.message}`
+              : "列表请求失败：搜索失败。",
+          );
+          setLoading(false);
+        });
+    },
+    [aiSearchMode, favoritesOnly, language, query, searchParams, setSelectedId, tagFilter],
+  );
+
   const refreshList = useCallback(() => {
     const controller = new AbortController();
     setLoading(true);
-
-    apiJson<PaginatedResult<RepoSummary>>(`/api/search?${searchParams.toString()}`, {
-      signal: controller.signal,
-    })
-      .then((data) => {
-        setRepos(data.items);
-        setTotal(data.total);
-        if (typeof data.allStarsTotal === "number") {
-          setAllStarsTotal(data.allStarsTotal);
-        } else if (!favoritesOnly && !aiSearchMode && !query.trim() && !language && !tagFilter) {
-          setAllStarsTotal(data.total);
-        }
-        setPageSize(data.pageSize);
-        setError(null);
-        setSelectedId((current) =>
-          data.items.some((repo) => repo.id === current)
-            ? current
-            : data.items[0]?.id ?? null,
-        );
-
-        if (data.items.length === 0) {
-          setSelectedRepo(null);
-          setNoteDraft("");
-        }
-        setLoading(false);
-      })
-      .catch((caught: unknown) => {
-        if (caught instanceof DOMException && caught.name === "AbortError") {
-          return;
-        }
-
-        setError(
-          caught instanceof Error
-            ? `列表请求失败：${caught.message}`
-            : "列表请求失败：搜索失败。",
-        );
-        setLoading(false);
-      });
-
+    void fetchList(controller.signal);
     return controller;
-  }, [aiSearchMode, favoritesOnly, language, query, searchParams, setSelectedId, tagFilter]);
+  }, [fetchList]);
 
   const patchRepoInList = useCallback((repo: RepoSummary) => {
     setRepos((items) =>
@@ -110,9 +115,10 @@ export function useWorkbenchData(
   }, [aiSearchResults, repos, selectedRepo]);
 
   useEffect(() => {
-    const controller = refreshList();
+    const controller = new AbortController();
+    void fetchList(controller.signal);
     return () => controller.abort();
-  }, [refreshList]);
+  }, [fetchList]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -186,7 +192,7 @@ export function useWorkbenchData(
     [findRepoById, patchRepoInList, selectedId, selectedRepo],
   );
 
-  async function syncNow() {
+  const syncNow = useCallback(async () => {
     setSyncing(true);
     setSyncMessage(null);
     setError(null);
@@ -216,10 +222,13 @@ export function useWorkbenchData(
     } finally {
       setSyncing(false);
     }
-  }
+  }, [refreshList]);
 
   // 中文注释：保持 syncNowRef 指向最新的 syncNow，供自动同步 effect 调用。
-  syncNowRef.current = syncNow;
+  // 在 useEffect 中更新 ref 而非 render 阶段，符合 React 19 并发渲染要求。
+  useEffect(() => {
+    syncNowRef.current = syncNow;
+  }, [syncNow]);
 
   // 中文注释：首次登录若仓库为空（无筛选条件），自动触发一次同步。
   useEffect(() => {
@@ -229,7 +238,6 @@ export function useWorkbenchData(
     if (query.trim() || language || tagFilter || favoritesOnly) return;
     hasAutoSyncedRef.current = true;
     void syncNowRef.current();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, total, aiSearchMode, query, language, tagFilter, favoritesOnly]);
 
   const lastSyncText = (() => {

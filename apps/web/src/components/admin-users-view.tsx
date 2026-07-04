@@ -28,20 +28,27 @@ export function AdminUsersView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  // 中文注释:用 AbortController 防止 Strict Mode 双挂载或切 tab 重 mount 时的竞态。
+  // 原写法 useEffect 内直接 void load() 无 controller,旧请求可能覆盖新请求。
+  async function load(signal?: AbortSignal) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchApi<AdminUser[]>("/api/admin/users");
+      const data = await fetchApi<AdminUser[]>("/api/admin/users", { signal });
       setUsers(data);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "加载失败。");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, []);
 
   return (
     <section className="app-panel rounded-[24px] p-6">
@@ -59,7 +66,7 @@ export function AdminUsersView() {
           type="button"
           onClick={() => void load()}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--foreground)] hover:bg-[color:var(--surface-2)] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--foreground)] hover:bg-[color:var(--surface-2)] disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
           刷新

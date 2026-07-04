@@ -22,6 +22,38 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
+  // 中文注释:安全响应头——防止点击劫持(X-Frame-Options)、MIME 嗅探(X-Content-Type-Options)、
+  // 降级攻击(HSTS)、Referer 泄露、敏感能力滥用(Permissions-Policy)。
+  // CSP 用宽松策略(允许 unsafe-inline 的 script/style),因为 NextAuth 和内联样式依赖此;
+  // frame-ancestors 'none' 等价于 X-Frame-Options: DENY。
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https: blob:",
+              "font-src 'self' data:",
+              "connect-src 'self'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default withMDX(nextConfig);

@@ -85,7 +85,12 @@ function parseSystemExtraHeaders(env: NodeJS.ProcessEnv) {
     return parsed && typeof parsed === "object"
       ? parsed as Record<string, string>
       : {};
-  } catch {
+  } catch (error) {
+    // 启动期 SYSTEM_AI_EXTRA_HEADERS JSON 语法错误会静默丢失 header，
+    // 与 SYSTEM_AI_API_KEY 过期同构——运维侧配置错误无任何信号。
+    // 输出 raw 前 200 字符便于定位语法错误位置，不打印其他 env 值。
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[ai/runtime] parseSystemExtraHeaders failed: error=${msg} raw=${raw.slice(0, 200)}`);
     return {};
   }
 }
