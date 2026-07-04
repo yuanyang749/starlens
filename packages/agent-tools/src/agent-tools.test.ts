@@ -18,7 +18,7 @@ function apiFailure(status: number, message: string): Response {
 }
 
 describe("agent tools", () => {
-  it("exposes search, detail, curation, sync, and AI tools", () => {
+  it("exposes search, detail, curation, sync, AI, and proactive tools", () => {
     expect(agentTools.map((tool) => tool.name)).toEqual([
       "search_stars",
       "show_star",
@@ -29,6 +29,12 @@ describe("agent tools", () => {
       "add_star_tag",
       "remove_star_tag",
       "ask_stars",
+      // 5 个主动型工具（spec 第 6.1 节）
+      "analyze_repo",
+      "recommend_for_task",
+      "find_related",
+      "suggest_organization",
+      "get_sync_summary",
     ]);
   });
 
@@ -124,6 +130,155 @@ describe("agent tools", () => {
       3,
       "https://starlens.test/api/repos/repo-1",
       expect.objectContaining({ method: "PATCH" }),
+    );
+  });
+
+  // 5 个主动型工具的薄路由调用测试（spec 第 6.1 节）。
+  it("analyze_repo posts to the analyze API with applySuggestions defaulting to false", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ repo: { fullName: "owner/repo" }, isStarred: true }));
+
+    await callAgentTool(
+      "analyze_repo",
+      { repo: "owner/repo" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/ai/analyze",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ repo: "owner/repo", applySuggestions: false }),
+      }),
+    );
+  });
+
+  it("analyze_repo forwards applySuggestions=true when explicitly requested", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ repo: { fullName: "owner/repo" }, applied: true }));
+
+    await callAgentTool(
+      "analyze_repo",
+      { repo: "owner/repo", applySuggestions: true },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/ai/analyze",
+      expect.objectContaining({
+        body: JSON.stringify({ repo: "owner/repo", applySuggestions: true }),
+      }),
+    );
+  });
+
+  it("recommend_for_task posts the task description and clamps limit to 1-30", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ items: [], meta: { empty: true } }));
+
+    await callAgentTool(
+      "recommend_for_task",
+      { taskDescription: "build a chat UI", limit: 50 },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/ai/recommend",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ taskDescription: "build a chat UI", limit: 30 }),
+      }),
+    );
+  });
+
+  it("recommend_for_task omits limit when not provided as a number", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ items: [], meta: { empty: true } }));
+
+    await callAgentTool(
+      "recommend_for_task",
+      { taskDescription: "build a chat UI" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/ai/recommend",
+      expect.objectContaining({
+        body: JSON.stringify({ taskDescription: "build a chat UI" }),
+      }),
+    );
+  });
+
+  it("find_related posts the repo and limit to the related API", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ items: [{ fullName: "owner/other" }] }));
+
+    await callAgentTool(
+      "find_related",
+      { repo: "owner/repo", limit: 5 },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/ai/related",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ repo: "owner/repo", limit: 5 }),
+      }),
+    );
+  });
+
+  it("suggest_organization calls the suggestions API with focus query", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ duplicates: [], stale: [], untagged: [] }));
+
+    await callAgentTool(
+      "suggest_organization",
+      { focus: "stale" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/repos/suggestions?focus=stale",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("suggest_organization drops invalid focus and lets the server default to all", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ duplicates: [], stale: [], untagged: [] }));
+
+    await callAgentTool(
+      "suggest_organization",
+      { focus: "bogus" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/repos/suggestions",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("get_sync_summary forwards since as a query string when provided", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ added: [], removed: [], changed: [], totalCount: 0 }));
+
+    await callAgentTool(
+      "get_sync_summary",
+      { since: "2026-07-01T00:00:00.000Z" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/sync/summary?since=2026-07-01T00%3A00%3A00.000Z",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("get_sync_summary omits since when not a non-empty string", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ added: [], removed: [], changed: [], totalCount: 0 }));
+
+    await callAgentTool(
+      "get_sync_summary",
+      {},
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/sync/summary",
+      expect.objectContaining({ method: "GET" }),
     );
   });
 });

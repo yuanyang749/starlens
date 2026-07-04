@@ -76,7 +76,9 @@ export function resolveSyncErrorLevel(error: unknown): SyncErrorLevel {
   return "unknown";
 }
 
-async function getGitHubAccessToken(userId: string) {
+// 中文注释：导出供 analyze.ts 等需要直接调 GitHub API 的模块复用——避免在每个调用方
+// 重复一遍"查 githubAccounts + 解密 token"的逻辑，保持密钥解密路径单一可审计。
+export async function getGitHubAccessToken(userId: string) {
   const db = getDb();
   const account = await db.query.githubAccounts.findFirst({
     where: eq(githubAccounts.userId, userId),

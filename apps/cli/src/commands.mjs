@@ -13,6 +13,8 @@ import {
   renderRepo,
   renderAsk,
   renderTags,
+  renderSuggest,
+  renderAnalyze,
 } from "./renderers.mjs";
 import { resolveRepo, patchRepoCuration, addTag, removeTag, openUrl } from "./repo.mjs";
 
@@ -158,4 +160,40 @@ export async function tagCommand(args, config) {
   }
   const data = action === "add" ? await addTag(repoOrId, tag, config) : await removeTag(repoOrId, tag, config);
   renderTags(data, config.format);
+}
+
+// stars suggest [--focus duplicates|stale|untagged|all]
+// 调用 GET /api/repos/suggestions，输出知识整理建议（重复 / 过时 / 未分类）
+export async function suggestCommand(args, config) {
+  const VALID_FOCUSES = ["duplicates", "stale", "untagged", "all"];
+  const { value: focus, rest } = readOption(args, "--focus");
+  if (focus !== undefined && !VALID_FOCUSES.includes(focus)) {
+    throw new CliError(`--focus must be one of: ${VALID_FOCUSES.join(", ")}.`);
+  }
+  if (rest.length > 0) throw new CliError(`Unknown suggest arguments: ${rest.join(" ")}`);
+  const data = await apiRequest("/api/repos/suggestions", {
+    config,
+    query: { focus: focus ?? "all" },
+  });
+  renderSuggest(data, config.format);
+}
+
+// stars analyze <repo> [--apply]
+// 调用 POST /api/ai/analyze，仓库分析 + 智能标注；--apply 应用建议到已 star 仓库
+export async function analyzeCommand(args, config) {
+  const { found: apply, rest } = readFlag(args, "--apply");
+  const repo = rest.join(" ").trim();
+  if (!repo) throw new CliError("analyze requires a repository id or owner/repo.");
+  const spinner = startSpinner("Analyzing...");
+  let data;
+  try {
+    data = await apiRequest("/api/ai/analyze", {
+      method: "POST",
+      config,
+      body: { repo, applySuggestions: apply },
+    });
+  } finally {
+    stopSpinner(spinner);
+  }
+  renderAnalyze(data, config.format);
 }
