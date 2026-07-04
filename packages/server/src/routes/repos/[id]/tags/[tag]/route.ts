@@ -1,6 +1,6 @@
 import { fail, ok, unauthorized } from "@starlens/server/lib/api-response";
 import { getApiUser } from "@starlens/server/server/auth/api-user";
-import { deleteRepoTag } from "@starlens/server/server/repos/repository";
+import { deleteRepoTag, resolveRepoRowId } from "@starlens/server/server/repos/repository";
 
 type RouteContext = {
   params: Promise<{ id: string; tag: string }>;
@@ -14,7 +14,13 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const { id, tag } = await context.params;
-  const repo = await deleteRepoTag(user.id, id, decodeURIComponent(tag));
+  const resolvedId = await resolveRepoRowId(user.id, id);
+
+  if (!resolvedId) {
+    return fail("repo_not_found", "Repository was not found.", 404);
+  }
+
+  const repo = await deleteRepoTag(user.id, resolvedId, decodeURIComponent(tag));
 
   if (!repo) {
     return fail("repo_not_found", "Repository was not found.", 404);

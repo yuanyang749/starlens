@@ -313,6 +313,34 @@ export async function searchReposRanked(userId: string, q: string, pageSize: num
   }));
 }
 
+// 中文注释：UUID 格式校验——starred_repos.id 是 uuid 列，同 github-star.ts / analyze.ts 的
+// UUID_RE 约定。非 UUID 字符串（如 "owner/repo"）直接传给 eq(starredRepos.id, ...) 会让
+// Postgres 抛 "invalid input syntax for type uuid"（500），而不是预期的 404。
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// 把路由层传入的 id 或 owner/repo 全名统一解析成 starred_repos.id（UUID）。
+// 只在路由边界调用——getRepoDetail/updateRepoCuration/addRepoTag/deleteRepoTag 本身
+// 仍然只接受真实 UUID，内部调用方（github-star.ts、analyze.ts、本文件的
+// refreshSearchDocument）传入的都已经是解析好的 UUID。
+export async function resolveRepoRowId(userId: string, idOrFullName: string): Promise<string | null> {
+  const db = getDb();
+
+  if (UUID_RE.test(idOrFullName)) {
+    const byId = await db.query.starredRepos.findFirst({
+      where: and(eq(starredRepos.userId, userId), eq(starredRepos.id, idOrFullName)),
+      columns: { id: true },
+    });
+    if (byId) return byId.id;
+  }
+
+  const byFullName = await db.query.starredRepos.findFirst({
+    where: and(eq(starredRepos.userId, userId), eq(starredRepos.fullName, idOrFullName)),
+    columns: { id: true },
+  });
+
+  return byFullName?.id ?? null;
+}
+
 export async function getRepoDetail(userId: string, id: string) {
   const db = getDb();
   const repo = await db.query.starredRepos.findFirst({
