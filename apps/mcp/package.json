@@ -1,6 +1,6 @@
 {
   "name": "@starlens-app/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Starlens MCP server — expose Starlens tools via Model Context Protocol",
   "type": "module",
   "bin": {

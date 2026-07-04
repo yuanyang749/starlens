@@ -1,6 +1,6 @@
 {
   "name": "@starlens-app/agent-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Starlens agent tools — MCP tool definitions and HTTP client for Starlens API",
   "type": "module",
   "exports": {

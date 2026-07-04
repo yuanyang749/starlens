@@ -9,7 +9,7 @@
     "postinstall": "node scripts/sync-skill.mjs || true",
     "sync:skill": "node scripts/sync-skill.mjs",
     "build:packages": "corepack pnpm --filter @starlens-app/core build && corepack pnpm --filter @starlens-app/agent-tools build",
-    "publish:packages": "pnpm build:packages && cd packages/core && npm publish --access public && cd ../../packages/agent-tools && npm publish --access public && cd ../../apps/mcp && npm publish --access public && cd ../cli && npm publish --access public && cd ../..",
+    "publish:packages": "pnpm build:packages && cd packages/core && pnpm publish --access public --no-git-checks && cd ../../packages/agent-tools && pnpm publish --access public --no-git-checks && cd ../../apps/mcp && pnpm publish --access public --no-git-checks && cd ../cli && pnpm publish --access public --no-git-checks && cd ../..",
     "dev": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web dev",
     "dev:mobile": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/mobile dev",
     "dev:local": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web dev",
