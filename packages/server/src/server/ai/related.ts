@@ -42,15 +42,21 @@ type RepoRow = typeof starredRepos.$inferSelect;
 
 // ─── 目标仓库解析 ─────────────────────────────────────────────────────────────
 
+// 中文注释：UUID 格式校验——starred_repos.id 是 uuid 列，传入非 UUID 字符串（如 "owner/repo"）
+// 会让 Postgres 抛 "invalid input syntax for type uuid"。在查 id 前先校验格式，避免这个错误。
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** @internal 测试可见，不是公共 API */
 export async function resolveTargetRepo(userId: string, repo: string): Promise<RepoRow | null> {
   const db = getDb();
 
-  // 按 id 精确匹配
-  const byId = await db.query.starredRepos.findFirst({
-    where: and(eq(starredRepos.userId, userId), eq(starredRepos.id, repo)),
-  });
-  if (byId) return byId;
+  // 按 id 精确匹配——仅当输入是合法 UUID 时才查，避免对 fullName 输入触发 uuid 类型错误
+  if (UUID_RE.test(repo)) {
+    const byId = await db.query.starredRepos.findFirst({
+      where: and(eq(starredRepos.userId, userId), eq(starredRepos.id, repo)),
+    });
+    if (byId) return byId;
+  }
 
   // 按 fullName 匹配
   const byFullName = await db.query.starredRepos.findFirst({
