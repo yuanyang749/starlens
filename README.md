@@ -315,12 +315,19 @@ Cursor-style stdio config:
 | `search_stars` | Search and filter starred repositories |
 | `show_star` | View a single repository's detail |
 | `sync_stars` | Trigger a GitHub Stars sync |
-| `favorite_star` | Mark a repository as favorite |
-| `unfavorite_star` | Remove favorite state |
+| `favorite_star` | Mark a repository as favorite (local flag only — does not change your real GitHub star) |
+| `unfavorite_star` | Remove favorite state (local flag only — does not change your real GitHub star) |
+| `star_repo` | Actually star a repository on GitHub (any owner/repo, even one you've never starred) |
+| `unstar_repo` | Actually remove your GitHub star from a repository |
 | `set_star_note` | Set or clear a repository note |
 | `add_star_tag` | Add a tag to a repository |
 | `remove_star_tag` | Remove a tag from a repository |
 | `ask_stars` | Natural language AI query over your Stars |
+| `analyze_repo` | Analyze a repo and suggest tags/notes (starred or not) |
+| `recommend_for_task` | Recommend starred repos relevant to a coding task |
+| `find_related` | Find starred repos related to a given repo |
+| `suggest_organization` | Suggest duplicates/stale/untagged repos to clean up |
+| `get_sync_summary` | Summarize what changed since the last sync |
 
 Do not commit real API tokens or MCP client configs containing secrets.
 

@@ -68,11 +68,19 @@ Authorization: Bearer stl_xxx
 | `search_stars` | `/api/search?q={query}&pageSize={pageSize}` | `GET` |
 | `show_star` | `/api/repos/{repoIdOrFullName}` | `GET` |
 | `sync_stars` | `/api/sync` | `POST` |
-| `favorite_star` | `/api/repos/{repoIdOrFullName}` | `PATCH` |
+| `favorite_star` | `/api/repos/{repoIdOrFullName}`（仅本地标记） | `PATCH` |
+| `unfavorite_star` | `/api/repos/{repoIdOrFullName}`（仅本地标记） | `PATCH` |
+| `star_repo` | `/api/repos/star`（真实 GitHub star） | `POST` |
+| `unstar_repo` | `/api/repos/unstar`（真实 GitHub unstar） | `POST` |
 | `set_star_note` | `/api/repos/{repoIdOrFullName}` | `PATCH` |
 | `add_star_tag` | `/api/repos/{repoIdOrFullName}/tags` | `POST` |
 | `remove_star_tag` | `/api/repos/{repoIdOrFullName}/tags/{tag}` | `DELETE` |
 | `ask_stars` | `/api/ai/ask` | `POST` |
+| `analyze_repo` | `/api/ai/analyze` | `POST` |
+| `recommend_for_task` | `/api/ai/recommend` | `POST` |
+| `find_related` | `/api/ai/related` | `POST` |
+| `suggest_organization` | `/api/repos/suggestions` | `GET` |
+| `get_sync_summary` | `/api/sync/summary` | `GET` |
 
 最小搜索示例：
 
@@ -212,9 +220,13 @@ Use the starlens MCP tool to search my starred repositories for react with pageS
 - `sync_stars`
   - 触发 GitHub Stars 同步
 - `favorite_star`
-  - 收藏仓库
+  - 标记为收藏（仅本地 Starlens 标记，不影响 GitHub 上的真实 star 状态）
 - `unfavorite_star`
-  - 取消收藏仓库
+  - 取消收藏标记（仅本地 Starlens 标记，不影响 GitHub 上的真实 star 状态）
+- `star_repo`
+  - 真实调用 GitHub star API。支持任意 `owner/repo`（哪怕从未收藏过）或已有的 Starlens id/fullName
+- `unstar_repo`
+  - 真实调用 GitHub unstar API，仓库会从用户 GitHub Stars 页面消失。仅对已在 Starlens 收藏列表中的仓库生效
 - `set_star_note`
   - 设置或清空备注
 - `add_star_tag`
@@ -223,6 +235,16 @@ Use the starlens MCP tool to search my starred repositories for react with pageS
   - 删除标签
 - `ask_stars`
   - 调用 Starlens AI 问答
+- `analyze_repo`
+  - 仓库分析 + 智能标注建议（已 star 用本地数据，未 star 实时拉 GitHub）
+- `recommend_for_task`
+  - 基于编码任务描述，从 starred repos 召回相关仓库
+- `find_related`
+  - 给定一个仓库，发现收藏中的关联仓库
+- `suggest_organization`
+  - 知识整理建议（重复 / 过时 / 未分类）
+- `get_sync_summary`
+  - 汇总最近一次同步的新增 / 移除 / 变化
 
 Hermes、OpenClaw 不需要通过 MCP 使用这些能力。它们应按第 3 节加载 StarLens skill，并把同名能力映射为 HTTP tools。
 

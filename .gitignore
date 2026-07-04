@@ -22,3 +22,8 @@ apps/web/next-env.d.ts
 # 工具产生的临时目录（Playwright MCP 截图输出、临时文件等）
 .playwright-mcp/
 .tmp/
+discuss/2026-07-04-trae-contest-demo-post.md
+
+# apps/cli/skills/starlens/ 是 scripts/sync-skill.mjs 从 agent-skills/starlens/
+# 生成的构建产物（发布 npm 包需要物理副本），唯一源文件在 agent-skills/starlens/。
+apps/cli/skills/

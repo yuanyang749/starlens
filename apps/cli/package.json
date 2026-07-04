@@ -27,6 +27,8 @@
   },
   "scripts": {
     "start": "node src/index.mjs",
-    "test": "node --test src/test/*.test.mjs"
+    "pretest": "node ../../scripts/sync-skill.mjs",
+    "test": "node --test src/test/*.test.mjs",
+    "prepack": "node ../../scripts/sync-skill.mjs"
   }
 }

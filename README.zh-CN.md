@@ -315,12 +315,19 @@ Cursor 风格的 stdio 配置：
 | `search_stars` | 搜索和过滤 starred repositories |
 | `show_star` | 查看单个仓库详情 |
 | `sync_stars` | 触发 GitHub Stars 同步 |
-| `favorite_star` | 标记重点收藏 |
-| `unfavorite_star` | 取消重点收藏 |
+| `favorite_star` | 标记重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态） |
+| `unfavorite_star` | 取消重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态） |
+| `star_repo` | 真实调用 GitHub star API（支持任意 owner/repo，哪怕之前从未收藏过） |
+| `unstar_repo` | 真实调用 GitHub unstar API，从 GitHub 上移除 star |
 | `set_star_note` | 设置或清空备注 |
 | `add_star_tag` | 添加标签 |
 | `remove_star_tag` | 删除标签 |
 | `ask_stars` | 对收藏仓库发起自然语言 AI 问答 |
+| `analyze_repo` | 分析仓库并给出标签/备注建议（已收藏或未收藏均可） |
+| `recommend_for_task` | 根据编码任务从收藏中推荐相关仓库 |
+| `find_related` | 发现与某个仓库相关的收藏仓库 |
+| `suggest_organization` | 建议清理重复/过时/未打标签的仓库 |
+| `get_sync_summary` | 汇总自上次同步以来的变化 |
 
 不要把真实 token 或包含 secret 的 MCP 配置提交到仓库。
 

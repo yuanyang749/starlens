@@ -6,6 +6,8 @@
     "node": ">=20.11.0"
   },
   "scripts": {
+    "postinstall": "node scripts/sync-skill.mjs",
+    "sync:skill": "node scripts/sync-skill.mjs",
     "build:packages": "corepack pnpm --filter @starlens-app/core build && corepack pnpm --filter @starlens-app/agent-tools build",
     "publish:packages": "pnpm build:packages && cd packages/core && npm publish --access public && cd ../../packages/agent-tools && npm publish --access public && cd ../../apps/mcp && npm publish --access public && cd ../cli && npm publish --access public && cd ../..",
     "dev": "node scripts/with-env.mjs .env -- corepack pnpm --filter @starlens/web dev",

@@ -84,6 +84,7 @@
 2. **等价优先**：第 1 层和第 3 层不改变现有工具行为，只优化描述和返回值结构。第 2 层新增工具是纯增量，不影响现有 9 个工具
 3. **工具描述即触发器**：对于 MCP-based agent，工具的 `description` 字段是 agent 决定"是否主动调用"的主要依据，新工具的 description 要写得像"触发条件"而非"功能说明"
 4. **SKILL.md 双写**：`agent-skills/starlens/` 和 `apps/cli/skills/starlens/` 两处保持同步
+   - 更新（star_repo/unstar_repo 集成时改造）：手动双写已改为 `scripts/sync-skill.mjs` 自动生成——`agent-skills/starlens/` 是唯一手写源，`apps/cli/skills/starlens/` 是构建产物（已加入 `.gitignore`），在 `apps/cli` 的 `prepack`/`pretest` 和仓库根 `postinstall` 时自动同步，不再手动维护第二份。
 5. **GitHub API 能力足够**：5 个工具不需要新的 GitHub API 能力，都是基于已有数据或已有 sync 链路的增量
 
 ## 5. 第 1 层：Skill 触发描述层

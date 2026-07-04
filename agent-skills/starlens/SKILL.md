@@ -14,10 +14,14 @@ description: >-
   asks "what's new" — call get_sync_summary to report recently
   added/removed/changed stars since their last visit; (5) the user drops a
   repository for analysis — call analyze_repo to surface what the repo is
-  good for and suggest tags/notes. Also trigger when the user explicitly
-  names a repository, topic, owner, or technology that may exist in their
-  starred collection. Do NOT trigger for tasks unrelated to software
-  development, library selection, or repository curation.
+  good for and suggest tags/notes; (6) the user explicitly asks to star a
+  repo on GitHub, unstar/remove a star from GitHub, or cleans up their
+  collection and wants matching repos actually removed from their GitHub
+  Stars (not just unfavorited locally) — call star_repo / unstar_repo.
+  Also trigger when the user explicitly names a repository, topic, owner,
+  or technology that may exist in their starred collection. Do NOT trigger
+  for tasks unrelated to software development, library selection, or
+  repository curation.
 ---
 
 # StarLens
@@ -48,6 +52,11 @@ Use StarLens as the user's searchable memory of GitHub starred repositories. Thi
 触发条件：用户丢一个仓库（`owner/repo`）让分析，或问"这个仓库适合做什么"、"它适合用什么场景"。
 推荐调用：`analyze_repo`（`POST /api/ai/analyze`）。已 star 仓库用本地数据 + AI 分析；未 star 仓库实时拉 GitHub。
 应用建议：默认 `applySuggestions=false`，agent 先呈现建议（`suggestedTags` / `suggestedNote`）给用户，用户确认后再调用一次 `applySuggestions=true` 应用，避免擅自修改用户数据。
+
+### Scenario 6: Real GitHub Star Management
+触发条件：用户明确要求"star 这个仓库"、"取消收藏"、"从 GitHub 上移除 star"，或在清理/整理收藏（Scenario 3）之后要求把确认的仓库真正从 GitHub 取消收藏。
+推荐调用：`star_repo`（`POST /api/repos/star`）/ `unstar_repo`（`POST /api/repos/unstar`）。
+⚠️ 与 `favorite_star`/`unfavorite_star` 严格区分：后两者只改 Starlens 本地的 `isFavorite` 标记，**不影响** GitHub 上的真实 star 状态；`star_repo`/`unstar_repo` 才会真正调用 GitHub API。批量 unstar 前必须先列出完整清单让用户确认，逐条操作不可通过 Starlens 撤销。
 
 ## When NOT to Use This Skill
 - 与软件开发、库选型、仓库整理无关的任务
@@ -91,7 +100,7 @@ CLI 的 `install-skill` 向导已按 agent 类型分发配置，本 Skill 不维
 ## Workflow
 
 1. 优先按场景触发，而非等用户显式指示"用 StarLens 查一下"。识别用户意图落入上述 5 个场景之一时主动调用。
-2. Normalize the user's intent into one of these operations: search, inspect, sync, favorite, note, tag, ask, recommend, related, suggest, summary, analyze.
+2. Normalize the user's intent into one of these operations: search, inspect, sync, favorite, note, tag, star, unstar, ask, recommend, related, suggest, summary, analyze.
 3. Use `GET /api/search` first when the user gives a repository topic, keyword, language, tag, owner, or partial repository name.
 4. Use `GET /api/repos/{idOrFullName}` when the user gives a concrete repository id or `owner/repo`.
 5. Use `POST /api/ai/recommend` when the user starts a coding task and needs prior art from their stars.
@@ -100,8 +109,9 @@ CLI 的 `install-skill` 向导已按 agent 类型分发配置，本 Skill 不维
 8. Use `GET /api/sync/summary` for "what's new" since last sync.
 9. Use `POST /api/ai/analyze` when the user drops a repo for analysis.
 10. Use write endpoints only when the user clearly asks to modify StarLens state, such as adding a note, tagging a repo, or marking a favorite.
-11. Use `POST /api/ai/ask` when the user asks for synthesis across starred repositories.
-12. Return concise answers with repository names, URLs when available, and the reason each result is relevant.
+11. Use `POST /api/repos/star` / `POST /api/repos/unstar` only when the user explicitly wants to change their REAL GitHub star status (not just the local favorite flag). Confirm the target repo(s) with the user first — especially before a bulk unstar.
+12. Use `POST /api/ai/ask` when the user asks for synthesis across starred repositories.
+13. Return concise answers with repository names, URLs when available, and the reason each result is relevant.
 
 Read `references/http-api.md` when you need exact endpoint parameters, request bodies, or response handling.
 
@@ -117,6 +127,8 @@ Read `references/http-api.md` when you need exact endpoint parameters, request b
 - 主动调用时向用户说明"我从你的 StarLens 收藏中找到了…"，让用户知道结果来源是个人 starred repos 而非通用网络。
 - `analyze_repo` 与 `suggest_organization` 返回的标签 / 备注建议默认不自动应用；先呈现，用户确认后再写回。
 - 冷启动（用户从未同步）时，`recommend_for_task` / `find_related` / `suggest_organization` 会返回 `meta.empty: true`，agent 应引导用户先调用 `sync_stars`。
+- `star_repo`/`unstar_repo` 操作的是 GitHub 上的真实 star 状态，不是 Starlens 本地标记，无法通过 Starlens 撤销。批量 unstar（例如清理过期收藏）前必须先列出完整清单让用户确认，不要静默批量执行。
+- 如果 `star_repo`/`unstar_repo` 返回 403/`forbidden_scope`，告诉用户这是因为 GitHub 授权缺少 `public_repo` 权限，需要退出重新登录 Starlens 以重新授权。
 
 ## Privacy
 - 主动调用的结果不得写入 agent 的长期记忆或外部日志。
@@ -187,4 +199,26 @@ curl -X POST "$STARLENS_API_BASE_URL/api/ai/analyze" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{"repo":"vercel/next.js","applySuggestions":true}'
+```
+
+### Scenario 6: 真实 GitHub Star 管理（star_repo / unstar_repo）
+
+Star 一个全新仓库（哪怕之前从未收藏过）：
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/star" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"facebook/react"}'
+```
+
+真正取消收藏（在用户确认要清理的仓库清单之后逐条调用）：
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/unstar" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"owner/abandoned-repo"}'
 ```

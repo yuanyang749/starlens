@@ -73,6 +73,50 @@ Body fields:
 
 Send only fields that should change. Use an empty `note` string only when the user asks to clear a note.
 
+⚠️ `isFavorite` here is a **local Starlens flag only** — it does NOT star/unstar the repo on GitHub. Use `POST /api/repos/star` / `POST /api/repos/unstar` below to change the user's real GitHub star status.
+
+## Star / Unstar on GitHub
+
+`POST /api/repos/star`
+
+Actually stars a repository on GitHub (calls `PUT /user/starred/{owner}/{repo}` on the user's behalf). Accepts any `owner/repo` — including repos the user has never starred before — or an existing Starlens id/fullName (e.g. to re-star a repo previously unstarred). On success, the repo is synced into the user's Starlens collection and the updated repo detail is returned.
+
+Request body:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `repo` | string | yes | `owner/repo`, or a Starlens repository id/fullName. |
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/star" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"facebook/react"}'
+```
+
+`POST /api/repos/unstar`
+
+Actually removes the user's GitHub star from a repository (calls `DELETE /user/starred/{owner}/{repo}`). The repo will disappear from the user's real GitHub Stars page — this cannot be undone through Starlens. Only works on repos already in the user's Starlens collection (404 otherwise).
+
+Request body:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `repo` | string | yes | `owner/repo`, or a Starlens repository id/fullName. |
+
+```bash
+curl -X POST "$STARLENS_API_BASE_URL/api/repos/unstar" \
+  -H "Authorization: Bearer $STARLENS_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"owner/abandoned-repo"}'
+```
+
+Both endpoints return `{ "ok": false, "error": { "code": "forbidden_scope", "message": "..." } }` with HTTP 403 when the user's GitHub OAuth token lacks the `public_repo` scope — tell the user to log out and back in to Starlens to re-authorize. A `not_found` (404) error means the repo doesn't exist on GitHub (star) or isn't in the user's Starlens collection (unstar).
+
+Before calling `unstar` in bulk (e.g. as a follow-up to a cleanup/organization request), always list the exact repos to the user and get explicit confirmation first — this is a real, irreversible-via-Starlens action on their GitHub account.
+
 ## Tags
 
 Add a tag:
