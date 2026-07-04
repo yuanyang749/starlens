@@ -1,9 +1,8 @@
 ---
 name: starlens
-description: >-
-  Proactively use StarLens as the user's personal memory of GitHub starred
+description: Proactively use StarLens as the user's personal memory of GitHub starred
   repositories. Trigger this skill when ANY of these contexts appear in the
-  user's task: (1) the user is starting a coding task — before writing code,
+  user's task — (1) the user is starting a coding task — before writing code,
   search StarLens for related libraries, frameworks, or prior art the user
   has already starred (recommend_for_task); (2) the user asks a technical
   question about libraries, tools, or frameworks — cite their starred repos
