@@ -46,7 +46,9 @@ export function WorkbenchView({
 
   // 内容模式与侧边栏状态（纯 UI，不属于数据层或动作层）
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard">("dashboard");
+  // 中文注释：默认进入 "repos" 模式,保证 RepoTablePane / RepoDetailPanel 立即可见,
+  // 也是 workbench-view.test.tsx 的契约(11 个用例依赖此默认值)。DashboardView 通过侧边栏导航进入。
+  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard">("repos");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [recentMode, setRecentMode] = useState(false);

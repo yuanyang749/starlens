@@ -10,6 +10,7 @@ import { Grid } from "@/components/charts/grid";
 import { XAxis } from "@/components/charts/x-axis";
 import { YAxis } from "@/components/charts/y-axis";
 import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
+import { fetchApi } from "@/lib/api-client";
 
 interface RepoStats {
   total: number;
@@ -25,25 +26,26 @@ export function DashboardView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 中文注释:走统一 fetchApi 封装,用 AbortController 防止 Strict Mode 双挂载或切 tab 重 mount 时的竞态,
+  // 避免 unmount 后 setState 报错。原写法直接 fetch + 无清理函数,旧请求可能覆盖新请求。
   useEffect(() => {
-    fetch("/api/stats")
-      .then((res) => {
-        if (!res.ok) throw new Error("获取统计数据失败");
-        return res.json();
+    const controller = new AbortController();
+    fetchApi<RepoStats>("/api/stats", { signal: controller.signal })
+      .then((data) => {
+        setStats(data);
+        setError(null);
       })
-      .then((res) => {
-        if (res.ok) {
-          setStats(res.data);
-        } else {
-          throw new Error(res.error?.message || "业务处理失败");
-        }
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "请求统计数据出错");
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        const msg = err instanceof Error ? err.message : "请求统计数据出错";
+        setError(msg);
+        // 静默吞错会违反项目硬约束,留日志便于排查
+        console.warn(`[dashboard] load stats failed: ${msg}`);
       })
       .finally(() => {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
+    return () => controller.abort();
   }, []);
 
   if (loading) {

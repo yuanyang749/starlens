@@ -63,6 +63,8 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
     model: "",
     providerType: "openai_compatible" as ProviderType,
   });
+  // 中文注释:防双击状态——创建/删除是异步操作,用户连点会发重复请求甚至产生重复配置。
+  const [creating, setCreating] = useState(false);
 
   const loadConfigs = async (signal?: AbortSignal) => {
     try {
@@ -116,6 +118,8 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
   };
 
   const createConfig = async () => {
+    if (creating) return;
+    setCreating(true);
     try {
       setMessage(null);
       setError(null);
@@ -137,6 +141,24 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
       setMessage("Provider 配置已保存。");
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "AI 配置创建失败。");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // 中文注释:删除配置用 cardBusy[id]="saving" 跟踪,按钮 disabled 防双击。
+  // 原写法 onClick 内联 async 无 catch,失败时 fetchApi 抛 ApiClientError 变成 unhandled rejection,用户无反馈。
+  const deleteConfig = async (id: string) => {
+    if (cardBusy[id]) return;
+    setCardBusy((prev) => ({ ...prev, [id]: "saving" }));
+    try {
+      await fetchApi(`/api/ai/configs/${id}`, { method: "DELETE" });
+      await loadConfigs();
+      setCardMsg(id, { type: "ok", text: "配置已删除" });
+    } catch (err) {
+      setCardMsg(id, { type: "err", text: err instanceof ApiClientError ? err.message : "删除失败" });
+    } finally {
+      setCardBusy((prev) => ({ ...prev, [id]: null }));
     }
   };
 
@@ -313,13 +335,11 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
                       </p>
                     </div>
                     <button
-                      onClick={async () => {
-                        await fetchApi(`/api/ai/configs/${config.id}`, { method: "DELETE" });
-                        await loadConfigs();
-                      }}
-                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
+                      onClick={() => void deleteConfig(config.id)}
+                      disabled={!!busy}
+                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      删除
+                      {busy === "saving" ? "删除中…" : "删除"}
                     </button>
                   </div>
 
@@ -581,10 +601,11 @@ export function AISettingsView({ isAdmin = true }: { isAdmin?: boolean }) {
           </label>
           <button
             onClick={createConfig}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-medium text-white cursor-pointer"
+            disabled={creating}
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-medium text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
-            创建配置
+            {creating ? "创建中…" : "创建配置"}
           </button>
         </div>
 
