@@ -16,6 +16,8 @@ import {
   favoriteCommand,
   noteCommand,
   tagCommand,
+  suggestCommand,
+  analyzeCommand,
 } from "./commands.mjs";
 import { runInstallSkillWizard } from "./install-skill/index.mjs";
 
@@ -37,6 +39,10 @@ const helpText = [
   "  stars note <repo-id|owner/repo> (--set <text>|--clear) [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag add <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag remove <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars suggest [--focus duplicates|stale|untagged|all] [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "    Suggest organization improvements for starred repos (duplicates, stale, untagged).",
+  "  stars analyze <repo-id|owner/repo> [--apply] [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "    Analyze a repo and suggest tags/notes. --apply writes suggestions to starred repos.",
   "  stars install-skill [--client <names>] [--token <token>|--token-stdin] [--api-base-url <url>] [--hosted|--local]",
   "    Launch interactive wizard to configure Starlens Skill and MCP Server.",
   "    --client       comma-separated clients (claude, cursor, codex, opencode, vscode, openclaw, hermes, other)",
@@ -94,6 +100,8 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   if (command === "favorite" || command === "unfavorite") return favoriteCommand(command, rest, config);
   if (command === "note") return noteCommand(rest, config);
   if (command === "tag") return tagCommand(rest, config);
+  if (command === "suggest") return suggestCommand(rest, config);
+  if (command === "analyze") return analyzeCommand(rest, config);
 
   if (command === "install-skill" || command === "setup") {
     return runInstallSkillWizard(rest, config, env);

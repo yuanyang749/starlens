@@ -148,6 +148,87 @@ export const agentTools: AgentToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  // 以下 5 个工具采用“触发条件”写法（spec 第 8.2 节），描述何时主动调用而非功能说明。
+  {
+    name: "analyze_repo",
+    description:
+      "Call this tool when the user drops a repository (owner/repo) for analysis and you want to surface what the repo is good for and suggest tags/notes. Triggers when the user says 'analyze this repo', 'what is X good for', or pastes a GitHub URL and asks for a summary. Works for both starred and unstarred repos; for unstarred repos it fetches live GitHub data without persisting it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        repo: repoProperty,
+        applySuggestions: {
+          type: "boolean",
+          description:
+            "Whether to automatically apply suggested tags/note to the user's starred repo. Defaults to false. Set to true only after the user has confirmed the suggestions. Has no effect on unstarred repos.",
+        },
+      },
+      required: ["repo"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "recommend_for_task",
+    description:
+      "Call this tool when the user starts a coding task (new feature, tech selection, research, library comparison) and you want to find relevant libraries or prior art from their GitHub starred repos BEFORE writing code. Triggers when the user says 'I'm going to build X', 'help me pick a library for Y', or describes a task that would benefit from prior starred knowledge.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        taskDescription: {
+          type: "string",
+          description: "Natural-language description of the coding task the user is starting.",
+        },
+        limit: { type: "integer", minimum: 1, maximum: 30, description: "Max number of recommended repos. Default 10." },
+      },
+      required: ["taskDescription"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "find_related",
+    description:
+      "Call this tool when the user mentions a specific repository (owner/repo) and wants to discover related repos they have already starred. Triggers when the user says 'find repos like X', 'what else do I have similar to Y', or when after showing a repo detail the user wants to explore its neighborhood. Returns repos sharing the same owner, language, or topics, ranked by AI semantic similarity.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        repo: repoProperty,
+        limit: { type: "integer", minimum: 1, maximum: 30, description: "Max number of related repos. Default 10." },
+      },
+      required: ["repo"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "suggest_organization",
+    description:
+      "Call this tool when the user mentions organizing, cleaning up, deduplicating, or auditing their starred repo collection. Triggers when the user says 'help me organize my stars', 'find duplicates', 'what's stale', 'which repos have no tags', or 'audit my collection'. Returns suggestions only — does not modify data; the agent must call add_star_tag/remove_star_tag/etc. to apply changes after user confirmation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        focus: {
+          type: "string",
+          enum: ["duplicates", "stale", "untagged", "all"],
+          description: "Which kind of organization suggestions to return. Default 'all'.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_sync_summary",
+    description:
+      "Call this tool at the start of a new session, or when the user asks 'what's new', 'what changed since last sync', or 'show me recent additions to my stars'. Returns a summary of repos added/removed/changed since the last sync (or since an arbitrary timestamp). Use this proactively to give the user context about their recent starred-repo activity without requiring them to ask explicitly.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        since: {
+          type: "string",
+          description: "Optional ISO 8601 timestamp. Defaults to the user's last sync finished time.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 function apiBaseUrl(context: AgentToolContext) {
@@ -332,6 +413,55 @@ export async function callAgentTool(
         context,
         method: "POST",
       }));
+    // 5 个主动型工具（spec 第 6.1 节）：均通过 apiRequest 复用鉴权/错误处理链。
+    case "analyze_repo": {
+      // applySuggestions 默认 false——agent 必须先呈现建议给用户、用户确认后才能传 true。
+      const applySuggestions = typeof args.applySuggestions === "boolean" ? args.applySuggestions : false;
+      return textResult(await apiRequest("/api/ai/analyze", {
+        body: { repo: stringArg(args, "repo"), applySuggestions },
+        context,
+        method: "POST",
+      }));
+    }
+    case "recommend_for_task": {
+      const limit = typeof args.limit === "number" && Number.isFinite(args.limit)
+        ? Math.min(30, Math.max(1, Math.trunc(args.limit)))
+        : undefined;
+      return textResult(await apiRequest("/api/ai/recommend", {
+        body: { taskDescription: stringArg(args, "taskDescription"), ...(limit ? { limit } : {}) },
+        context,
+        method: "POST",
+      }));
+    }
+    case "find_related": {
+      const limit = typeof args.limit === "number" && Number.isFinite(args.limit)
+        ? Math.min(30, Math.max(1, Math.trunc(args.limit)))
+        : undefined;
+      return textResult(await apiRequest("/api/ai/related", {
+        body: { repo: stringArg(args, "repo"), ...(limit ? { limit } : {}) },
+        context,
+        method: "POST",
+      }));
+    }
+    case "suggest_organization": {
+      // focus 是可选枚举——非 duplicates/stale/untagged/all 时不传，由路由层降级到默认 'all'。
+      const focus = typeof args.focus === "string" && ["duplicates", "stale", "untagged", "all"].includes(args.focus)
+        ? args.focus
+        : undefined;
+      return textResult(await apiRequest("/api/repos/suggestions", {
+        context,
+        query: focus ? { focus } : undefined,
+      }));
+    }
+    case "get_sync_summary": {
+      // since 是可选 ISO 时间戳——非字符串或空字符串时不传，由业务逻辑降级到上次同步时间。
+      const sinceRaw = args.since;
+      const since = typeof sinceRaw === "string" && sinceRaw.trim() ? sinceRaw.trim() : undefined;
+      return textResult(await apiRequest("/api/sync/summary", {
+        context,
+        query: since ? { since } : undefined,
+      }));
+    }
     default:
       throw new AgentToolError(`Unknown Starlens agent tool: ${name}`);
   }

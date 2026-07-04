@@ -128,6 +128,77 @@ export function renderTags(data, format) {
   );
 }
 
+// stars suggest：表格化输出知识整理建议（fullName / issue / suggestion）
+export function renderSuggest(data, format) {
+  if (format === "json") return outputJson(data);
+  const suggestions = data.suggestions ?? [];
+  printTable(
+    suggestions.map((item) => ({
+      fullName: item.fullName ?? "",
+      issue: item.issue ?? "",
+      suggestion: item.suggestion ?? "",
+    })),
+    [
+      { key: "fullName", label: "Repository", maxWidth: 32 },
+      { key: "issue", label: "Issue", maxWidth: 16 },
+      { key: "suggestion", label: "Suggestion", maxWidth: 72 },
+    ],
+  );
+  const total = data.meta?.totalCount;
+  if (typeof total === "number") {
+    console.log(`\n${total} suggestion${total === 1 ? "" : "s"}`);
+  }
+}
+
+// stars analyze：分块输出仓库基础信息、AI 分析、建议标签/备注、应用状态
+export function renderAnalyze(data, format) {
+  if (format === "json") return outputJson(data);
+  const repo = data.repo ?? {};
+  const columns = [
+    { key: "field", label: "Field", maxWidth: 16 },
+    { key: "value", label: "Value", maxWidth: 96 },
+  ];
+
+  // 仓库基础信息
+  console.log("Repository");
+  printTable(
+    [
+      { field: "Full name", value: repo.fullName ?? "" },
+      { field: "Stars", value: repo.stargazersCount ?? 0 },
+      { field: "Language", value: repo.language ?? "" },
+      { field: "Starred", value: data.isStarred ? "yes" : "no" },
+    ],
+    columns,
+  );
+
+  // AI 分析
+  console.log("\nAI analysis");
+  printTable(
+    [
+      { field: "Summary", value: data.summary ?? "" },
+      { field: "Suitable for", value: data.suitableFor ?? "" },
+    ],
+    columns,
+  );
+
+  // 建议标签 / 建议备注
+  console.log("\nSuggestions");
+  printTable(
+    [
+      { field: "Tags", value: (data.suggestedTags ?? []).join(", ") },
+      { field: "Note", value: data.suggestedNote ?? "" },
+    ],
+    columns,
+  );
+
+  // 应用状态：applied 为 true 显示已应用；否则由后端 hint 提示（如先 star）
+  console.log("\nApply status");
+  printTable([{ field: "Applied", value: data.applied ? "yes" : "no" }], columns);
+  if (data.hint) {
+    console.log(`\n${data.hint}`);
+  }
+}
+
 // 修复：version / help 也尊重 --format json（它们是全局选项）。
 export function renderVersion(version, format) {
   if (format === "json") return outputJson({ version });
