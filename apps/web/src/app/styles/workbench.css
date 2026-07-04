@@ -237,6 +237,99 @@
   gap: 0;
 }
 
+/* --- 工作台左侧拉票卡片 (像素撞色贴纸风格 ฅ'ω'ฅ) --- */
+.workbench-vote-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 2px solid #111827;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfaff, #f3efff);
+  padding: 14px;
+  text-decoration: none;
+  color: #111827;
+  box-shadow: 4px 4px 0 #111827;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  margin-top: 6px;
+}
+
+.workbench-vote-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #111827;
+  background: #ffffff;
+}
+
+.workbench-vote-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #111827;
+}
+
+/* 倾斜贴纸 */
+.workbench-vote-card__badge {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 3px 8px;
+  background: #7c3aed; /* 大赛亮紫 */
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  border: 2px solid #111827;
+  box-shadow: 2px 2px 0 #111827;
+  transform: rotate(-3deg);
+  margin-left: 2px;
+  image-rendering: pixelated;
+}
+
+.workbench-vote-card:hover .workbench-vote-card__badge {
+  background: #10b981; /* 大赛亮绿 */
+  color: #111827;
+}
+
+.workbench-vote-card__text {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #374151;
+}
+
+.workbench-vote-card__go {
+  align-self: flex-end;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #7c3aed;
+  transition: color 150ms ease;
+}
+
+.workbench-vote-card:hover .workbench-vote-card__go {
+  color: #10b981;
+}
+
+/* 折叠状态下的小图标样式 */
+.workbench-vote-card.is-collapsed {
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 0;
+  margin: 0 auto 6px;
+  background: linear-gradient(180deg, #7c3aed, #6d28d9);
+  border: 2px solid #111827;
+  box-shadow: 2px 2px 0 #111827;
+}
+
+.workbench-vote-card.is-collapsed:hover {
+  background: #10b981;
+  box-shadow: 3px 3px 0 #111827;
+}
+
+.workbench-vote-card__collapsed-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .workbench-sync-card {
   border: 1px solid var(--line);
   border-radius: 18px;

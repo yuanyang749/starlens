@@ -366,6 +366,113 @@ html {
   scroll-margin-top: 96px;
 }
 
+/* --- TRAE AI 大赛拉票 Banner (像素撞色贴纸风格 ฅ'ω'ฅ) --- */
+.landing-contest-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: min(calc(100vw - 48px), 760px);
+  margin-bottom: 24px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 2px solid #111827;
+  border-radius: 4px;
+  box-shadow: 4px 4px 0 #111827;
+  text-decoration: none;
+  color: #111827;
+  font-family: inherit;
+  transition: transform 150ms cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 150ms cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.landing-contest-banner:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #111827;
+  background: #ffffff;
+}
+
+.landing-contest-banner:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #111827;
+}
+
+/* 倾斜的 8-bit 大赛贴纸 */
+.landing-contest-banner__badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  background: #7c3aed; /* 亮紫色 */
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 2px solid #111827;
+  box-shadow: 2px 2px 0 #111827;
+  transform: rotate(-3deg);
+  image-rendering: pixelated;
+}
+
+/* 比赛亮绿色撞色 */
+.landing-contest-banner:hover .landing-contest-banner__badge {
+  background: #10b981; /* 亮绿色 */
+  color: #111827;
+}
+
+.landing-contest-banner__text {
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* 像素风“去投票”按钮 */
+.landing-contest-banner__go {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #e2e8f0;
+  border: 2px solid #111827;
+  border-radius: 2px;
+  color: #111827;
+  font-size: 11.5px;
+  font-weight: 750;
+  box-shadow: 2px 2px 0 #111827;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.landing-contest-banner:hover .landing-contest-banner__go {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .landing-contest-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+
+  .landing-contest-banner__badge {
+    align-self: flex-start;
+    transform: rotate(-2deg);
+  }
+
+  .landing-contest-banner__text {
+    font-size: 12.5px;
+  }
+
+  .landing-contest-banner__go {
+    align-self: flex-end;
+  }
+}
+
 .landing-kicker,
 .landing-pill {
   display: inline-flex;

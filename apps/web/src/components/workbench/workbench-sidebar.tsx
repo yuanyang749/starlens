@@ -173,6 +173,33 @@ export function WorkbenchSidebar({
         </section>
       </div>
 
+      {/* 大赛拉票卡片 ฅ'ω'ฅ */}
+      <a
+        href="https://forum.trae.cn/t/topic/70912"
+        target="_blank"
+        rel="noopener noreferrer"
+        className={collapsed ? "workbench-vote-card is-collapsed" : "workbench-vote-card"}
+        title="前往 TRAE AI 大赛为 Starlens 投票！"
+      >
+        {collapsed ? (
+          <div className="workbench-vote-card__collapsed-icon">
+            <span className="animate-pulse">💜</span>
+          </div>
+        ) : (
+          <>
+            <div className="workbench-vote-card__badge">
+              <span>TRAE 大赛</span>
+            </div>
+            <p className="workbench-vote-card__text">
+              Starlens 正在参加“TRAE AI 创造力大赛”！如果它帮到了你，请投我一票！
+            </p>
+            <div className="workbench-vote-card__go">
+              去投票 💜
+            </div>
+          </>
+        )}
+      </a>
+
       <div className="workbench-sync-card">
         <p className="workbench-sync-card__label">上次同步</p>
         <p className="workbench-sync-card__value">{lastSyncText}</p>
