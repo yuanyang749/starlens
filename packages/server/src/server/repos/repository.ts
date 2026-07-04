@@ -223,7 +223,7 @@ export async function searchRepos(userId: string, input: SearchReposInput = {}) 
             )
           : desc(starredRepos.pushedAtGithub);
 
-  const [rows, totalRows, allStarsRows] = await Promise.all([
+  const [rows, totalRows, allStarsRows, favRows] = await Promise.all([
     db
       .select()
       .from(starredRepos)
@@ -241,6 +241,16 @@ export async function searchRepos(userId: string, input: SearchReposInput = {}) 
           eq(starredRepos.isStarred, true)
         )
       ),
+    db
+      .select({ value: count() })
+      .from(starredRepos)
+      .where(
+        and(
+          eq(starredRepos.userId, userId),
+          eq(starredRepos.isStarred, true),
+          eq(starredRepos.isFavorite, true)
+        )
+      ),
   ]);
 
   const decorations = await getRepoDecorations(
@@ -250,6 +260,7 @@ export async function searchRepos(userId: string, input: SearchReposInput = {}) 
 
   const total = totalRows[0]?.value ?? 0;
   const allStarsTotal = allStarsRows[0]?.value ?? 0;
+  const favoritesTotal = favRows[0]?.value ?? 0;
 
   return {
     items: rows.map((repo) =>
@@ -264,6 +275,7 @@ export async function searchRepos(userId: string, input: SearchReposInput = {}) 
     total,
     hasMore: offset + pageSize < total,
     allStarsTotal,
+    favoritesTotal,
   };
 }
 

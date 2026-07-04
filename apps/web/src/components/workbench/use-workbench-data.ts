@@ -29,6 +29,7 @@ export function useWorkbenchData(
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [allStarsTotal, setAllStarsTotal] = useState(0);
+  const [favoritesTotal, setFavoritesTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [selectedRepo, setSelectedRepo] = useState<RepoSummary | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -58,6 +59,13 @@ export function useWorkbenchData(
           } else if (!favoritesOnly && !aiSearchMode && !query.trim() && !language && !tagFilter) {
             setAllStarsTotal(data.total);
           }
+
+          if (typeof data.favoritesTotal === "number") {
+            setFavoritesTotal(data.favoritesTotal);
+          } else if (favoritesOnly && !aiSearchMode && !query.trim() && !language && !tagFilter) {
+            setFavoritesTotal(data.total);
+          }
+
           setPageSize(data.pageSize);
           setError(null);
           setSelectedId((current) =>
@@ -162,6 +170,10 @@ export function useWorkbenchData(
       }
       patchRepoInList(optimisticRepo);
 
+      if (typeof updates.isFavorite === "boolean" && updates.isFavorite !== currentRepo.isFavorite) {
+        setFavoritesTotal((prev) => (updates.isFavorite ? prev + 1 : Math.max(0, prev - 1)));
+      }
+
       try {
         const repo = await apiJson<RepoSummary>(`/api/repos/${repoId}`, {
           method: "PATCH",
@@ -181,6 +193,9 @@ export function useWorkbenchData(
           setNoteDraft(prevSelectedRepo.note);
         }
         patchRepoInList(currentRepo);
+        if (typeof updates.isFavorite === "boolean" && updates.isFavorite !== currentRepo.isFavorite) {
+          setFavoritesTotal((prev) => (currentRepo.isFavorite ? prev + 1 : Math.max(0, prev - 1)));
+        }
         setError(
           caught instanceof Error
             ? `详情请求失败：${caught.message}`
@@ -253,7 +268,7 @@ export function useWorkbenchData(
     return "尚未同步";
   })();
 
-  const favoriteCount = repos.filter((repo) => repo.isFavorite).length;
+  const favoriteCount = favoritesTotal;
 
   return {
     // 列表数据

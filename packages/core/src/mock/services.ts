@@ -113,6 +113,8 @@ export function searchMockRepos(
     pageSize,
     total: filtered.length,
     hasMore: start + pageSize < filtered.length,
+    allStarsTotal: mockRepoDetails.length,
+    favoritesTotal: mockRepoDetails.filter((r) => r.isFavorite).length,
   };
 }
 

@@ -112,5 +112,6 @@ export type PaginatedResult<T> = {
   total: number;
   hasMore: boolean;
   allStarsTotal?: number;
+  favoritesTotal?: number;
 };
 
