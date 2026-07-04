@@ -6,14 +6,14 @@ import type { AiSearchInsight } from "./workbench-api";
 
 function renderFormattedSummary(text: string) {
   // 分割并格式化段落/列表
-  let normalizedText = text.replace(/(\d+\.\s+\*\*)/g, "\n$1");
+  const normalizedText = text.replace(/(\d+\.\s+\*\*)/g, "\n$1");
   const lines = normalizedText.split("\n").map(line => line.trim()).filter(Boolean);
 
   return (
     <div className="ai-search-report__summary-flow">
       {lines.map((line, idx) => {
         const parts: Array<{ text: string; isBold: boolean }> = [];
-        let tempLine = line;
+        const tempLine = line;
 
         const boldRegex = /\*\*(.*?)\*\*/g;
         let match;

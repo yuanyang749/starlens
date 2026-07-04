@@ -626,4 +626,62 @@ describe("workbench view", () => {
 
     expect(el.textContent).toContain(mockRepoDetails[1]?.fullName ?? "");
   });
+
+  it("clears loading state and shows error when the list fetch fails", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.startsWith("/api/search")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: false, error: { code: "x", message: "搜索服务暂不可用" } }), { status: 500 }),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+      );
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { el } = mount(<WorkbenchView userName="Tester" />);
+    await flushWorkbench();
+
+    // 中文注释：fetch 失败后 loading 必须归零,不能卡在 "正在加载仓库列表..." 骨架屏
+    expect(el.textContent).not.toContain("正在加载仓库列表");
+    expect(el.textContent).toContain("列表请求失败");
+    expect(el.textContent).toContain("搜索服务暂不可用");
+  });
+
+  it("auto-triggers a sync on first mount when the repo list is empty", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.startsWith("/api/search")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true, data: createSearchPayload([]) })),
+        );
+      }
+
+      if (url === "/api/sync" && init?.method === "POST") {
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+      );
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    mount(<WorkbenchView userName="Tester" />);
+    await flushWorkbench();
+
+    const syncCalls = fetchMock.mock.calls.filter(([input, init]) =>
+      (typeof input === "string" ? input : input.toString()) === "/api/sync" && init?.method === "POST",
+    );
+    expect(syncCalls.length).toBeGreaterThanOrEqual(1);
+  });
 });
