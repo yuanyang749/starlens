@@ -42,7 +42,8 @@ type RepoRow = typeof starredRepos.$inferSelect;
 
 // ─── 目标仓库解析 ─────────────────────────────────────────────────────────────
 
-async function resolveTargetRepo(userId: string, repo: string): Promise<RepoRow | null> {
+/** @internal 测试可见，不是公共 API */
+export async function resolveTargetRepo(userId: string, repo: string): Promise<RepoRow | null> {
   const db = getDb();
 
   // 按 id 精确匹配
@@ -61,7 +62,8 @@ async function resolveTargetRepo(userId: string, repo: string): Promise<RepoRow 
 // ─── 候选召回 ─────────────────────────────────────────────────────────────────
 
 // 召回同 owner 的其他仓库
-async function recallByOwner(userId: string, ownerLogin: string, excludeId: string): Promise<RepoRow[]> {
+/** @internal 测试可见，不是公共 API */
+export async function recallByOwner(userId: string, ownerLogin: string, excludeId: string): Promise<RepoRow[]> {
   const db = getDb();
   return db
     .select()
@@ -78,7 +80,8 @@ async function recallByOwner(userId: string, ownerLogin: string, excludeId: stri
 }
 
 // 召回同 language 的其他仓库
-async function recallByLanguage(userId: string, language: string | null, excludeId: string): Promise<RepoRow[]> {
+/** @internal 测试可见，不是公共 API */
+export async function recallByLanguage(userId: string, language: string | null, excludeId: string): Promise<RepoRow[]> {
   if (!language) return [];
   const db = getDb();
   return db
@@ -100,7 +103,8 @@ async function recallByLanguage(userId: string, language: string | null, exclude
 // 在序列化后的 JSON 字符串上做包含匹配——能精确匹配到 topic 字符串边界（双引号包裹），
 // 避免误匹配子串（如 "rag" 不会匹配 "storage"）。
 // 防注入：topic 命名规范是字母数字+连字符/点/下划线，只保留这些字符。
-async function recallByTopics(userId: string, topics: string[], excludeId: string): Promise<RepoRow[]> {
+/** @internal 测试可见，不是公共 API */
+export async function recallByTopics(userId: string, topics: string[], excludeId: string): Promise<RepoRow[]> {
   if (topics.length === 0) return [];
   const safeTopics = topics
     .map((t) => t.replace(/[^a-zA-Z0-9.\-_]/g, ""))
@@ -171,9 +175,11 @@ ${candidateText}
 请按与目标的关联强度排序，并为每个保留的候选生成一句中文 relation。`;
 }
 
-type AiRelatedOutput = { items: Array<{ id: string; relation: string }> };
+/** @internal AI 输出结构——测试可见，不是公共 API */
+export type AiRelatedOutput = { items: Array<{ id: string; relation: string }> };
 
-function parseAiRelatedOutput(raw: string | null): AiRelatedOutput | null {
+/** @internal 测试可见，不是公共 API */
+export function parseAiRelatedOutput(raw: string | null): AiRelatedOutput | null {
   if (!raw) return null;
 
   const cleaned = stripThinkBlocks(raw).trim();

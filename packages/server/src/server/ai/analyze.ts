@@ -48,7 +48,8 @@ export type AnalyzeRepoResult = {
 
 // ─── 仓库解析 ───────────────────────────────────────────────────────────────
 
-type RepoSnapshot = {
+/** @internal 仓库快照——测试可见，不是公共 API */
+export type RepoSnapshot = {
   id: string | null;
   fullName: string;
   description: string;
@@ -155,7 +156,8 @@ async function fetchRepoFromGitHub(userId: string, owner: string, repo: string):
 
 // ─── AI 分析 ────────────────────────────────────────────────────────────────
 
-function buildAnalyzeSystemPrompt(): string {
+/** @internal 测试可见，不是公共 API */
+export function buildAnalyzeSystemPrompt(): string {
   return `你是 Starlens 的仓库分析助手。基于仓库的 fullName、description、topics、README 摘录、repoSummary、language、star 数，输出对仓库的分析。
 
 严格规则：
@@ -166,7 +168,8 @@ function buildAnalyzeSystemPrompt(): string {
 - 如果数据不足以判断 suitableFor 或 suggestedNote，返回空字符串而不是编造`;
 }
 
-function buildAnalyzeUserPrompt(snapshot: RepoSnapshot): string {
+/** @internal 测试可见，不是公共 API */
+export function buildAnalyzeUserPrompt(snapshot: RepoSnapshot): string {
   const lines = [
     `仓库：${snapshot.fullName}`,
     `Stars: ${snapshot.stargazersCount}`,
@@ -183,14 +186,16 @@ function buildAnalyzeUserPrompt(snapshot: RepoSnapshot): string {
   return lines.join("\n");
 }
 
-type AiAnalyzeOutput = {
+/** @internal AI 输出结构——测试可见，不是公共 API */
+export type AiAnalyzeOutput = {
   summary: string;
   suitableFor: string;
   suggestedTags: string[];
   suggestedNote: string;
 };
 
-function parseAiOutput(raw: string | null, fallback: RepoSnapshot): AiAnalyzeOutput {
+/** @internal 测试可见，不是公共 API */
+export function parseAiOutput(raw: string | null, fallback: RepoSnapshot): AiAnalyzeOutput {
   if (!raw) {
     return {
       summary: fallback.repoSummary || fallback.description || fallback.fullName,
@@ -238,7 +243,8 @@ function parseAiOutput(raw: string | null, fallback: RepoSnapshot): AiAnalyzeOut
 
 // applySuggestions=true 且已 star：调用 addRepoTag + updateRepoCuration 应用建议。
 // 单个 tag 应用失败不致命——记录原因后继续应用其他 tag，最大化用户感知到的成功。
-async function applySuggestionsToStarredRepo(
+/** @internal 测试可见，不是公共 API */
+export async function applySuggestionsToStarredRepo(
   userId: string,
   repoId: string,
   suggestions: AiAnalyzeOutput,

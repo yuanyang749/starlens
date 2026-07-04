@@ -12,6 +12,9 @@
     "./server/*": "./src/server/*.ts",
     "./server/ai/ask/*": "./src/server/ai/ask/*.ts"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@starlens-app/core": "workspace:*",
     "drizzle-orm": "^0.45.2",
@@ -22,6 +25,7 @@
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }

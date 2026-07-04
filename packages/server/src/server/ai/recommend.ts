@@ -39,7 +39,8 @@ export type RecommendForTaskResult = {
 };
 
 // 中文注释：冷启动检测——用户未同步任何 star 时返回 empty: true，让 agent 引导用户先 sync_stars。
-async function hasStarredRepos(userId: string): Promise<boolean> {
+/** @internal 测试可见，不是公共 API */
+export async function hasStarredRepos(userId: string): Promise<boolean> {
   const db = getDb();
   const rows = await db
     .select({ value: count() })
@@ -50,7 +51,8 @@ async function hasStarredRepos(userId: string): Promise<boolean> {
 
 // ─── AI 重排 ────────────────────────────────────────────────────────────────
 
-function buildRecommendSystemPrompt(): string {
+/** @internal 测试可见，不是公共 API */
+export function buildRecommendSystemPrompt(): string {
   return `你是 Starlens 的仓库推荐助手。给定一个编码任务描述和一组候选仓库（已带 ts_rank 排序），你需要：
 1. 根据任务描述判断哪些仓库最相关
 2. 对相关仓库按相关性降序重新排序
@@ -98,9 +100,11 @@ ${candidateText}
 请按任务相关性重排，并为每个保留的仓库生成一句中文 reason。`;
 }
 
-type AiRecommendOutput = { items: Array<{ id: string; reason: string }> };
+/** @internal AI 输出结构——测试可见，不是公共 API */
+export type AiRecommendOutput = { items: Array<{ id: string; reason: string }> };
 
-function parseAiRecommendOutput(raw: string | null): AiRecommendOutput | null {
+/** @internal 测试可见，不是公共 API */
+export function parseAiRecommendOutput(raw: string | null): AiRecommendOutput | null {
   if (!raw) return null;
 
   const cleaned = stripThinkBlocks(raw).trim();
