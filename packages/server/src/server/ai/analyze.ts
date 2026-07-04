@@ -10,7 +10,7 @@ import { getDb } from "../../db/client";
 import { starredRepos } from "../../db/schema";
 import { addRepoTag, updateRepoCuration } from "../repos/repository";
 import { getGitHubAccessToken } from "../github/sync";
-import { fetchReadmeExcerpt, summarizeSyncedRepo } from "../github/client";
+import { fetchGithubRepoMetadata, fetchReadmeExcerpt, summarizeSyncedRepo } from "../github/client";
 import { callChatCompletionsWithTools, stripThinkBlocks, type AgentChatMessage } from "./ask/provider";
 import type { ChatRuntimeConfig } from "./ask/types";
 
@@ -107,32 +107,15 @@ function toSnapshot(row: typeof starredRepos.$inferSelect): RepoSnapshot {
 }
 
 // 实时调 GitHub API 拉取未 star 仓库的元数据 + README。
+// 元数据拉取逻辑复用 github/client.ts 的 fetchGithubRepoMetadata（star_repo 收藏全新仓库时也要用到）。
 async function fetchRepoFromGitHub(userId: string, owner: string, repo: string): Promise<RepoSnapshot> {
   const { token } = await getGitHubAccessToken(userId);
 
-  const metaResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-
-  if (!metaResponse.ok) {
-    const status = metaResponse.status;
-    const msg = `GitHub repo metadata fetch failed: status=${status} repo=${owner}/${repo}`;
+  const meta = await fetchGithubRepoMetadata(token, owner, repo).catch((error: unknown) => {
+    const msg = error instanceof Error ? error.message : String(error);
     console.warn(`[ai/analyze] ${msg}`);
-    throw new Error(status === 404 ? `Repository ${owner}/${repo} was not found on GitHub.` : msg);
-  }
-
-  const meta = await metaResponse.json() as {
-    full_name: string;
-    html_url: string;
-    description?: string | null;
-    topics?: string[];
-    language?: string | null;
-    stargazers_count?: number;
-  };
+    throw error;
+  });
 
   const readmeExcerpt = await fetchReadmeExcerpt(token, owner, repo).catch((error: unknown) => {
     // README 拉取失败不致命——空 readme 会让 repoSummary 质量下降，但分析仍可继续。

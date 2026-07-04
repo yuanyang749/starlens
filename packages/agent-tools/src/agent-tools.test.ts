@@ -25,6 +25,8 @@ describe("agent tools", () => {
       "sync_stars",
       "favorite_star",
       "unfavorite_star",
+      "star_repo",
+      "unstar_repo",
       "set_star_note",
       "add_star_tag",
       "remove_star_tag",
@@ -108,6 +110,43 @@ describe("agent tools", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ tag: "mobile" }),
+      }),
+    );
+  });
+
+  it("star_repo posts the repo to the real GitHub star API", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ fullName: "owner/repo", isStarred: true }));
+
+    const result = await callAgentTool(
+      "star_repo",
+      { repo: "owner/repo" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/repos/star",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ repo: "owner/repo" }),
+      }),
+    );
+    expect(result.content[0]?.text).toContain("owner/repo");
+  });
+
+  it("unstar_repo posts the repo to the real GitHub unstar API", async () => {
+    const fetchMock = vi.fn(async () => apiResponse({ fullName: "owner/repo", isStarred: false }));
+
+    await callAgentTool(
+      "unstar_repo",
+      { repo: "repo-1" },
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://starlens.test/api/repos/unstar",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ repo: "repo-1" }),
       }),
     );
   });

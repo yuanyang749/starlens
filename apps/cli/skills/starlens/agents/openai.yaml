@@ -1,4 +1,0 @@
-interface:
-  display_name: "StarLens Agent"
-  short_description: "Use StarLens HTTP APIs from agent runtimes."
-  default_prompt: "Use the StarLens skill to search, inspect, organize, and ask questions over GitHub starred repositories through the configured HTTP API."

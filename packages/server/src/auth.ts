@@ -34,7 +34,9 @@ export const authOptions: NextAuthOptions = {
       },
       authorization: {
         params: {
-          scope: "read:user user:email",
+          // public_repo：star/unstar 公开仓库需要的写权限（见 packages/server/src/server/repos/github-star.ts）。
+          // 已连接旧 scope 的账号需要退出重新登录一次才能拿到这个新 scope。
+          scope: "read:user user:email public_repo",
         },
       },
     }),

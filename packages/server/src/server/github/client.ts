@@ -3,6 +3,7 @@ import "server-only";
 import { buildRepoSummary, extractReadmeExcerpt } from "@starlens-app/core";
 import {
   normalizeGitHubStarredRepo,
+  type GitHubRepoPayload,
   type GitHubStarredPayload,
   type NormalizedGitHubStarredRepo,
 } from "./normalize";
@@ -59,6 +60,59 @@ export async function listAllStarredRepos(token: string) {
     repos,
     pages,
   };
+}
+
+// 中文注释：Star/Unstar 需要 OAuth token 带 public_repo scope（见 packages/server/src/auth.ts）。
+// GitHub 对这两个接口返回 204 No Content 且天然幂等——重复 star 已 star 的仓库、
+// 或 unstar 已经不是 star 的仓库都会正常返回 204，不会报错。
+async function githubStarMutation(
+  token: string,
+  method: "PUT" | "DELETE",
+  owner: string,
+  repo: string,
+) {
+  const response = await fetch(`https://api.github.com/user/starred/${owner}/${repo}`, {
+    method,
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+      "Content-Length": "0",
+    },
+  });
+
+  if (!response.ok) {
+    // 状态码透传给上层——403 通常意味着 token 缺少 public_repo scope，404 意味着仓库不存在。
+    throw new Error(`GitHub ${method} star request failed: status=${response.status} repo=${owner}/${repo}`);
+  }
+}
+
+export function starRepoOnGithub(token: string, owner: string, repo: string) {
+  return githubStarMutation(token, "PUT", owner, repo);
+}
+
+export function unstarRepoOnGithub(token: string, owner: string, repo: string) {
+  return githubStarMutation(token, "DELETE", owner, repo);
+}
+
+// 中文注释：从 analyze.ts 抽出来的共享实现——两处都需要给"未 star/未知"的 owner/repo
+// 实时拉取 GitHub 仓库元数据（analyze_repo 分析未 star 仓库、star_repo 收藏全新仓库）。
+export async function fetchGithubRepoMetadata(token: string, owner: string, repo: string) {
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+
+  if (!response.ok) {
+    const status = response.status;
+    const msg = `GitHub repo metadata fetch failed: status=${status} repo=${owner}/${repo}`;
+    throw new Error(status === 404 ? `Repository ${owner}/${repo} was not found on GitHub.` : msg);
+  }
+
+  return (await response.json()) as GitHubRepoPayload;
 }
 
 export async function fetchReadmeExcerpt(token: string, owner: string, repo: string) {

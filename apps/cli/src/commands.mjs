@@ -122,6 +122,38 @@ export async function favoriteCommand(command, args, config) {
   );
 }
 
+// stars star <owner/repo|repo-id>
+// 真实调用 GitHub star API（POST /api/repos/star），与 favorite（本地标记）不同。
+// 接受任意 owner/repo，哪怕之前从未收藏过。
+export async function starCommand(args, config) {
+  const repo = args.join(" ").trim();
+  if (!repo) throw new CliError("star requires a repository id or owner/repo.");
+  const spinner = startSpinner("Starring...");
+  let data;
+  try {
+    data = await apiRequest("/api/repos/star", { method: "POST", config, body: { repo } });
+  } finally {
+    stopSpinner(spinner);
+  }
+  renderRepo(data, config.format);
+}
+
+// stars unstar <owner/repo|repo-id>
+// 真实调用 GitHub unstar API（POST /api/repos/unstar），与 unfavorite（本地标记）不同。
+// 只对已在本地收藏列表中的仓库生效。
+export async function unstarCommand(args, config) {
+  const repo = args.join(" ").trim();
+  if (!repo) throw new CliError("unstar requires a repository id or owner/repo.");
+  const spinner = startSpinner("Unstarring...");
+  let data;
+  try {
+    data = await apiRequest("/api/repos/unstar", { method: "POST", config, body: { repo } });
+  } finally {
+    stopSpinner(spinner);
+  }
+  renderRepo(data, config.format);
+}
+
 // stars note <repo> (--set <text>|--clear)
 export async function noteCommand(args, config) {
   let rest = [...args];

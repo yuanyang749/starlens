@@ -112,7 +112,9 @@ async function getTagsAndNote(userId: string, repoId: string) {
   };
 }
 
-async function upsertSyncedRepo(
+// 中文注释：导出供 github-star.ts 复用——star_repo 收藏一个新仓库时，
+// 需要走和批量 sync 完全一致的"写入/更新 starred_repos 并保留 tags/note"逻辑，避免另起一套实现。
+export async function upsertSyncedRepo(
   userId: string,
   token: string,
   repo: NormalizedGitHubStarredRepo,

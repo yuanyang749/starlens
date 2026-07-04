@@ -85,7 +85,8 @@ export const agentTools: AgentToolDefinition[] = [
   },
   {
     name: "favorite_star",
-    description: "Mark a starred repository as favorite.",
+    description:
+      "Mark a starred repository as favorite. This only sets a local Starlens flag — it does NOT change your real star status on GitHub. Use star_repo/unstar_repo for that.",
     inputSchema: {
       type: "object",
       properties: { repo: repoProperty },
@@ -95,7 +96,30 @@ export const agentTools: AgentToolDefinition[] = [
   },
   {
     name: "unfavorite_star",
-    description: "Remove favorite state from a starred repository.",
+    description:
+      "Remove favorite state from a starred repository. This only clears a local Starlens flag — it does NOT unstar the repo on GitHub. Use unstar_repo to actually remove a GitHub star.",
+    inputSchema: {
+      type: "object",
+      properties: { repo: repoProperty },
+      required: ["repo"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "star_repo",
+    description:
+      "Actually star a repository on GitHub (calls the real GitHub star API, not just a local Starlens flag). Accepts any 'owner/repo' — including repos you've never starred before — or an existing Starlens id/fullName (e.g. to re-star a repo you previously unstarred). After starring, the repo is synced into your Starlens collection.",
+    inputSchema: {
+      type: "object",
+      properties: { repo: repoProperty },
+      required: ["repo"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "unstar_repo",
+    description:
+      "Actually remove your GitHub star from a repository (calls the real GitHub unstar API — the repo will disappear from your GitHub Stars page). This is different from unfavorite_star, which only clears a local Starlens flag and leaves the GitHub star intact. Only works on repos already in your Starlens collection.",
     inputSchema: {
       type: "object",
       properties: { repo: repoProperty },
@@ -407,6 +431,18 @@ export async function callAgentTool(
       return textResult(await tagRepo(stringArg(args, "repo"), stringArg(args, "tag"), "POST", context));
     case "remove_star_tag":
       return textResult(await tagRepo(stringArg(args, "repo"), stringArg(args, "tag"), "DELETE", context));
+    case "star_repo":
+      return textResult(await apiRequest("/api/repos/star", {
+        body: { repo: stringArg(args, "repo") },
+        context,
+        method: "POST",
+      }));
+    case "unstar_repo":
+      return textResult(await apiRequest("/api/repos/unstar", {
+        body: { repo: stringArg(args, "repo") },
+        context,
+        method: "POST",
+      }));
     case "ask_stars":
       return textResult(await apiRequest("/api/ai/ask", {
         body: { question: stringArg(args, "question") },

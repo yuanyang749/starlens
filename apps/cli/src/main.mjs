@@ -14,6 +14,8 @@ import {
   openCommand,
   askCommand,
   favoriteCommand,
+  starCommand,
+  unstarCommand,
   noteCommand,
   tagCommand,
   suggestCommand,
@@ -36,6 +38,10 @@ const helpText = [
   "  stars ask <question> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars favorite <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars unfavorite <repo-id|owner/repo> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "  stars star <owner/repo|repo-id> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "    Actually star the repo on GitHub (not just a local favorite). Works on any owner/repo.",
+  "  stars unstar <owner/repo|repo-id> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
+  "    Actually unstar the repo on GitHub (not just a local favorite). Repo must already be in your collection.",
   "  stars note <repo-id|owner/repo> (--set <text>|--clear) [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag add <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "  stars tag remove <repo-id|owner/repo> <tag> [--api-base-url <url>] [--token-path <path>] [--format table|json]",
@@ -98,6 +104,8 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   if (command === "open") return openCommand(rest, config);
   if (command === "ask") return askCommand(rest, config);
   if (command === "favorite" || command === "unfavorite") return favoriteCommand(command, rest, config);
+  if (command === "star") return starCommand(rest, config);
+  if (command === "unstar") return unstarCommand(rest, config);
   if (command === "note") return noteCommand(rest, config);
   if (command === "tag") return tagCommand(rest, config);
   if (command === "suggest") return suggestCommand(rest, config);
