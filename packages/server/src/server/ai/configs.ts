@@ -68,7 +68,11 @@ function decryptHeaders(value: string | null) {
   try {
     const parsed = JSON.parse(decryptSecret(value));
     return parsed && typeof parsed === "object" ? parsed as Record<string, string> : {};
-  } catch {
+  } catch (error) {
+    // 解密或 JSON 解析失败——不打印密文，只记录原因。
+    // 否则用户配置的自定义 header 静默丢失，Provider 返回 401/403 时根因被转嫁为"Provider 鉴权失败"。
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[ai/configs] decryptHeaders failed: error=${msg}`);
     return {};
   }
 }
@@ -367,7 +371,11 @@ export async function getAiConfigModels(userId: string, id: string) {
       models: await fetchProviderModels(config),
       source: "provider",
     };
-  } catch {
+  } catch (error) {
+    // 拉模型列表失败（baseUrl 错、API key 失效、网络故障、CORS）——记录原因，
+    // 否则前端会把网络/鉴权故障误判为"Provider 不支持列表"。
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[ai/configs] fetchProviderModels failed: configId=${id} providerType=${config.providerType} error=${msg}`);
     return {
       providerType: config.providerType,
       models: [],

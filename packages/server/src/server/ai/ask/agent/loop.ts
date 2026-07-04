@@ -71,7 +71,11 @@ export async function runAgentLoop(
       let args: { answer?: unknown; repoIds?: unknown };
       try {
         args = JSON.parse(submitCall.function.arguments || "{}");
-      } catch {
+      } catch (error) {
+        // LLM 偶尔会返回畸形 JSON（长上下文/复杂 schema 时更常见）。记录原文（截断）便于
+        // prompt 调优和 Provider 选型决策，否则线上无法区分"LLM 输出畸形"还是"Provider 鉴权失败"。
+        const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        console.warn(`[ai/ask] submit_answer arguments JSON parse failed: error=${msg} args=${(submitCall.function.arguments || "").slice(0, 500)}`);
         return null;
       }
       if (typeof args.answer !== "string" || !args.answer.trim()) return null;
