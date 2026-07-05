@@ -5,22 +5,33 @@
     <title>Starlens 推广视频</title>
   </head>
   <body>
-    <!-- 根合成：1920x1080，38 秒。composition-id 必须与 window.__timelines 的 key 一致 -->
-    <div data-hf-id="hf-fzv6" id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="38">
-      <!-- ============ 全局背景层（持续 38s）============ -->
-      <div data-hf-id="hf-s01l" id="bg" class="clip" data-start="0" data-duration="38" data-track-index="5">
+    <!-- 根合成：1920x1080，65 秒。composition-id 必须与 window.__timelines 的 key 一致 -->
+    <div data-hf-id="hf-fzv6" id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="65">
+      <!-- ============ 全局背景层（持续 65s）============ -->
+      <div data-hf-id="hf-s01l" id="bg" class="clip" data-start="0" data-duration="65" data-track-index="5">
         <div data-hf-id="hf-yqqm" class="bg-grid"></div>
         <div data-hf-id="hf-rc9h" class="bg-glow" id="bg-glow"></div>
         <canvas data-hf-id="hf-nos6" id="starmap" width="1920" height="1080"></canvas>
       </div>
 
-      <!-- ============ 顶部进度条（持续 38s，贯穿全片）============ -->
-      <div data-hf-id="hf-prog" id="progress" class="clip" data-start="0" data-duration="38" data-track-index="4">
+      <!-- ============ 顶部进度条（持续 65s，贯穿全片）============ -->
+      <div data-hf-id="hf-prog" id="progress" class="clip" data-start="0" data-duration="65" data-track-index="4">
         <div data-hf-id="hf-progbar" class="progress-bar" id="progress-bar"></div>
       </div>
 
-      <!-- ============ S1 开场 (0-4.4s) ============ -->
-      <section data-hf-id="hf-m0gy" id="s1" class="scene clip" data-start="0" data-duration="4.8" data-track-index="0">
+      <!-- ============ 全局 TTS 语音旁白解说轨 (Track 10) ============ -->
+      <audio data-hf-id="audio-s1" src="assets/audio/s1.wav" class="clip" data-start="0.3" data-duration="5.52" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s2" src="assets/audio/s2.wav" class="clip" data-start="6.0" data-duration="7.34" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s3" src="assets/audio/s3.wav" class="clip" data-start="13.6" data-duration="5.98" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s4" src="assets/audio/s4.wav" class="clip" data-start="19.8" data-duration="5.88" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s5" src="assets/audio/s5.wav" class="clip" data-start="25.9" data-duration="6.38" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s5b" src="assets/audio/s5b.wav" class="clip" data-start="32.6" data-duration="7.06" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s5c" src="assets/audio/s5c.wav" class="clip" data-start="44.6" data-duration="6.19" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s6" src="assets/audio/s6.wav" class="clip" data-start="51.6" data-duration="6.55" data-track-index="10"></audio>
+      <audio data-hf-id="audio-s7" src="assets/audio/s7.wav" class="clip" data-start="58.6" data-duration="5.09" data-track-index="10"></audio>
+
+      <!-- ============ S1 开场 (0-6.0s) ============ -->
+      <section data-hf-id="hf-m0gy" id="s1" class="scene clip" data-start="0" data-duration="6.0" data-track-index="0">
         <div data-hf-id="hf-xb9t" class="scene-content scene-content--center">
           <div data-hf-id="hf-86l0" class="logo-row" id="s1-logo">
             <svg data-hf-id="hf-omyb" class="logo-mark" viewBox="0 0 48 48" width="64" height="64" aria-hidden="true">
@@ -34,10 +45,10 @@
         <div data-hf-id="hf-rf01" class="caption-bar" id="s1-cap">开发者平均 Star 过 500+ 仓库，却很少再打开</div>
       </section>
 
-      <!-- ============ S2 痛点 (4-9.4s) ============ -->
-      <section data-hf-id="hf-0jvp" id="s2" class="scene clip" data-start="4.4" data-duration="5.2" data-track-index="1">
+      <!-- ============ S2 痛点 (5.8-13.6s) ============ -->
+      <section data-hf-id="hf-0jvp" id="s2" class="scene clip" data-start="5.8" data-duration="7.8" data-track-index="1">
         <div data-hf-id="hf-rnph" class="scene-content scene-content--center">
-          <h2 data-hf-id="hf-ihfc" class="scene-heading" id="s2-heading">三个让人头疼的瞬间</h2>
+          <h2 data-hf-id="hf-ihfc" class="scene-heading shimmer-text" id="s2-heading">三个让人头疼的瞬间</h2>
           <div data-hf-id="hf-rird" class="pain-grid">
             <div data-hf-id="hf-mpmj" class="pain-card" id="pain-1">
               <svg data-hf-id="hf-2xme" class="pain-icon" viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
@@ -67,10 +78,10 @@
         <div data-hf-id="hf-smyy" class="caption-bar" id="s2-cap">这些痛点，Starlens 一次帮你解决</div>
       </section>
 
-      <!-- ============ S3 CLI 安装 + search (9-16.5s) ============ -->
-      <section data-hf-id="hf-3qsv" id="s3" class="scene clip" data-start="9.2" data-duration="6.8" data-track-index="0">
+      <!-- ============ S3 CLI 安装 + search (13.4-19.8s) ============ -->
+      <section data-hf-id="hf-3qsv" id="s3" class="scene clip" data-start="13.4" data-duration="6.4" data-track-index="0">
         <div data-hf-id="hf-sumk" class="scene-content scene-content--center">
-          <h2 data-hf-id="hf-eor7" class="scene-heading scene-heading--sm" id="s3-heading">用 CLI 把 Stars 变成知识库</h2>
+          <h2 data-hf-id="hf-eor7" class="scene-heading scene-heading--sm shimmer-text" id="s3-heading">用 CLI 把 Stars 变成知识库</h2>
           <div data-hf-id="hf-f5qv" class="terminal-window" id="term-1">
             <div data-hf-id="hf-px2o" class="terminal-titlebar">
               <span data-hf-id="hf-iaii" class="dot dot--red"></span>
@@ -110,10 +121,10 @@
         <div data-hf-id="hf-n1cz" class="caption-bar" id="s3-cap">装好就能按语言、关键词秒搜收藏</div>
       </section>
 
-      <!-- ============ S4 CLI ask (16.5-24s) ============ -->
-      <section data-hf-id="hf-6fha" id="s4" class="scene clip" data-start="15.6" data-duration="6.4" data-track-index="1">
+      <!-- ============ S4 CLI ask (19.6-25.9s) ============ -->
+      <section data-hf-id="hf-6fha" id="s4" class="scene clip" data-start="19.6" data-duration="6.3" data-track-index="1">
         <div data-hf-id="hf-sgbj" class="scene-content scene-content--center">
-          <h2 data-hf-id="hf-u8tr" class="scene-heading scene-heading--sm" id="s4-heading">用自然语言问你的收藏</h2>
+          <h2 data-hf-id="hf-u8tr" class="scene-heading scene-heading--sm shimmer-text" id="s4-heading">用自然语言问你的收藏</h2>
           <div data-hf-id="hf-6hv0" class="terminal-window" id="term-2">
             <div data-hf-id="hf-fs08" class="terminal-titlebar">
               <span data-hf-id="hf-ffxa" class="dot dot--red"></span>
@@ -148,10 +159,10 @@
         <div data-hf-id="hf-jq96" class="caption-bar" id="s4-cap">不记得仓库名？描述需求就能找到</div>
       </section>
 
-      <!-- ============ S5 Claude Code 调用 (24-36s) ============ -->
-      <section data-hf-id="hf-8zdr" id="s5cc" class="scene clip" data-start="21.6" data-duration="8" data-track-index="0">
+      <!-- ============ S5 Claude Code 调用 (25.7-32.5s) ============ -->
+      <section data-hf-id="hf-8zdr" id="s5cc" class="scene clip" data-start="25.7" data-duration="6.8" data-track-index="0">
         <div data-hf-id="hf-ufuo" class="scene-content scene-content--center">
-          <h2 data-hf-id="hf-sikh" class="scene-heading scene-heading--sm" id="s5cc-heading">让 Claude Code 帮你自动整理</h2>
+          <h2 data-hf-id="hf-sikh" class="scene-heading scene-heading--sm shimmer-text" id="s5cc-heading">让 Claude Code 帮你自动整理</h2>
           <div data-hf-id="hf-t9to" class="terminal-window" id="term-cc">
             <div data-hf-id="hf-el35" class="terminal-titlebar">
               <span data-hf-id="hf-fu8b" class="dot dot--red"></span>
@@ -200,10 +211,158 @@
         <div data-hf-id="hf-pfhp" class="caption-bar" id="s5cc-cap">通过 MCP，Agent 读取并自动整理你的 Stars</div>
       </section>
 
-      <!-- ============ S6 多端集成 (36-42s) ============ -->
-      <section data-hf-id="hf-b5b1" id="s5" class="scene clip" data-start="29.2" data-duration="4.4" data-track-index="1">
+      <!-- ============ S5b Agent 主动分析与归档 (32.3-44.5s) ============ -->
+      <section data-hf-id="hf-s5b" id="s5b" class="scene clip" data-start="32.3" data-duration="12.2" data-track-index="1">
+        <div data-hf-id="hf-s5b-cnt" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-s5b-hd" class="scene-heading scene-heading--sm shimmer-text" id="s5b-heading">Agent 主动分析，一句话智能入库</h2>
+          
+          <div data-hf-id="hf-s5b-term" class="terminal-window" id="term-s5b">
+            <div data-hf-id="hf-s5b-tb" class="terminal-titlebar">
+              <span data-hf-id="hf-s5b-d1" class="dot dot--red"></span>
+              <span data-hf-id="hf-s5b-d2" class="dot dot--yellow"></span>
+              <span data-hf-id="hf-s5b-d3" class="dot dot--green"></span>
+              <span data-hf-id="hf-s5b-tt" class="terminal-title">agent-chat — starlens mcp</span>
+            </div>
+            <div data-hf-id="hf-s5b-tbdy" class="terminal-body">
+              <!-- 1. 用户发送链接 -->
+              <div data-hf-id="hf-s5b-l1" class="term-line">
+                <span data-hf-id="hf-s5b-u1" class="cmd-text cc-user"><span data-hf-id="hf-s5b-p1" class="cc-prompt">❯</span> 帮我分析一下这个仓库: https://github.com/galacean/effects-runtime</span>
+              </div>
+              
+              <!-- 2. Starlens 主动调用高亮卡片 -->
+              <div data-hf-id="hf-s5b-tag" class="agent-tool-tag" id="s5b-tool-call">
+                <span data-hf-id="hf-s5b-dot" class="tool-glow-dot"></span> Called <strong data-hf-id="hf-6ee6">starlens</strong> tool (effects-runtime)
+              </div>
+              
+              <!-- 3. 分析结果与智能推荐卡片 -->
+              <div data-hf-id="hf-s5b-card" class="agent-suggest-card" id="s5b-suggest">
+                <div data-hf-id="hf-s5b-sr1" class="suggest-row">
+                  <span data-hf-id="hf-s5b-sl1" class="suggest-label">建议场景</span>
+                  <span data-hf-id="hf-s5b-sv1" class="suggest-val">Web 端 2D/3D 动效与粒子动画渲染引擎</span>
+                </div>
+                <div data-hf-id="hf-s5b-sr2" class="suggest-row highlight-box">
+                  <span data-hf-id="hf-s5b-sl2" class="suggest-label">建议标签</span>
+                  <div data-hf-id="hf-s5b-cg" class="chip-group">
+                    <span data-hf-id="hf-s5b-c1" class="suggest-chip">animation</span>
+                    <span data-hf-id="hf-s5b-c2" class="suggest-chip">effects</span>
+                    <span data-hf-id="hf-s5b-c3" class="suggest-chip">webgl</span>
+                    <span data-hf-id="hf-s5b-c4" class="suggest-chip">typescript</span>
+                  </div>
+                </div>
+                <div data-hf-id="hf-s5b-sr3" class="suggest-row highlight-box">
+                  <span data-hf-id="hf-s5b-sl3" class="suggest-label">建议备注</span>
+                  <span data-hf-id="hf-s5b-sv3" class="suggest-val font-mono">支持粒子与 Spine 骨骼动画的 Web 动效渲染引擎，配合编辑器可快速还原动效</span>
+                </div>
+              </div>
+
+              <!-- 3.5. AI 主动提问 -->
+              <div data-hf-id="hf-s5b-ask" class="agent-ask-box" id="s5b-ask">
+                <span data-hf-id="hf-15v7" class="ask-icon">💬</span> 主人尚未 Star 该仓库，需要为您 Star 并同步标签与备注吗？
+              </div>
+
+              <!-- 3.6. 用户确认回复 -->
+              <div data-hf-id="hf-s5b-uconfirm" class="term-line term-line--gap agent-user-reply" id="s5b-confirm">
+                <span data-hf-id="hf-47t4" class="cmd-text cc-user"><span data-hf-id="hf-hoin" class="cc-prompt">❯</span> 是的，帮我 Star 并添加标签与备注</span>
+              </div>
+
+              <!-- 4. 自动更新状态 -->
+              <div data-hf-id="hf-s5b-stat" class="agent-status-list" id="s5b-status">
+                <div data-hf-id="hf-s5b-i1" class="status-item"><span data-hf-id="hf-s5b-g1" class="t-green">✓</span> 已 Star 到 GitHub</div>
+                <div data-hf-id="hf-s5b-i2" class="status-item"><span data-hf-id="hf-s5b-g2" class="t-green">✓</span> 标签与备注已更新至 Starlens 个人库</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-s5b-cap" class="caption-bar" id="s5b-cap">发送 URL，AI 自动提炼用途与备注并交互式确认入库</div>
+      </section>
+
+      <!-- ============ S5c Web 工作台无缝同步 (44.3-51.5s) ============ -->
+      <section data-hf-id="hf-s5c" id="s5c" class="scene clip" data-start="44.3" data-duration="7.2" data-track-index="1">
+        <div data-hf-id="hf-s5c-cnt" class="scene-content scene-content--center">
+          <h2 data-hf-id="hf-s5c-hd" class="scene-heading scene-heading--sm shimmer-text" id="s5c-heading">数据无缝落盘，Web 工作台同步可查</h2>
+
+          <!-- 工作台模拟界面 -->
+          <div data-hf-id="hf-s5c-wb" class="wb-mockup-window" id="wb-window">
+            <div data-hf-id="hf-s5c-top" class="wb-topbar">
+              <span data-hf-id="hf-s5c-brand" class="wb-brand">Starlens</span>
+              <div data-hf-id="hf-s5c-sbox" class="wb-search-box">🔍 搜索你的 Stars...</div>
+            </div>
+            <div data-hf-id="hf-s5c-body" class="wb-body">
+              <!-- 左侧边栏（半透明） -->
+              <div data-hf-id="hf-s5c-side" class="wb-sidebar blur-dim">
+                <div data-hf-id="hf-pdrh" class="wb-nav-item active">⭐ 全部 Stars (165)</div>
+                <div data-hf-id="hf-uou3" class="wb-nav-item">📌 重点收藏 (5)</div>
+                <div data-hf-id="hf-31ne" class="wb-nav-item">🕒 最近同步</div>
+              </div>
+              
+              <!-- 中间列表区 -->
+              <div data-hf-id="hf-s5c-list" class="wb-list">
+                <!-- 第一行：高亮重点！ -->
+                <div data-hf-id="hf-s5c-item1" class="wb-repo-item focus-repo" id="wb-repo-focus">
+                  <div data-hf-id="hf-erwx" class="wb-repo-title">
+                    <span data-hf-id="hf-hzvz" class="repo-name">galacean/effects-runtime</span>
+                    <span data-hf-id="hf-qivx" class="repo-stars">681 Stars · TypeScript</span>
+                  </div>
+                  <div data-hf-id="hf-rcez" class="repo-desc">It can load and render cool animation effects</div>
+                  <div data-hf-id="hf-ir6i" class="repo-tags">
+                    <span data-hf-id="hf-s52n" class="mini-tag">animation</span>
+                    <span data-hf-id="hf-yaxv" class="mini-tag">effects</span>
+                    <span data-hf-id="hf-2rw4" class="mini-tag">webgl</span>
+                  </div>
+                  <div data-hf-id="hf-iwf1" class="red-highlight-border"></div>
+                </div>
+
+                <!-- 次要行 (模糊半透明) -->
+                <div data-hf-id="hf-3c62" class="wb-repo-item blur-dim">
+                  <div data-hf-id="hf-b8sl" class="wb-repo-title"><span data-hf-id="hf-xc86" class="repo-name">ai-boost/awesome-harness</span><span data-hf-id="hf-pqvf">2.6k Stars</span></div>
+                </div>
+                <div data-hf-id="hf-c58e" class="wb-repo-item blur-dim">
+                  <div data-hf-id="hf-cfpo" class="wb-repo-title"><span data-hf-id="hf-6vz8" class="repo-name">xinntao/Real-ESRGAN</span><span data-hf-id="hf-83c6">3.6万 Stars</span></div>
+                </div>
+                <div data-hf-id="hf-cjjf" class="wb-repo-item blur-dim">
+                  <div data-hf-id="hf-c1en" class="wb-repo-title"><span data-hf-id="hf-iej6" class="repo-name">upscayl/upscayl</span><span data-hf-id="hf-a2bo">4.7万 Stars</span></div>
+                </div>
+              </div>
+
+              <!-- 右侧详情面板 -->
+              <div data-hf-id="hf-s5c-panel" class="wb-detail-panel" id="wb-detail-panel">
+                <div data-hf-id="hf-tagr" class="detail-header">
+                  <h3 data-hf-id="hf-clx0">galacean/effects-runtime</h3>
+                  <span data-hf-id="hf-90hm" class="detail-url">https://github.com/galacean/effects-runtime</span>
+                </div>
+
+                <!-- 重点高亮 1：我的备注 -->
+                <div data-hf-id="hf-s5c-fmemo" class="detail-box focus-detail-box" id="wb-focus-memo">
+                  <div data-hf-id="hf-eix2" class="box-header">我的备注 <span data-hf-id="hf-0k2c" class="badge-saved">✓ 已自动保存</span></div>
+                  <div data-hf-id="hf-edl6" class="box-content memo-text">
+                    支持粒子与 Spine 骨骼动画的 Web 端动效渲染引擎，配合编辑器可快速实现所见即所得的动效还原。
+                  </div>
+                  <div data-hf-id="hf-7h6q" class="red-highlight-border red-pulse"></div>
+                </div>
+
+                <!-- 重点高亮 2：同步标签 -->
+                <div data-hf-id="hf-s5c-ftags" class="detail-box focus-detail-box" id="wb-focus-tags">
+                  <div data-hf-id="hf-f0q5" class="box-header">同步标签</div>
+                  <div data-hf-id="hf-s3ts" class="box-content tag-chips">
+                    <span data-hf-id="hf-8xos" class="chip">animation ✕</span>
+                    <span data-hf-id="hf-r9ve" class="chip">effects ✕</span>
+                    <span data-hf-id="hf-0m8q" class="chip">webgl ✕</span>
+                    <span data-hf-id="hf-447u" class="chip">typescript ✕</span>
+                    <span data-hf-id="hf-u68s" class="chip">html5 ✕</span>
+                  </div>
+                  <div data-hf-id="hf-n95v" class="red-highlight-border red-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-s5c-cap" class="caption-bar" id="s5c-cap">标签与备注无缝同步至 Web 工作台，随时高效检索</div>
+      </section>
+
+      <!-- ============ S6 多端集成 (51.3-58.5s) ============ -->
+      <section data-hf-id="hf-b5b1" id="s5" class="scene clip" data-start="51.3" data-duration="7.2" data-track-index="1">
         <div data-hf-id="hf-tn8m" class="scene-content scene-content--center">
-          <h2 data-hf-id="hf-edsz" class="scene-heading scene-heading--sm" id="s5-heading">随处可用，多端打通</h2>
+          <h2 data-hf-id="hf-edsz" class="scene-heading scene-heading--sm shimmer-text" id="s5-heading">随处可用，多端打通</h2>
           <div data-hf-id="hf-goj0" class="s5-shot" id="s5-shot">
             <img data-hf-id="hf-rrnw" src="assets/starlens-workbench-concept-21x9.png" alt="Starlens 工作台界面" crossorigin="anonymous">
           </div>
@@ -246,8 +405,8 @@
         </div>
       </section>
 
-      <!-- ============ S7 CTA (42-45s) ============ -->
-      <section data-hf-id="hf-2xjy" id="s6" class="scene scene--final clip" data-start="33.2" data-duration="4.8" data-track-index="0">
+      <!-- ============ S7 CTA (58.3-65.0s) ============ -->
+      <section data-hf-id="hf-2xjy" id="s6" class="scene scene--final clip" data-start="58.3" data-duration="6.7" data-track-index="0">
         <div data-hf-id="hf-t8xl" class="scene-content scene-content--center">
           <div data-hf-id="hf-ih0x" class="logo-row" id="s6-logo">
             <svg data-hf-id="hf-abi3" class="logo-mark" viewBox="0 0 48 48" width="80" height="80" aria-hidden="true">
@@ -255,19 +414,26 @@
             </svg>
             <span data-hf-id="hf-nrva" class="logo-word logo-word--lg">Starlens</span>
           </div>
-          <h2 data-hf-id="hf-unh1" class="cta-title" id="s6-title">开始整理你的 GitHub Stars</h2>
+          <h2 data-hf-id="hf-unh1" class="cta-title shimmer-text" id="s6-title">开始整理你的 GitHub Stars</h2>
           <div data-hf-id="hf-96pd" class="cta-button" id="s6-btn">
             <span data-hf-id="hf-kp3u">立即开始</span>
             <svg data-hf-id="hf-kxah" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
               <path data-hf-id="hf-suol" d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
+          <!-- 官方网址 Badge (波浪起伏动效) -->
+          <div data-hf-id="hf-s6-url" class="cta-url-badge" id="s6-url">
+            <span data-hf-id="hf-s6-uicon" class="url-icon" id="s6-url-icon">🌐</span>
+            <span data-hf-id="hf-s6-utxt" class="url-text" id="s6-url-text">
+              <span data-hf-id="hf-jq9z" class="url-char">h</span><span data-hf-id="hf-uuur" class="url-char">t</span><span data-hf-id="hf-uk2b" class="url-char">t</span><span data-hf-id="hf-t9mn" class="url-char">p</span><span data-hf-id="hf-svbm" class="url-char">s</span><span data-hf-id="hf-is59" class="url-char">:</span><span data-hf-id="hf-eery" class="url-char">/</span><span data-hf-id="hf-gx1u" class="url-char">/</span><span data-hf-id="hf-vumu" class="url-char">s</span><span data-hf-id="hf-u5ra" class="url-char">t</span><span data-hf-id="hf-nb18" class="url-char">a</span><span data-hf-id="hf-sh0l" class="url-char">r</span><span data-hf-id="hf-lbi3" class="url-char">l</span><span data-hf-id="hf-ow9c" class="url-char">e</span><span data-hf-id="hf-kiw1" class="url-char">n</span><span data-hf-id="hf-w8xv" class="url-char">s</span><span data-hf-id="hf-e0gx" class="url-char">.</span><span data-hf-id="hf-oqqo" class="url-char">5</span><span data-hf-id="hf-lylh" class="url-char">2</span><span data-hf-id="hf-mr7j" class="url-char">0</span><span data-hf-id="hf-c6tw" class="url-char">a</span><span data-hf-id="hf-k4l0" class="url-char">i</span><span data-hf-id="hf-p0j9" class="url-char">.</span><span data-hf-id="hf-q36f" class="url-char">x</span><span data-hf-id="hf-93kc" class="url-char">i</span><span data-hf-id="hf-8lo5" class="url-char">n</span>
+            </span>
+          </div>
         </div>
         <div data-hf-id="hf-v5w3" class="caption-bar" id="s6-cap">立即免费开始，三分钟整理好收藏</div>
       </section>
 
       <style>
-        /* ===== 全局 ===== */
+        /* ===== 全局 (Villa 3D Edition) ===== */
         #root {
           position: relative;
           width: 1920px;
@@ -277,9 +443,26 @@
           color: #101722;
           font-family: "Inter", "Helvetica Neue", system-ui, sans-serif;
           -webkit-font-smoothing: antialiased;
+          perspective: 1400px;
+          transform-style: preserve-3d;
         }
 
-        /* ===== 背景层 ===== */
+        /* ===== 高级流光标题 ===== */
+        .shimmer-text {
+          background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 40%, #a855f7 70%, #0ea5e9 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmerGlow 5s linear infinite;
+          display: inline-block;
+        }
+        @keyframes shimmerGlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        /* ===== 背景层 (流动网格) ===== */
         #bg {
           position: absolute;
           inset: 0;
@@ -291,14 +474,19 @@
           background-image:
             linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
             linear-gradient(180deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
-          background-size: 24px 24px;
+          background-size: 32px 32px;
+          animation: gridMove 20s linear infinite;
+        }
+        @keyframes gridMove {
+          0% { background-position: 0 0; }
+          100% { background-position: 32px 32px; }
         }
         .bg-glow {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(800px 500px at 20% 25%, rgba(99, 102, 241, 0.08), transparent 70%),
-            radial-gradient(700px 500px at 80% 75%, rgba(14, 165, 233, 0.08), transparent 70%);
+            radial-gradient(900px 600px at 20% 25%, rgba(99, 102, 241, 0.12), transparent 70%),
+            radial-gradient(800px 600px at 80% 75%, rgba(14, 165, 233, 0.12), transparent 70%);
         }
         #starmap {
           position: absolute;
@@ -437,10 +625,26 @@
         .terminal-window {
           width: 1480px;
           background: #1e1e2e;
-          border-radius: 14px;
-          box-shadow: 0 40px 80px -30px rgba(15, 23, 42, 0.5);
+          border-radius: 16px;
+          box-shadow: 0 40px 100px -20px rgba(15, 23, 42, 0.65), 0 0 40px rgba(99, 102, 241, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.16);
           overflow: hidden;
           font-family: "JetBrains Mono", "Menlo", monospace;
+          position: relative;
+          transform-style: preserve-3d;
+        }
+        .terminal-window::after {
+          content: "";
+          position: absolute;
+          top: 0; left: -150%; width: 100%; height: 100%;
+          background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.08) 50%, transparent 60%);
+          pointer-events: none;
+          transform: skewX(-20deg);
+          animation: glassSweep 6s ease-in-out infinite;
+        }
+        @keyframes glassSweep {
+          0%, 60% { left: -150%; }
+          100% { left: 150%; }
         }
         .terminal-titlebar {
           display: flex;
@@ -717,6 +921,32 @@
           font-weight: 700;
           box-shadow: 0 20px 50px -20px rgba(17, 24, 39, 0.5);
         }
+        .cta-url-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 14px;
+          margin-top: 10px;
+          padding: 14px 36px;
+          background: rgba(15, 23, 42, 0.04);
+          border: 1.5px solid rgba(99, 102, 241, 0.35);
+          border-radius: 99px;
+          box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
+          font-family: "JetBrains Mono", monospace;
+          font-size: 30px;
+          font-weight: 700;
+          color: #4f46e5;
+          letter-spacing: 0.5px;
+          opacity: 0;
+        }
+        .url-icon {
+          font-size: 28px;
+          display: inline-block;
+        }
+        .url-char {
+          display: inline-block;
+          transform-origin: 50% 100%;
+          will-change: transform, opacity;
+        }
 
         /* ===== 顶部进度条（贯穿全片，scaleX 随时间推进）===== */
         #progress {
@@ -738,6 +968,316 @@
 
         /* 终端 AI 操作列：绿色完成态（区别于 S4 紫色推荐理由）*/
         .t-green { color: #22c55e; }
+
+        /* ===== S5b Agent 主动分析专属样式 ===== */
+        .agent-tool-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          margin: 10px 0 14px;
+          padding: 6px 18px;
+          background: rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(99, 102, 241, 0.4);
+          border-radius: 8px;
+          color: #a5b4fc;
+          font-size: 24px;
+          font-family: "JetBrains Mono", monospace;
+          opacity: 0;
+        }
+        .tool-glow-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #6366f1;
+          box-shadow: 0 0 10px #6366f1;
+        }
+
+        .agent-suggest-card {
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 12px;
+          padding: 16px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          opacity: 0;
+          text-align: left;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .suggest-row {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          font-size: 24px;
+        }
+        .suggest-label {
+          color: #94a3b8;
+          width: 110px;
+          flex-shrink: 0;
+        }
+        .suggest-val {
+          color: #f8fafc;
+        }
+        .suggest-val.font-mono {
+          font-family: "JetBrains Mono", monospace;
+          font-size: 22px;
+        }
+        .highlight-box {
+          background: rgba(99, 102, 241, 0.08);
+          border-left: 4px solid #6366f1;
+          padding: 8px 14px;
+          border-radius: 4px;
+        }
+        .chip-group {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .suggest-chip {
+          background: rgba(14, 165, 233, 0.2);
+          color: #38bdf8;
+          padding: 3px 12px;
+          border-radius: 99px;
+          font-size: 20px;
+          font-weight: 600;
+        }
+
+        .agent-status-list {
+          display: flex;
+          gap: 24px;
+          margin-top: 14px;
+          font-size: 24px;
+          color: #e2e8f0;
+          opacity: 0;
+        }
+        .status-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* 交互提问 & 用户确认 */
+        .agent-ask-box {
+          background: rgba(234, 179, 8, 0.12);
+          border: 1px solid rgba(234, 179, 8, 0.4);
+          color: #fef08a;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-size: 22px;
+          margin-top: 10px;
+          opacity: 0;
+          text-align: left;
+        }
+        .agent-user-reply {
+          margin-top: 10px;
+          opacity: 0;
+        }
+
+        /* ===== S5c Web 工作台模拟 & 红框闪烁样式 ===== */
+        .wb-mockup-window {
+          width: 1400px;
+          height: 680px;
+          background: #ffffff;
+          border-radius: 16px;
+          box-shadow: 0 40px 80px -20px rgba(15, 23, 42, 0.25);
+          border: 1px solid #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          opacity: 0;
+        }
+        .wb-topbar {
+          height: 56px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          padding: 0 24px;
+          gap: 24px;
+        }
+        .wb-brand {
+          font-size: 24px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+        .wb-search-box {
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          padding: 6px 16px;
+          border-radius: 8px;
+          font-size: 18px;
+          color: #64748b;
+          width: 320px;
+        }
+        .wb-body {
+          flex: 1;
+          display: flex;
+          overflow: hidden;
+        }
+        .wb-sidebar {
+          width: 220px;
+          background: #f8fafc;
+          border-right: 1px solid #e2e8f0;
+          padding: 20px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .wb-nav-item {
+          padding: 10px 14px;
+          border-radius: 8px;
+          font-size: 20px;
+          color: #475569;
+        }
+        .wb-nav-item.active {
+          background: #e0e7ff;
+          color: #4338ca;
+          font-weight: 600;
+        }
+        .wb-list {
+          flex: 1;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          border-right: 1px solid #e2e8f0;
+          background: #ffffff;
+        }
+        .wb-repo-item {
+          position: relative;
+          padding: 16px;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          text-align: left;
+        }
+        .wb-repo-title {
+          display: flex;
+          justify-content: space-between;
+          font-size: 20px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .repo-stars {
+          font-size: 16px;
+          color: #64748b;
+          font-weight: 400;
+        }
+        .repo-desc {
+          font-size: 16px;
+          color: #475569;
+          margin-top: 6px;
+        }
+        .repo-tags {
+          display: flex;
+          gap: 6px;
+          margin-top: 8px;
+        }
+        .mini-tag {
+          background: #f1f5f9;
+          color: #475569;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 14px;
+        }
+
+        /* 侧边与次要列表雾化遮罩 */
+        .blur-dim {
+          filter: blur(2.5px);
+          opacity: 0.35;
+        }
+
+        .focus-repo {
+          border-color: #ef4444;
+          box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+        }
+
+        /* 右侧详情面板 */
+        .wb-detail-panel {
+          width: 440px;
+          background: #f8fafc;
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          text-align: left;
+        }
+        .detail-header h3 {
+          margin: 0;
+          font-size: 24px;
+          color: #0f172a;
+        }
+        .detail-url {
+          font-size: 16px;
+          color: #2563eb;
+        }
+        .detail-box {
+          position: relative;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          padding: 16px;
+        }
+        .box-header {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .badge-saved {
+          font-size: 14px;
+          color: #16a34a;
+          background: #dcfce7;
+          padding: 2px 8px;
+          border-radius: 99px;
+        }
+        .memo-text {
+          font-size: 18px;
+          color: #334155;
+          line-height: 1.5;
+        }
+        .tag-chips {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .chip {
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
+          padding: 3px 10px;
+          border-radius: 99px;
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        /* 核心红框闪烁高亮 */
+        .red-highlight-border {
+          position: absolute;
+          inset: -4px;
+          border: 3px solid #ef4444;
+          border-radius: 12px;
+          pointer-events: none;
+          box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+          opacity: 0;
+        }
+        .red-pulse {
+          animation: redGlowPulse 1.2s infinite alternate ease-in-out;
+        }
+        @keyframes redGlowPulse {
+          from {
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
+          }
+          to {
+            box-shadow: 0 0 26px rgba(239, 68, 68, 0.8);
+            border-color: #dc2626;
+          }
+        }
       </style>
 
       <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -801,128 +1341,175 @@
         window.__timelines = window.__timelines || {};
         const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
 
-        // ----- 背景层（全程 38s，可 seek）-----
-        // 顶部进度条：scaleX 线性推进
-        tl.to("#progress-bar", { scaleX: 1, duration: 38, ease: "none" }, 0);
-        // 星空：proxy 时钟驱动 canvas 重绘，t 与时间轴同步 → seek 确定
+        // ----- 背景层（全程 65s，可 seek）-----
+        tl.to("#progress-bar", { scaleX: 1, duration: 65, ease: "none" }, 0);
         const starClock = { t: 0 };
-        tl.to(starClock, { t: 38, duration: 38, ease: "none", onUpdate: () => drawStars(starClock.t) }, 0);
-        // 氛围光晕缓慢呼吸位移（有限 yoyo repeat，周期 10s 覆盖 38s）
-        tl.to("#bg-glow", { xPercent: 4, yPercent: -3, scale: 1.08, opacity: 0.72, duration: 10, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+        tl.to(starClock, { t: 65, duration: 65, ease: "none", onUpdate: () => drawStars(starClock.t) }, 0);
+        tl.to("#bg-glow", { xPercent: 4, yPercent: -3, scale: 1.08, opacity: 0.72, duration: 10, ease: "sine.inOut", yoyo: true, repeat: 6 }, 0);
 
-        // ----- S1 开场 (0-4.8s) -----
-        // 转场：新场景淡入覆盖（符合"转场即出场"规则，旧场景不做 gsap.to opacity:0）
+        // ===== S1 开场 (0-6.0s) =====
         tl.from("#s1", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 0);
-        tl.from("#s1-logo", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 0.2);
-        // logo 星形旋转弹入，呼应「Starlens / 星海」主题
-        tl.from("#s1-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 0.25);
-        tl.from("#s1-title", { y: 56, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.5);
-        tl.from("#s1-sub", { y: 32, opacity: 0, duration: 0.5, ease: "power2.out" }, 1.0);
-        tl.from("#s1-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 1.3);
+        tl.from("#s1-logo", { y: -40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.2);
+        tl.from("#s1-title", { y: 40, opacity: 0, duration: 0.8, ease: "expo.out" }, 0.4);
+        tl.from("#s1-sub", { y: 24, opacity: 0, duration: 0.6, ease: "power2.out" }, 0.7);
+        tl.from("#s1-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 0.9);
+        tl.to("#s1", { scale: 1.12, opacity: 0, duration: 0.55, ease: "power3.in" }, 5.5);
 
-        // ----- S2 痛点 (4.4-9.6s) -----
-        tl.from("#s2", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 4.4);
-        tl.from("#s2-heading", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 4.6);
-        tl.from("#pain-1", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 4.95);
-        tl.from("#pain-2", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 5.15);
-        tl.from("#pain-3", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 5.35);
-        tl.from("#s2-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 5.6);
+        // ===== S2 痛点 (5.8-13.6s) =====
+        tl.from("#s2", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 5.8);
+        tl.from("#s2-heading", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 6.0);
+        tl.from("#pain-1", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 6.3);
+        tl.from("#pain-2", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 6.7);
+        tl.from("#pain-3", { y: 60, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 7.1);
+        tl.from("#s2-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 7.4);
 
-        // ----- S3 CLI 安装 + search (9.2-16.0s) -----
-        tl.from("#s3", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 9.2);
-        tl.from("#s3-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 9.4);
-        tl.from("#term-1", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 9.5);
-        tl.from("#s3-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 9.7);
-        // 命令 1 打字（提速 1.8→1.0）：$ 符号随命令一起揭开
+        // ===== S3 CLI 安装 + search (13.4-19.8s) =====
+        tl.from("#s3", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 13.4);
+        tl.from("#s3-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 13.6);
+        tl.from("#term-1", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 13.7);
+        tl.from("#s3-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 13.9);
         tl.fromTo("#s3 .term-line:nth-child(1) .cmd-text",
           { clipPath: "inset(0 100% 0 0)" },
           { clipPath: "inset(0 0% 0 0)", duration: 1.0, ease: "none" },
-          10.2
+          14.2
         );
-        tl.to("#s3-out-1", { opacity: 1, duration: 0.3, ease: "power2.out" }, 11.4);
-        // 命令 2 打字（提速 2.2→1.2）
+        tl.to("#s3-out-1", { opacity: 1, duration: 0.3, ease: "power2.out" }, 15.4);
         tl.fromTo("#s3 .term-line--gap .cmd-text",
           { clipPath: "inset(0 100% 0 0)" },
           { clipPath: "inset(0 0% 0 0)", duration: 1.2, ease: "none" },
-          11.9
+          15.9
         );
-        // 表格逐行流入（先显容器，再 stagger 每行，像真实数据返回）
-        tl.set("#s3-out-2", { opacity: 1 }, 13.3);
-        tl.from("#s3-out-2 .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 13.3);
+        tl.set("#s3-out-2", { opacity: 1 }, 17.3);
+        tl.from("#s3-out-2 .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 17.3);
 
-        // ----- S4 CLI ask (15.6-22.0s) -----
-        tl.from("#s4", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 15.6);
-        tl.from("#s4-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 15.8);
-        tl.from("#term-2", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 15.9);
-        tl.from("#s4-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 16.1);
-        // ask 命令打字（提速 2.4→1.4）
+        // ===== S4 CLI ask (19.6-25.9s) =====
+        tl.from("#s4", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 19.6);
+        tl.from("#s4-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 19.8);
+        tl.from("#term-2", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 19.9);
+        tl.from("#s4-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 20.1);
         tl.fromTo("#s4 .term-line .cmd-text",
           { clipPath: "inset(0 100% 0 0)" },
           { clipPath: "inset(0 0% 0 0)", duration: 1.4, ease: "none" },
-          16.6
+          20.6
         );
-        // spinner 出现并真旋转（rotation 有限 repeat，转两圈）
-        tl.to("#s4-spinner", { opacity: 1, duration: 0.3, ease: "power2.out" }, 18.1);
-        tl.to("#s4-spinner .spinner-dot", { rotation: 360, duration: 0.7, ease: "none", repeat: 1 }, 18.2);
-        tl.to("#s4-spinner", { opacity: 0, duration: 0.25, ease: "power2.in" }, 19.7);
-        // AI 答案 + 表格逐行（缩短空等：答案比原版提前约 2s 出现）
-        tl.fromTo("#s4-ai", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 19.9);
-        tl.set("#s4-ai .term-table", { opacity: 1 }, 20.2);
-        tl.from("#s4-ai .term-table .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 20.2);
+        tl.to("#s4-spinner", { opacity: 1, duration: 0.3, ease: "power2.out" }, 22.1);
+        tl.to("#s4-spinner .spinner-dot", { rotation: 360, duration: 0.7, ease: "none", repeat: 1 }, 22.2);
+        tl.to("#s4-spinner", { opacity: 0, duration: 0.25, ease: "power2.in" }, 23.7);
+        tl.fromTo("#s4-ai", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 23.9);
+        tl.set("#s4-ai .term-table", { opacity: 1 }, 24.2);
+        tl.from("#s4-ai .term-table .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 24.2);
 
-        // ----- S5 Claude Code 调用 (21.6-29.6s) -----
-        tl.from("#s5cc", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 21.6);
-        tl.from("#s5cc-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 21.8);
-        tl.from("#term-cc", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 21.9);
-        tl.from("#s5cc-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 22.1);
-        // 启动命令 claude 打字（提速 1.0→0.8）
+        // ===== S5 Claude Code 调用 (25.7-32.5s) =====
+        tl.from("#s5cc", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 25.7);
+        tl.from("#s5cc-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 25.9);
+        tl.from("#term-cc", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 26.0);
+        tl.from("#s5cc-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 26.2);
         tl.fromTo("#s5cc .term-line:nth-child(1) .cmd-text",
           { clipPath: "inset(0 100% 0 0)" },
           { clipPath: "inset(0 0% 0 0)", duration: 0.8, ease: "none" },
-          22.6
+          26.6
         );
-        tl.to(".term-output--cc", { opacity: 1, duration: 0.4, ease: "power2.out" }, 23.5);
-        // 用户提问打字（提速 2.6→1.6）
+        tl.to(".term-output--cc", { opacity: 1, duration: 0.4, ease: "power2.out" }, 27.5);
         tl.fromTo("#s5cc .term-line--gap .cmd-text",
           { clipPath: "inset(0 100% 0 0)" },
           { clipPath: "inset(0 0% 0 0)", duration: 1.6, ease: "none" },
-          24.0
+          28.0
         );
-        // Claude 调用工具
-        tl.to("#cc-tool", { opacity: 1, duration: 0.4, ease: "power2.out" }, 25.8);
-        tl.from("#cc-tool .cc-tool-line", { x: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 25.8);
-        tl.from("#cc-tool .cc-tool-args", { x: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 26.05);
-        // Claude 回答 + 表格逐行
-        tl.fromTo("#cc-answer", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 26.6);
-        tl.set("#cc-answer .term-table", { opacity: 1 }, 26.9);
-        tl.from("#cc-answer .term-table .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 26.9);
+        tl.to("#cc-tool", { opacity: 1, duration: 0.4, ease: "power2.out" }, 29.8);
+        tl.from("#cc-tool .cc-tool-line", { x: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 29.8);
+        tl.from("#cc-tool .cc-tool-args", { x: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 30.05);
+        tl.fromTo("#cc-answer", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 30.6);
+        tl.set("#cc-answer .term-table", { opacity: 1 }, 30.9);
+        tl.from("#cc-answer .term-table .term-row", { opacity: 0, y: 12, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 30.9);
 
-        // ----- S6 多端+截图 (29.2-35.6s) -----
-        tl.from("#s5", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 29.2);
-        tl.from("#s5-heading", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 29.4);
-        tl.from("#s5-shot", { y: 50, scale: 0.97, opacity: 0, duration: 0.7, ease: "power3.out" }, 29.6);
-        tl.from("#s5-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 29.7);
-        tl.from("#plat-1", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.3);
-        tl.from("#plat-2", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.45);
-        tl.from("#plat-3", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.6);
-        tl.from("#plat-4", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 30.75);
-        tl.from("#providers", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 31.1);
-        // provider chips 错峰
-        tl.from(".provider-chip", { y: 20, opacity: 0, duration: 0.4, stagger: 0.08, ease: "power2.out" }, 31.3);
+        // ===== S5b Agent 主动分析与智能归档 (32.3-44.5s) =====
+        tl.from("#s5b", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 32.3);
+        tl.from("#s5b-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 32.5);
+        tl.from("#term-s5b", { y: 60, scale: 0.96, opacity: 0, duration: 0.6, ease: "power3.out" }, 32.6);
+        tl.from("#s5b-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 32.8);
 
-        // ----- S7 CTA (33.2-38.0s) -----
-        tl.from("#s6", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 33.2);
-        // logo 星形旋转弹入，与开场呼应
-        tl.from("#s6-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 33.4);
-        tl.from("#s6-logo .logo-word", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 33.65);
-        tl.from("#s6-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 33.95);
-        tl.from("#s6-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 34.0);
-        tl.from("#s6-btn", { y: 24, opacity: 0, duration: 0.5, ease: "back.out(1.5)" }, 34.35);
-        // CTA 召唤动作：按钮脉冲 + 箭头滑动（有限 yoyo repeat）
-        tl.to("#s6-btn", { scale: 1.06, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 35.1);
-        tl.to("#s6-btn svg", { x: 8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 35.1);
-        // 最后场景允许淡出（规则唯一例外）
-        tl.to("#s6 .scene-content", { opacity: 0, duration: 0.5, ease: "power2.in" }, 37.4);
+        tl.fromTo("#s5b .term-line .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 1.6, ease: "none" },
+          33.1
+        );
+
+        tl.to("#s5b-tool-call", { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(2.2)" }, 35.0);
+        tl.to("#s5b-suggest", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 35.7);
+        tl.from("#s5b-suggest .suggest-chip", { scale: 0.4, opacity: 0, duration: 0.4, stagger: 0.1, ease: "back.out(2.4)" }, 36.0);
+        tl.to("#s5b-ask", { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.8)" }, 37.3);
+
+        tl.to("#s5b-confirm", { opacity: 1, duration: 0.1 }, 38.2);
+        tl.fromTo("#s5b-confirm .cmd-text",
+          { clipPath: "inset(0 100% 0 0)" },
+          { clipPath: "inset(0 0% 0 0)", duration: 1.6, ease: "none" },
+          38.2
+        );
+
+        tl.to("#s5b-status", { opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.8)" }, 40.3);
+        tl.to("#term-s5b", { rotateX: 18, z: -250, opacity: 0, duration: 0.55, ease: "power2.in" }, 43.7);
+
+        // ===== S5c Web 工作台无缝同步 (44.3-51.5s) =====
+        tl.from("#s5c", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 44.3);
+        tl.from("#s5c-heading", { y: 30, opacity: 0, duration: 0.5, ease: "expo.out" }, 44.5);
+        tl.fromTo("#wb-window", { rotateX: -14, z: 200, scale: 1.06, y: 70, opacity: 0 }, { rotateX: 0, z: 0, scale: 1, y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 44.6);
+        tl.from("#s5c-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 44.9);
+        tl.to("#wb-repo-focus .red-highlight-border", { opacity: 1, duration: 0.5, ease: "power2.out" }, 45.7);
+        tl.to("#wb-focus-memo .red-highlight-border", { opacity: 1, duration: 0.5, ease: "power2.out" }, 46.8);
+        tl.to("#wb-focus-tags .red-highlight-border", { opacity: 1, duration: 0.5, ease: "power2.out" }, 47.8);
+
+        // ===== S6 多端+截图 (51.3-58.5s) =====
+        tl.from("#s5", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 51.3);
+        tl.from("#s5-heading", { y: 40, opacity: 0, duration: 0.6, ease: "expo.out" }, 51.5);
+        tl.from("#s5-shot", { y: 50, scale: 0.97, opacity: 0, duration: 0.7, ease: "power3.out" }, 51.7);
+        tl.from("#s5-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 51.8);
+        tl.from("#plat-1", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(2.2)" }, 52.4);
+        tl.from("#plat-2", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(2.2)" }, 52.55);
+        tl.from("#plat-3", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 52.7);
+        tl.from("#plat-4", { y: 50, opacity: 0, duration: 0.55, ease: "back.out(1.4)" }, 52.85);
+        tl.from("#providers", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 53.2);
+        tl.from(".provider-chip", { y: 20, opacity: 0, duration: 0.4, stagger: 0.08, ease: "power2.out" }, 53.4);
+
+        // ===== S7 CTA (58.3-65.0s) =====
+        tl.from("#s6", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 58.3);
+        tl.from("#s6-logo .logo-mark", { rotation: -120, scale: 0.4, opacity: 0, duration: 0.7, ease: "back.out(1.6)", transformOrigin: "50% 50%" }, 58.5);
+        tl.from("#s6-logo .logo-word", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 58.75);
+        tl.from("#s6-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 59.05);
+        tl.from("#s6-cap", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 59.1);
+        tl.from("#s6-btn", { y: 24, opacity: 0, duration: 0.5, ease: "back.out(1.5)" }, 59.45);
+        // 🌐 官方网址 Badge 容器透视展屏
+        tl.to("#s6-url", { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power2.out" }, 59.7);
+        // 图标 🌐 旋转强弹性弹出
+        tl.from("#s6-url-icon", { scale: 0, rotation: -120, opacity: 0, duration: 0.5, ease: "back.out(2.4)" }, 59.8);
+        // 🌊 网址逐字波浪起伏跳跃入场 (Wave Ripple Entrance)
+        tl.from("#s6-url .url-char", {
+          y: 32,
+          opacity: 0,
+          scale: 0.2,
+          rotation: -12,
+          duration: 0.55,
+          stagger: {
+            each: 0.035,
+            ease: "sine.inOut"
+          },
+          ease: "back.out(3.2)"
+        }, 59.85);
+
+        // 🌊 字符次级波浪涟漪荡漾 (Wave Ripple Oscillation)
+        tl.to("#s6-url .url-char", {
+          y: -7,
+          duration: 0.35,
+          stagger: {
+            each: 0.03,
+            yoyo: true,
+            repeat: 1
+          },
+          ease: "sine.inOut"
+        }, 60.9);
+
+        tl.to("#s6-btn", { scale: 1.06, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 60.5);
+        tl.to("#s6-btn svg", { x: 8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 60.5);
+        tl.to("#s6 .scene-content", { opacity: 0, duration: 0.5, ease: "power2.in" }, 64.2);
 
         // 注册时间轴：key 必须等于根 composition 的 data-composition-id
         window.__timelines["root"] = tl;
