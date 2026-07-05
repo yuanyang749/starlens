@@ -28,7 +28,7 @@ export function LandingHeader({ githubAuthEnabled }: { githubAuthEnabled: boolea
     <header className="landing-header">
       <div className="landing-header__inner">
         <Link href="/" className="landing-brand" aria-label="Starlens 首页">
-          <BrandLogo size={30} className="rounded-lg" priority />
+          <BrandLogo size={50} className="rounded-lg" priority />
           <span>Starlens</span>
         </Link>
         <nav className="landing-nav" aria-label="落地页导航">

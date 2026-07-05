@@ -741,6 +741,74 @@ html {
   object-fit: cover;
 }
 
+/* 视频右下角单独圆形声音切换按钮 */
+.landing-demo__audio-toggle {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.78);
+  color: #ffffff;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease, transform 250ms cubic-bezier(0.4, 0, 0.2, 1), background 250ms ease, border-color 250ms ease;
+  user-select: none;
+}
+
+.landing-demo__audio-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* 桌面端：鼠标移动到视频窗口/框架上时淡入显示声音控制按钮 */
+.landing-demo__screen:hover .landing-demo__audio-toggle,
+.landing-demo__frame:hover .landing-demo__audio-toggle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.landing-demo__audio-toggle:hover {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: rgba(99, 102, 241, 0.65);
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.35);
+}
+
+.landing-demo__audio-toggle:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.landing-demo__audio-toggle--active {
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+}
+
+/* 移动端/触摸屏（或小屏幕设备）：声音切换按钮精简紧凑常驻展示 */
+@media (max-width: 768px), (hover: none) {
+  .landing-demo__audio-toggle {
+    opacity: 1;
+    pointer-events: auto;
+    bottom: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+  }
+  .landing-demo__audio-icon {
+    width: 15px;
+    height: 15px;
+  }
+}
+
 /* 视频表面横扫微光（复用 landing-scan keyframes）*/
 .landing-demo__screen::after {
   position: absolute;

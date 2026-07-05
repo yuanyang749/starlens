@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { BrandLogo } from "./brand-logo";
 import ClickSpark from "./click-spark";
@@ -23,6 +23,8 @@ import {
   Star,
   Tags,
   TerminalSquare,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { GitHubSignInButton } from "./github-sign-in-button";
 
@@ -159,10 +161,21 @@ function FeatureMock({ type }: { type: string }) {
 
 export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: boolean }) {
   const [copied, setCopied] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const handleCopy = () => {
     navigator.clipboard.writeText("npm install -g @starlens-app/cli");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      const nextMuted = !videoRef.current.muted;
+      videoRef.current.muted = nextMuted;
+      setIsMuted(nextMuted);
+    }
   };
 
   return (
@@ -269,7 +282,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
         <section id="demo" className="landing-section landing-demo landing-block">
           <div className="landing-section-heading">
             <p className="landing-pill">产品演示</p>
-            <h2>40 秒看懂 Starlens</h2>
+            <h2>1 分钟看懂 Starlens</h2>
             <p>从 CLI 检索、自然语言提问，到 Claude Code 通过 MCP 自动整理收藏，完整流程一镜到底。</p>
           </div>
           <div className="landing-demo__stage">
@@ -277,15 +290,29 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
             <div className="landing-demo__frame">
               <div className="landing-demo__screen">
                 <video
+                  ref={videoRef}
                   className="landing-demo__video"
                   src="/demo/starlens-demo.mp4"
                   autoPlay
-                  muted
+                  muted={isMuted}
                   loop
                   playsInline
                   preload="metadata"
                   aria-label="Starlens 产品演示视频"
                 />
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className={`landing-demo__audio-toggle ${!isMuted ? "landing-demo__audio-toggle--active" : ""}`}
+                  aria-label={isMuted ? "开启语音旁白解说" : "静音"}
+                  title={isMuted ? "开启语音旁白解说" : "静音"}
+                >
+                  {isMuted ? (
+                    <VolumeX className="landing-demo__audio-icon text-slate-200" />
+                  ) : (
+                    <Volume2 className="landing-demo__audio-icon text-emerald-400" />
+                  )}
+                </button>
               </div>
             </div>
             <Star className="landing-demo__spark landing-demo__spark--1" aria-hidden="true" />
