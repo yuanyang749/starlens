@@ -36,6 +36,7 @@ import {
 import { findProjectRoot, isHostedUrl, buildMcpArgs } from "./env.mjs";
 import { installSkillFiles } from "./skill-installer.mjs";
 import { writeMcpConfig } from "./mcp-config.mjs";
+import { messages, checkboxLabels } from "./messages.mjs";
 
 const CLIENT_LABELS = {
   claude: "Claude Code",
@@ -103,6 +104,18 @@ async function resolveTokenFromSources({ tokenStdin, env, tokenPath }) {
   return "";
 }
 
+// 语言选择问询:用独立 rl 问完即关,不进入主流程的行缓冲队列。
+// 双语提示 "Language / 语言",默认 1 (English),回车即跳过。
+async function askLanguage() {
+  const { createReadlineInterface } = await import("./prompts.mjs");
+  const rl = createReadlineInterface();
+  try {
+    return await wizardPrompt(rl, messages.en.languagePrompt, "1");
+  } finally {
+    rl.close();
+  }
+}
+
 export async function runInstallSkillWizard(args, config, env) {
   let rest = [...args];
 
@@ -118,22 +131,41 @@ export async function runInstallSkillWizard(args, config, env) {
   rest = hostedArg.rest;
   const localArg = readFlag(rest, "--local");
   rest = localArg.rest;
+  const langArg = readOption(rest, "--lang");
+  rest = langArg.rest;
 
   // 修复 #12：--hosted 与 --local 互斥
   if (hostedArg.found && localArg.found) {
     throw new CliError("--hosted and --local are mutually exclusive.");
   }
 
+  // Step 0: 语言选择
+  // --lang en|zh 可跳过交互问询;非法值报错(与 --client 校验风格一致)。
+  // 无 --lang 时问用户,默认 1 (English),回车即跳过,不增加英文用户摩擦。
+  // 注意:readOption 返回 { value, rest },无 found 字段;用 value !== undefined 判断。
+  let locale;
+  if (langArg.value !== undefined) {
+    const v = (langArg.value ?? "").toLowerCase();
+    if (v !== "en" && v !== "zh") {
+      throw new CliError(`--lang has invalid value "${langArg.value}". Valid: en, zh.`);
+    }
+    locale = v;
+  } else {
+    const choice = await askLanguage();
+    locale = choice === "2" ? "zh" : "en";
+  }
+  const t = messages[locale];
+  const ui = checkboxLabels[locale];
+
   console.log("");
-  console.log("Starlens Install Wizard");
+  console.log(t.wizardTitle);
   console.log("═".repeat(40));
-  console.log("This wizard guides you through Skill installation and optional MCP Server setup.");
+  console.log(t.wizardIntro);
   console.log("");
 
   // Step 0: check global install
   if (!isGlobalInstall()) {
-    console.log("Tip: you are running from source. To use `stars` globally,");
-    console.log("      install first: npm install -g @starlens-app/cli");
+    console.log(t.sourceTip);
     console.log("");
   }
 
@@ -154,7 +186,7 @@ export async function runInstallSkillWizard(args, config, env) {
       console.log(`Selected clients: ${clients.map((c) => CLIENT_LABELS[c]).join(", ")}`);
     } else {
       console.log("");
-      clients = await wizardCheckbox(CLIENT_ITEMS);
+      clients = await wizardCheckbox(CLIENT_ITEMS, ui);
       console.log(`Selected: ${clients.map((c) => CLIENT_LABELS[c]).join(", ")}`);
     }
 
@@ -166,31 +198,31 @@ export async function runInstallSkillWizard(args, config, env) {
     // Step 2: 安装 Skill（默认是）
     console.log("");
     console.log("─".repeat(40));
-    const installSkill = await wizardPrompt(rl, "Install Starlens Skill files? (Y/n)", "Y");
+    const installSkill = await wizardPrompt(rl, t.installSkillPrompt, "Y");
     if (!/^n$/i.test(installSkill)) {
       console.log("");
-      console.log("Installing Starlens Agent Skill...");
+      console.log(t.installingSkill);
       for (const client of clients) {
         // 修复 #11：other 客户端不做自动安装，仅后续输出片段
         if (client === "other") {
-          console.log(`• ${CLIENT_LABELS.other}: skipped auto-install (will output snippet later)`);
+          console.log(`• ${t.skillSkippedAuto.replace("{0}", CLIENT_LABELS.other)}`);
           continue;
         }
         const skillResult = await installSkillFiles(client, cwd);
         if (skillResult.results) {
           for (const r of skillResult.results) {
             if (r.ok) {
-              console.log(`✓ Skill installed: ${r.path}`);
+              console.log(t.skillInstalled.replace("{0}", r.path));
             } else {
-              console.log(`⚠  Skill install failed: ${r.path} (${r.reason})`);
+              console.log(t.skillInstallFailed.replace("{0}", r.path).replace("{1}", r.reason));
             }
           }
         } else if (!skillResult.ok) {
-          console.log(`⚠  ${CLIENT_LABELS[client]}: ${skillResult.reason}`);
+          console.log(t.skillInstallClientFailed.replace("{0}", CLIENT_LABELS[client]).replace("{1}", skillResult.reason));
         }
       }
     } else {
-      console.log("Skipped Skill installation.");
+      console.log(t.skillSkipped);
     }
 
     // Step 3: 配置 MCP（可选，默认否）
@@ -203,12 +235,12 @@ export async function runInstallSkillWizard(args, config, env) {
     let apiBaseUrl = "";
 
     if (mcpClients.length === 0 && otherClients.length === 0) {
-      console.log("Selected clients do not support MCP. Skipping MCP configuration.");
+      console.log(t.mcpNoSupportedClients);
     } else {
       const promptClients = [...mcpClients, ...otherClients];
       const doMcp = await wizardPrompt(
         rl,
-        `Configure MCP Server? (supports ${promptClients.map((c) => CLIENT_LABELS[c]).join(", ")}) (y/N)`,
+        t.mcpConfigurePrompt.replace("{0}", promptClients.map((c) => CLIENT_LABELS[c]).join(", ")),
         "N",
       );
       if (/^y$/i.test(doMcp)) {
@@ -219,15 +251,15 @@ export async function runInstallSkillWizard(args, config, env) {
         let isSelfHosted;
         if (hostedArg.found) {
           isSelfHosted = false;
-          console.log("✓ Hosted service mode (--hosted)");
+          console.log(t.hostedModeFlag);
         } else if (localArg.found) {
           isSelfHosted = true;
-          console.log("✓ Self-hosted mode (--local)");
+          console.log(t.selfHostedModeFlag);
         } else {
-          console.log("Deployment mode:");
-          console.log("  1) Hosted (recommended) — uses starlens.520ai.xin, no local service needed");
-          console.log("  2) Self-hosted — your own server or local dev environment");
-          const modeChoice = await wizardPrompt(rl, "Choose mode", "1");
+          console.log(t.deploymentModeTitle);
+          console.log(t.deploymentModeHosted);
+          console.log(t.deploymentModeSelfHosted);
+          const modeChoice = await wizardPrompt(rl, t.deploymentModePrompt, "1");
           isSelfHosted = modeChoice.trim() === "2";
         }
 
@@ -237,7 +269,7 @@ export async function runInstallSkillWizard(args, config, env) {
           apiBaseUrl = (
             await wizardPrompt(
               rl,
-              "Starlens API base URL",
+              t.apiBaseUrlPrompt,
               defaultUrl === HOSTED_MCP_BASE_URL ? DEFAULT_API_BASE_URL : defaultUrl,
             )
           ).replace(/\/+$/, "");
@@ -246,11 +278,11 @@ export async function runInstallSkillWizard(args, config, env) {
             // stdio 传输：需要可执行 mcp:start 的项目根目录
             const detected = await findProjectRoot(cwd);
             if (detected) {
-              console.log(`Detected project root: ${detected}`);
-              projectRoot = (await wizardPrompt(rl, "Project path (enter to confirm)", detected)).replace(/\/$/, "");
+              console.log(t.projectRootDetected.replace("{0}", detected));
+              projectRoot = (await wizardPrompt(rl, t.projectRootConfirmPrompt, detected)).replace(/\/$/, "");
             } else {
-              console.log("Could not auto-detect a project with `mcp:start` script.");
-              projectRoot = (await wizardPrompt(rl, "Project path (absolute, must contain mcp:start script)", "")).replace(/\/$/, "");
+              console.log(t.projectRootNotFound);
+              projectRoot = (await wizardPrompt(rl, t.projectPathPrompt, "")).replace(/\/$/, "");
             }
             // 修复 #7：stdio 模式下 projectRoot 必须存在且可用，否则配置必然失败
             if (!projectRoot) {
@@ -262,7 +294,7 @@ export async function runInstallSkillWizard(args, config, env) {
           }
         } else {
           apiBaseUrl = HOSTED_MCP_BASE_URL;
-          console.log(`✓ Hosted service: ${HOSTED_MCP_BASE_URL}`);
+          console.log(t.hostedServiceUrl.replace("{0}", HOSTED_MCP_BASE_URL));
         }
 
         const useHttpTransport = isHostedUrl(apiBaseUrl);
@@ -276,7 +308,7 @@ export async function runInstallSkillWizard(args, config, env) {
 
         // Token（支持历史复用，脱敏展示）
         console.log("");
-        console.log("Create an API Token (stl_xxx) in Starlens settings, then paste it here.");
+        console.log(t.tokenCreateHint);
         if (!token) {
           // 修复 #8/#14：多来源复用
           const reused = await resolveTokenFromSources({
@@ -285,16 +317,16 @@ export async function runInstallSkillWizard(args, config, env) {
             tokenPath: config.tokenPath,
           });
           if (reused) {
-            const tokenHint = `press enter to reuse existing token: ${maskToken(reused)}, or enter a new one`;
-            const inputToken = await wizardPromptSecret(`API Token (${tokenHint})`, rl);
+            const promptText = t.tokenReuseHint.replace("{0}", maskToken(reused));
+            const inputToken = await wizardPromptSecret(promptText, rl);
             token = inputToken || reused;
           } else {
-            const inputToken = await wizardPromptSecret("API Token (input hidden)", rl);
+            const inputToken = await wizardPromptSecret(t.tokenInputHidden, rl);
             token = inputToken;
           }
         }
         if (!token) {
-          console.log("⚠  No token provided. Config snippet will show placeholder stl_xxx; replace it manually.");
+          console.log(t.tokenNotProvided);
         }
 
         // 持久化 token 到 CLI token 文件，让 hosted 与 self-hosted 模式下次都能复用（对称）。
@@ -312,40 +344,40 @@ export async function runInstallSkillWizard(args, config, env) {
           let skipEnvWrite = false;
           if (await agentEnvExists()) {
             console.log("");
-            const overwrite = await wizardPrompt(rl, "~/.starlens/agent.env already exists. Overwrite? (y/N)", "N");
+            const overwrite = await wizardPrompt(rl, t.agentEnvExistsPrompt, "N");
             skipEnvWrite = !/^y$/i.test(overwrite);
           }
           if (!skipEnvWrite) {
             const envPath = await writeAgentEnv({ token, apiBaseUrl });
-            console.log(`✓ Written: ${envPath}`);
+            console.log(t.agentEnvWritten.replace("{0}", envPath));
           } else {
-            console.log("Skipped writing agent.env.");
+            console.log(t.agentEnvSkipped);
           }
         }
 
         // 对每个支持 MCP 的客户端自动写入配置
         console.log("");
         console.log("─".repeat(40));
-        console.log("Configuring MCP Server...");
+        console.log(t.mcpConfiguringTitle);
         for (const client of mcpClients) {
           if (client === "claude") {
             const mcpJson = useHttpTransport
               ? JSON.stringify({ type: "http", url: `${apiBaseUrl}/mcp`, headers: { Authorization: `Bearer ${token || "stl_xxx"}` } })
               : JSON.stringify({ type: "stdio", command: "zsh", args: buildMcpArgs(projectRoot) });
-            console.log(`\n  ${CLIENT_LABELS.claude} config command:`);
+            console.log(t.claudeConfigCommandLabel.replace("{0}", CLIENT_LABELS.claude));
             console.log(`  claude mcp add-json starlens '${mcpJson}'`);
             console.log("");
-            const autoRun = await wizardPrompt(rl, "  Run now? (y/N)", "N");
+            const autoRun = await wizardPrompt(rl, t.claudeRunNowPrompt, "N");
             if (/^y$/i.test(autoRun)) {
               const ok = await spawnCommand("claude", ["mcp", "add-json", "starlens", mcpJson]);
-              console.log(ok ? "  ✓ MCP server registered to Claude Code." : "  ✗ Registration failed. Run the command above manually.");
+              console.log(ok ? t.claudeRegistered.replace("{0}", CLIENT_LABELS.claude) : t.claudeRegisterFailed);
             }
           } else {
             const result = await writeMcpConfig(client, { apiBaseUrl, token, projectRoot, hosted: useHttpTransport });
             if (result.ok) {
-              console.log(`✓ MCP config written: ${result.path}`);
+              console.log(t.mcpConfigWritten.replace("{0}", result.path));
             } else {
-              console.log(`⚠  ${CLIENT_LABELS[client]}: ${result.reason}`);
+              console.log(t.mcpConfigFailed.replace("{0}", CLIENT_LABELS[client]).replace("{1}", result.reason));
             }
           }
         }
@@ -354,7 +386,7 @@ export async function runInstallSkillWizard(args, config, env) {
         if (otherClients.length > 0) {
           console.log("");
           console.log("─".repeat(40));
-          console.log("Manual config snippet for 'Other' clients:");
+          console.log(t.otherClientSnippetTitle);
           const snippet = useHttpTransport
             ? JSON.stringify(
                 {
@@ -380,9 +412,9 @@ export async function runInstallSkillWizard(args, config, env) {
         // 验证 Token（可选）
         if (token) {
           console.log("");
-          const doVerify = await wizardPrompt(rl, "Verify token validity? (y/N)", "N");
+          const doVerify = await wizardPrompt(rl, t.verifyTokenPrompt, "N");
           if (/^y$/i.test(doVerify)) {
-            console.log("Verifying...");
+            console.log(t.verifying);
             try {
               const res = await fetchWithTimeout(
                 `${apiBaseUrl}/api/search?q=test&pageSize=1`,
@@ -390,31 +422,31 @@ export async function runInstallSkillWizard(args, config, env) {
                 8_000,
               );
               if (res.ok) {
-                console.log("✓ Token verified, API connection OK.");
+                console.log(t.tokenVerified);
               } else if (res.status === 401 || res.status === 403) {
-                console.log(`✗ Token invalid (HTTP ${res.status}). Check the token.`);
+                console.log(t.tokenInvalid.replace("{0}", String(res.status)));
               } else {
-                console.log(`⚠  Server returned HTTP ${res.status}. Check the API base URL.`);
+                console.log(t.serverReturnedStatus.replace("{0}", String(res.status)));
               }
             } catch {
-              console.log(`✗ Could not connect to ${apiBaseUrl}. Check the service is running.`);
+              console.log(t.connectFailed.replace("{0}", apiBaseUrl));
             }
           }
         }
       } else {
-        console.log("Skipped MCP configuration.");
+        console.log(t.mcpSkipped);
       }
     }
 
     // 完成
     console.log("");
     console.log("─".repeat(40));
-    console.log("✓ Setup complete!");
+    console.log(t.setupComplete);
     console.log("");
-    console.log("Next steps:");
-    console.log("  1. Restart your AI client so the config takes effect.");
-    console.log("  2. In the client, try: \"search my starred repos about React\" to verify.");
-    console.log(`  3. Full docs: ${HOSTED_MCP_BASE_URL}/docs/integrations`);
+    console.log(t.nextStepsTitle);
+    console.log(t.nextStep1);
+    console.log(t.nextStep2);
+    console.log(t.nextStep3.replace("{0}", `${HOSTED_MCP_BASE_URL}/docs/integrations`));
     console.log("");
   } finally {
     rl?.close();

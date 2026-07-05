@@ -122,15 +122,22 @@ export async function wizardPromptSecret(question, rl) {
 
 // 多选复选框（TTY 下方向键 + 空格 + 回车；非 TTY 下逗号分隔序号）。
 // 修复 #10：非 TTY 空输入时改为报错，而非静默选中第一项（CI 安全）。
-export async function wizardCheckbox(items) {
+// labels 参数：UI 原语提示文本（i18n），结构：{ selectPrompt, enterNumbersPrompt, noClientSelectedError, skillOnlyLabel }
+export async function wizardCheckbox(items, labels) {
   const isTTY = typeof process.stdin.setRawMode === "function";
+  const ui = labels ?? {
+    selectPrompt: "Select AI clients (↑↓ move, space toggle, enter confirm):",
+    enterNumbersPrompt: "Enter numbers (comma-separated, e.g. 1,2): ",
+    noClientSelectedError: "No client selected. Pass --client <names> for non-interactive use.",
+    skillOnlyLabel: "[Skill only]",
+  };
 
   if (!isTTY) {
-    const labels = items.map((it, i) => `  ${i + 1}) ${it.label}${it.skillOnly ? " [Skill only]" : ""}`).join("\n");
-    console.log(labels);
+    const rendered = items.map((it, i) => `  ${i + 1}) ${it.label}${it.skillOnly ? ` ${ui.skillOnlyLabel}` : ""}`).join("\n");
+    console.log(rendered);
     const rl = createReadlineInterface();
     return new Promise((resolve, reject) => {
-      rl.question("Enter numbers (comma-separated, e.g. 1,2): ", (answer) => {
+      rl.question(ui.enterNumbersPrompt, (answer) => {
         rl.close();
         const selected = answer
           .trim()
@@ -141,7 +148,7 @@ export async function wizardCheckbox(items) {
           })
           .filter(Boolean);
         if (selected.length === 0) {
-          reject(new CliError("No client selected. Pass --client <names> for non-interactive use."));
+          reject(new CliError(ui.noClientSelectedError));
           return;
         }
         resolve(selected);
@@ -166,14 +173,14 @@ export async function wizardCheckbox(items) {
         const isActive = i === cursor;
         const isSelected = selected.has(item.value);
         const icon = isSelected ? "◉" : "◯";
-        const label = item.label + (item.skillOnly ? `  ${DIM}[Skill only]${RESET}` : "");
+        const label = item.label + (item.skillOnly ? `  ${DIM}${ui.skillOnlyLabel}${RESET}` : "");
         const line = isActive ? `${BOLD}${CYAN}> ${icon} ${label}${RESET}` : `  ${icon} ${label}`;
         process.stdout.write(line + "\n");
       }
     }
 
     // 初次渲染
-    console.log(`Select AI clients (${BOLD}↑↓${RESET} move, ${BOLD}space${RESET} toggle, ${BOLD}enter${RESET} confirm):\n`);
+    console.log(`${ui.selectPrompt}\n`);
     for (let i = 0; i < items.length; i += 1) {
       process.stdout.write("\n");
     }
