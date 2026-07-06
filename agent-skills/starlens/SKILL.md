@@ -27,7 +27,9 @@ description: Proactively use StarLens as the user's personal memory of GitHub st
 
 ## Purpose
 
-Use StarLens as the user's searchable memory of GitHub starred repositories. This skill tells an agent when and how to proactively call StarLens over HTTP (Hermes/OpenClaw/server-side agents) or MCP (IDE/terminal clients that support it).
+Use StarLens as the user's searchable memory of GitHub starred repositories. This skill tells an agent when and how to proactively call StarLens over HTTP.
+
+Note: In this local profile, the user's Starlens instance is deployed on the same server, accessible at `https://starlens.520ai.xin`. The credentials `STARLENS_API_BASE_URL` and `STARLENS_TOKEN` are pre-configured in `~/.hermes/.env`.
 
 ## When to Proactively Use This Skill
 
@@ -103,7 +105,7 @@ CLI 的 `install-skill` 向导已按 agent 类型分发配置，本 Skill 不维
 1. 优先按场景触发，而非等用户显式指示"用 StarLens 查一下"。识别用户意图落入上述 5 个场景之一时主动调用。
 2. Normalize the user's intent into one of these operations: search, inspect, sync, favorite, note, tag, star, unstar, ask, recommend, related, suggest, summary, analyze.
 3. Use `GET /api/search` first when the user gives a repository topic, keyword, language, tag, owner, or partial repository name.
-4. Use `GET /api/repos/{idOrFullName}` when the user gives a concrete repository id or `owner/repo`.
+4. **【重要防 404 规则】** 对于需要指定单个仓库进行操作的接口（如：获取仓库详情 `GET /api/repos/{id}`，修改标签/备注 `PATCH /api/repos/{id}`、`POST /api/repos/{id}/tags` 等），**严禁直接在 URL 中使用 `owner/repo` 拼接路径**（这会因为 Next.js 动态段不支持斜杠导致 404）。**必须先调用 `GET /api/search` 查询该仓库，获取其在 PostgreSQL 数据库中的 UUID (如 `f87aebb4-...`)，然后用该 UUID 拼接 URL 完成后续操作。**
 5. Use `POST /api/repos/recommend-data` (agent/MCP data endpoint) when the user starts a coding task and needs prior art from their stars. CLI/Web 用 `POST /api/ai/recommend` 走后端 AI 重排。
 6. Use `POST /api/repos/related-data` (agent/MCP data endpoint) when the user names a repo and wants related stars. CLI/Web 用 `POST /api/ai/related` 走后端 AI 重排。
 7. Use `GET /api/repos/suggestions` when the user mentions organizing / cleaning up.
