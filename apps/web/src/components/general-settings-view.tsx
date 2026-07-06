@@ -87,8 +87,10 @@ export function GeneralSettingsView({
               版本
             </p>
             <div className="mt-2 flex items-center gap-3">
+              {/* 展示 versionInfo.current（来自 /api/version 实时读取的 package.json）而非 appVersion prop——
+                  后者是构建进客户端 bundle 的静态值，浏览器缓存旧 chunk 时会跟服务端实际版本脱节。 */}
               <p className="text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
-                {appVersion}
+                {versionInfo.current}
               </p>
               {checking && (
                 <span
