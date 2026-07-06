@@ -1,8 +1,7 @@
 // 命令分发器：解析全局选项，路由到各子命令
-import { readFile } from "node:fs/promises";
 import { CliError } from "./errors.mjs";
 import { parseGlobalOptions } from "./args.mjs";
-import { cachedCliVersion, setCachedCliVersion } from "./config.mjs";
+import { getCliVersion } from "./config.mjs";
 import { renderVersion, renderHelp } from "./renderers.mjs";
 import {
   loginCommand,
@@ -22,6 +21,7 @@ import {
   analyzeCommand,
 } from "./commands.mjs";
 import { runInstallSkillWizard } from "./install-skill/index.mjs";
+import { runUpdateCommand } from "./self-update.mjs";
 
 const helpText = [
   "Starlens CLI",
@@ -56,6 +56,11 @@ const helpText = [
   "    --token-stdin  read token from stdin (avoids argv leak)",
   "    --hosted       use hosted service (starlens.520ai.xin), skip mode prompt",
   "    --local        use self-hosted service, skip mode prompt",
+  "  stars update [--yes] [--skill-only] [--client <names>]",
+  "    Check npm for a newer @starlens-app/cli version, update it, then refresh installed skill files.",
+  "    --yes         skip the update confirmation prompt (non-interactive)",
+  "    --skill-only  skip the CLI version check/update; just refresh already-installed skill files",
+  "    --client      comma-separated clients to refresh (default: auto-detect installed ones)",
   "  stars version",
   "",
   "  'setup' is an alias for 'install-skill'.",
@@ -70,14 +75,6 @@ const helpText = [
 
 export function getHelpText() {
   return helpText;
-}
-
-async function getCliVersion() {
-  if (cachedCliVersion) return cachedCliVersion;
-  const packageJsonPath = new URL("../package.json", import.meta.url);
-  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
-  setCachedCliVersion(packageJson.version ?? "0.0.0");
-  return cachedCliVersion;
 }
 
 export async function main(argv = process.argv.slice(2), env = process.env) {
@@ -114,6 +111,8 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   if (command === "install-skill" || command === "setup") {
     return runInstallSkillWizard(rest, config, env);
   }
+
+  if (command === "update") return runUpdateCommand(rest, config);
 
   throw new CliError(`Unknown command: ${command}\n\n${helpText}`);
 }

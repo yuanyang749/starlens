@@ -199,6 +199,25 @@ export function renderAnalyze(data, format) {
   }
 }
 
+// stars update：刷新 skill 文件的结果表（client / path / status / reason）
+export function renderUpdateSkill(results, format) {
+  if (format === "json") return outputJson({ results });
+  printTable(
+    results.map((r) => ({
+      client: r.client,
+      path: r.path,
+      status: r.ok ? "updated" : "failed",
+      reason: r.reason ?? "",
+    })),
+    [
+      { key: "client", label: "Client", maxWidth: 12 },
+      { key: "path", label: "Path", maxWidth: 64 },
+      { key: "status", label: "Status", maxWidth: 10 },
+      { key: "reason", label: "Reason", maxWidth: 40 },
+    ],
+  );
+}
+
 // 修复：version / help 也尊重 --format json（它们是全局选项）。
 export function renderVersion(version, format) {
   if (format === "json") return outputJson({ version });

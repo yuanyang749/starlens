@@ -753,3 +753,60 @@ test("install-skill --client claude skips cleanly when answering n to prompts", 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+// ── stars update ─────────────────────────────────────────────────────────
+
+test("compareVersions compares dotted version numbers numerically", async () => {
+  const { compareVersions } = await import("../self-update.mjs");
+  assert.equal(compareVersions("1.2.3", "1.2.3"), 0);
+  assert.equal(compareVersions("1.10.0", "1.9.0") > 0, true, "1.10.0 > 1.9.0 (numeric, not lexical)");
+  assert.equal(compareVersions("0.2.0", "0.3.0") < 0, true);
+  assert.equal(compareVersions("1.0", "1.0.1") < 0, true, "missing segment treated as 0");
+});
+
+test("update --unknown-flag exits with an error before touching the network", async () => {
+  const result = await runCli(["update", "--unknown-flag"]);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Unknown update arguments/);
+});
+
+test("update --skill-only --client claude copies skill files to the claude target directory", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-update-"));
+  try {
+    const result = await runCli(["update", "--skill-only", "--client", "claude", "--format", "json"], { HOME: dir });
+    assert.equal(result.code, 0, result.stderr);
+    const skillPath = join(dir, ".claude", "skills", "starlens", "SKILL.md");
+    assert.equal((await readFile(skillPath, "utf8")).includes("# StarLens"), true);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.results[0].client, "claude");
+    assert.equal(parsed.results[0].ok, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("update --skill-only with nothing installed reports no skill found (not an error)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-update-"));
+  try {
+    const result = await runCli(["update", "--skill-only"], { HOME: dir });
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /No installed Starlens skill found/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("update --skill-only auto-detects a previously installed client", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-update-"));
+  try {
+    const first = await runCli(["update", "--skill-only", "--client", "claude"], { HOME: dir });
+    assert.equal(first.code, 0, first.stderr);
+
+    const second = await runCli(["update", "--skill-only", "--format", "json"], { HOME: dir });
+    assert.equal(second.code, 0, second.stderr);
+    const parsed = JSON.parse(second.stdout);
+    assert.equal(parsed.results.some((r) => r.client === "claude" && r.ok === true), true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

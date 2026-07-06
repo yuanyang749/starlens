@@ -3,6 +3,16 @@ import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
+// 判断路径是否存在，不抛错。
+async function pathExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Skill 源目录（npm 包内的 skills/starlens）。
 // 本文件位于 apps/cli/src/install-skill/skill-installer.mjs，
 // 上溯 3 级到 apps/cli/，再进 skills/starlens。
@@ -101,4 +111,32 @@ export async function installSkillFiles(client, projectPath) {
   }
 
   return { ok: results.some((r) => r.ok), results };
+}
+
+// 探测本机已安装 skill 的客户端（供 `stars update` 自动刷新时使用，省得每次都要 --client）。
+// 全局客户端：检查 SKILL_TARGETS[client].path 下是否有 SKILL.md。
+// cursor/vscode 是项目级安装，需要传 projectPath 才能检测。
+export async function detectInstalledClients(projectPath) {
+  const detected = [];
+
+  for (const [client, target] of Object.entries(SKILL_TARGETS)) {
+    if (await pathExists(join(target.path, "SKILL.md"))) {
+      detected.push(client);
+    }
+  }
+
+  if (projectPath) {
+    if (await pathExists(join(projectPath, ".cursor", "rules", "starlens.mdc"))) {
+      detected.push("cursor");
+    }
+    const copilotPath = join(projectPath, ".github", "copilot-instructions.md");
+    if (await pathExists(copilotPath)) {
+      const content = await readFile(copilotPath, "utf8").catch(() => "");
+      if (content.includes("<!-- starlens-skill -->")) {
+        detected.push("vscode");
+      }
+    }
+  }
+
+  return detected;
 }

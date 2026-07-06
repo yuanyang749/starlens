@@ -2,6 +2,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 // API 默认地址（本地开发环境）
 export const DEFAULT_API_BASE_URL = "http://localhost:3000";
@@ -20,6 +21,16 @@ export let cachedCliVersion;
 
 export function setCachedCliVersion(v) {
   cachedCliVersion = v;
+}
+
+// 读取当前 CLI 版本号（读 apps/cli/package.json，带缓存）。
+// 与 self-update.mjs 共用，避免 self-update.mjs ↔ main.mjs 产生循环 import。
+export async function getCliVersion() {
+  if (cachedCliVersion) return cachedCliVersion;
+  const packageJsonPath = new URL("../package.json", import.meta.url);
+  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  setCachedCliVersion(packageJson.version ?? "0.0.0");
+  return cachedCliVersion;
 }
 
 // 默认 token 存储路径：~/.config/starlens/token
