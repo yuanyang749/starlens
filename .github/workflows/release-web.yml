@@ -1,0 +1,45 @@
+name: Release web
+
+# apps/web/package.json 的版本号变化时自动打 tag + 发布 GitHub Release，
+# 让 /api/version（apps/web/src/app/api/version/route.ts）依赖的 releases/latest
+# 能跟上实际部署的版本，不用再手动打 tag。
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/web/package.json
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 需要完整历史 + tags，rev-parse 判断 tag 是否存在才准确
+
+      - name: Read web version
+        id: version
+        run: echo "value=$(node -p "require('./apps/web/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if tag already exists
+        id: check
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.value }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.version.outputs.value }}" \
+            --title "v${{ steps.version.outputs.value }}" \
+            --generate-notes \
+            --target "${{ github.sha }}"
