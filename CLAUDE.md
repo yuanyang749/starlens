@@ -12,6 +12,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Login with CLI: `printf '%s\n' '<your-token>' | corepack pnpm --filter @starlens-app/cli start -- login --token-stdin`
 - CLI status: `corepack pnpm --filter @starlens-app/cli start -- status`
 
+### Environment Files
+
+- `.env`, `.env.example`, and `.env.neon.example` live at the repo root and are gitignored.
+- Local dev: copy `.env.example` → `.env`. Hosted Neon validation: copy `.env.neon.example` → `.env.neon` (use the pooled connection string with `sslmode=require`).
+- The `dev`, `build`, and `db:*` scripts inject `.env` via `scripts/with-env.mjs`; the `db:*neon` variants use `.env.neon`. Do not commit real secrets.
+
 ### Build
 
 - Build internal packages: `corepack pnpm build:packages` (Always build packages first if there are type/resolution errors)
@@ -34,6 +40,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run Neon migrations: `corepack pnpm db:migrate:neon` (Uses `.env.neon`)
 - Check local DB connection: `corepack pnpm db:check:local`
 - Check Neon DB connection: `corepack pnpm db:check:neon`
+
+### Database & Migrations (gotcha)
+
+- The single source of truth is the **root** `drizzle.config.ts`. The `db:*` scripts run from `apps/web` with `--config ../../drizzle.config.ts`, so its `schema` path (`./src/db/schema.ts`) resolves relative to `apps/web`.
+- The canonical schema lives in `packages/server/src/db/schema.ts` and is re-exported by `apps/web/src/db/schema.ts`. Generate migrations from the workspace root via `corepack pnpm db:generate` — never hand-edit migration SQL.
+- Schema changes must be reflected in both `packages/server` (runtime) and the web re-export; if a new table is added, update the server schema and verify the web re-export still compiles.
 
 ### Linting
 
@@ -60,6 +72,20 @@ Starlens is structured as a monorepo workspace managed by `pnpm`.
   - `server/`: Main backend layer containing Drizzle schemas and PostgreSQL database client, NextAuth configuration, GitHub OAuth and repository sync/unstar logic, AI provider wrapper interfaces, and API route controller logic.
   - `workbench/`: Shared workbench state logic hook (`useMobileWorkbench`) and formatting utils.
   - `agent-tools/`: Decoupled MCP tool schema definitions and API client logic (`callAgentTool`) shared by CLI, MCP, and Web app.
+
+- **Top-level support directories** (not part of the app build graph):
+  - `scripts/`: Workspace helper scripts.
+    - `with-env.mjs`: Loads a `.env` file then runs the wrapped command (used by `dev`, `build`, `db:*` scripts).
+    - `sync-skill.mjs`: Copies `agent-skills/starlens` into the published CLI package so `stars install-skill` can ship it. Runs automatically on `pnpm install` (postinstall). **Edit the skill in `agent-skills/starlens`, never a generated copy.**
+    - `check-api-shims.mjs`: Web↔Mobile API route parity check (see below).
+    - `deploy.mjs`: Deployment helper.
+    - `bin/`: Small CLI shims.
+  - `drizzle/`: Drizzle ORM migration files and snapshots.
+  - `docs/`: User-facing product docs (features, architecture, integrations, deployment) plus internal design notes (`project-plan`, `environments`, `api-contract`, `database-schema`, `sync-flow-design`, `agent-integration`).
+  - `deploy/`: Self-hosting assets — `docker-compose.yml`, `.env.production.example`, an OpenResty config template (`.example`), and a Let's Encrypt TLS script (`issue-letsencrypt.sh`).
+  - `agent-skills/starlens`: Source of truth for the one-click installable Agent Skill (`SKILL.md`, `agents/openai.yaml`, `references/http-api.md`). Synced into the CLI by `scripts/sync-skill.mjs`.
+  - `discuss/`: Design discussions and marketing drafts (e.g. workbench refactor plans, contest/WeChat write-ups). Context only.
+  - `design-assets/`, `marketing-video/`: Static media assets; never compiled or bundled.
 
 ### Data Flow & Execution Pathways
 
