@@ -7,6 +7,10 @@ export type AiRuntimeConfig = {
   baseUrl: string | null;
   apiKey: string;
   extraHeaders: Record<string, string>;
+  // 中文注释：仅系统默认 Provider 会填充——同一个网关/同一个 apiKey 下的兜底 model 名。
+  // 用户自己配置的 Provider 不做这个兜底（很可能是完全不同的厂商/key，换个 model 名字没意义，
+  // 甚至会指向错误的模型），所以只在 resolveSystemDefaultAiRuntimeConfig 里赋值。
+  fallbackModel?: string;
 };
 
 export type AiRuntimeConfigSource = "user_default" | "system_default" | "none";
@@ -108,6 +112,9 @@ export function resolveSystemDefaultAiRuntimeConfig(env: NodeJS.ProcessEnv = pro
   const model = systemEnvValue(env, "SYSTEM_AI_MODEL", "OPENAI_MODEL_KEY");
   const baseUrl = systemEnvValue(env, "SYSTEM_AI_BASE_URL", "OPENAI_BASE_URL")
     ?? providerDefaults[providerType];
+  // 中文注释：可选的兜底 model——同一个网关/apiKey 下换一个 model 名重试一次。
+  // 不填就是没有兜底，保持原行为。
+  const fallbackModel = systemEnvValue(env, "SYSTEM_AI_FALLBACK_MODEL");
 
   if (!apiKey || !model) {
     return null;
@@ -124,6 +131,7 @@ export function resolveSystemDefaultAiRuntimeConfig(env: NodeJS.ProcessEnv = pro
     baseUrl,
     apiKey,
     extraHeaders: parseSystemExtraHeaders(env),
+    ...(fallbackModel ? { fallbackModel } : {}),
   };
 }
 

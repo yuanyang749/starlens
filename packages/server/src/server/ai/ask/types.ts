@@ -50,7 +50,7 @@ export type OpenAiCompatibleResponse = {
 export type SearchRepoItem = Awaited<ReturnType<typeof searchRepos>>["items"][number];
 
 export type ChatRuntimeConfig = Omit<
-  Pick<AiRuntimeConfig, "apiKey" | "baseUrl" | "extraHeaders" | "id" | "model" | "providerType">,
+  Pick<AiRuntimeConfig, "apiKey" | "baseUrl" | "extraHeaders" | "fallbackModel" | "id" | "model" | "providerType">,
   "baseUrl"
 > & { baseUrl: string };
 
@@ -62,6 +62,10 @@ export const MAX_QUESTION_LENGTH = 1000;
 
 // ─── Agent 工具调用循环 ──────────────────────────────────────────────────────
 
-// 覆盖"1 次搜索 + 最多 2 次仓库详情 + 1 次统计 + 1 次 submit_answer"的现实场景，
-// 还留 1 次给"第一轮没调工具"的纠正重试。成本不是约束，这里放宽是为了准确率，不是为了省钱。
-export const MAX_AGENT_ITERATIONS = 6;
+// 中文注释：原值 6 经调试脚本（scripts/debug-ai-ask.ts）实测发现不够用——模糊问题（如"哪些仓库
+// 适合做本地 agent 工具"）走完 search_repos 换角度探索 + get_repo_detail 确认 + submit_answer
+// 的正常流程就要 7~8 轮，6 轮会在 submit_answer 之前被硬性截断，误判为"没有找到匹配的仓库"。
+// 当前用户量还小，产品阶段优先保成功率，成本不是约束——放宽到 20，配合 loop.ts 里的
+// "剩余轮次预警"提醒机制，避免真的跑满。上限对应的耗时由 AGENT_LOOP_TIMEOUT_MS 兜底
+// （nginx 反代 proxy_read_timeout 默认 60s 未单独覆盖，见 agent/index.ts 的注释）。
+export const MAX_AGENT_ITERATIONS = 20;
