@@ -1,8 +1,14 @@
+"use client";
+
 // AI 搜索报告展示组件
 // 职责：渲染 AI 搜索结果摘要和候选仓库卡片
 
-import { X, Star } from "lucide-react";
+import { ChevronDown, ChevronUp, X, Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { AiSearchInsight } from "./workbench-api";
+
+// 中文注释：摘要列表条数不受控（取决于 AI 回答里写了几条），条数一多就把下方仓库表格挤得很小，
+// 所以默认折叠，只有真的超出这个高度才显示"展开"按钮。
 
 function renderFormattedSummary(text: string) {
   // 分割并格式化段落/列表
@@ -83,6 +89,24 @@ export function AiSearchReport({
   onSelect: (id: string) => void;
   onClose: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  // 中文注释：summaryText 变化时（新一轮 AI 搜索）重置折叠态——父组件在发起新搜索时会先把
+  // aiSearchInsights 清空导致本组件整体卸载重挂载，所以这里其实拿到的都是全新的组件实例，
+  // 用 key 而不是 effect 里的 setState 来复位更符合 React 的推荐写法。
+  const [measuredFor, setMeasuredFor] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 折叠状态下量一次真实内容高度 vs 折叠高度，只有真的溢出才需要展开按钮——
+    // 避免摘要本来就很短时也白白显示一个没用的"展开"按钮。
+    if (measuredFor === summaryText) return;
+    const el = summaryRef.current;
+    setOverflowing(el ? el.scrollHeight > el.clientHeight + 1 : false);
+    setMeasuredFor(summaryText);
+  }, [summaryText, measuredFor]);
+
   return (
     <div className="ai-search-report" role="status" aria-live="polite">
       <div className="ai-search-report__header">
@@ -90,18 +114,37 @@ export function AiSearchReport({
           <span className="ai-search-report__icon-spark">✦</span>
           <h3 className="ai-search-report__title">AI 智能检索报告</h3>
         </div>
-        <button
-          type="button"
-          className="ai-search-report__close"
-          aria-label="关闭报告"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="ai-search-report__header-actions">
+          {overflowing ? (
+            <button
+              type="button"
+              className="ai-search-report__toggle"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {expanded ? "收起" : "展开全部"}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="ai-search-report__close"
+            aria-label="关闭报告"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <div className="ai-search-report__summary">
-        {renderFormattedSummary(summaryText)}
+      <div className="ai-search-report__summary-wrap">
+        <div
+          ref={summaryRef}
+          className={expanded ? "ai-search-report__summary is-expanded" : "ai-search-report__summary"}
+        >
+          {renderFormattedSummary(summaryText)}
+        </div>
+        {!expanded && overflowing ? <div className="ai-search-report__summary-fade" aria-hidden="true" /> : null}
       </div>
 
       <div className="ai-search-report__grid">

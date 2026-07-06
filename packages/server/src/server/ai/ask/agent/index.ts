@@ -3,11 +3,10 @@ import "server-only";
 import type { AskResult, ChatRuntimeConfig } from "../types";
 import { runAgentLoop, type RunAgentLoopOptions } from "./loop";
 
-// 中文注释：SSH 到生产 vps24g 上核对过——1Panel 的 openresty 反代（conf.d/starlens.520ai.xin.conf）
-// 没有单独覆盖 proxy_read_timeout，走的是 nginx 编译期默认值 60s。超过这个值反代会先掐断连接，
-// 用户看到的是裸的 504，比应用层这句"ask_failed"的结构化错误还难排查。50s 是在 60s default 之下
-// 留出的安全余量（response flush + TLS 开销），如果之后要往上提，得先在 openresty 那边显式
-// 加大 proxy_read_timeout，不然应用层调了也没用。
+// 中文注释：生产环境的反向代理没有单独调大 proxy_read_timeout，用的是常见默认值 60s 左右。
+// 超过这个值反代会先掐断连接，用户看到的是裸的网关超时错误，比应用层这句"ask_failed"的结构化
+// 错误还难排查。50s 是在这个默认值之下留出的安全余量（response flush + TLS 开销），如果之后要
+// 往上提，得先确认反向代理那边的超时配置也跟着调大，不然应用层调了也没用。
 const AGENT_LOOP_TIMEOUT_MS = 50_000;
 
 export type AnswerWithAgentOptions = RunAgentLoopOptions & {

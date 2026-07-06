@@ -67,5 +67,5 @@ export const MAX_QUESTION_LENGTH = 1000;
 // 的正常流程就要 7~8 轮，6 轮会在 submit_answer 之前被硬性截断，误判为"没有找到匹配的仓库"。
 // 当前用户量还小，产品阶段优先保成功率，成本不是约束——放宽到 20，配合 loop.ts 里的
 // "剩余轮次预警"提醒机制，避免真的跑满。上限对应的耗时由 AGENT_LOOP_TIMEOUT_MS 兜底
-// （nginx 反代 proxy_read_timeout 默认 60s 未单独覆盖，见 agent/index.ts 的注释）。
+// （反向代理超时默认值未单独覆盖，见 agent/index.ts 的注释）。
 export const MAX_AGENT_ITERATIONS = 20;

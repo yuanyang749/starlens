@@ -15,7 +15,7 @@ export function getDb() {
 
   if (!db) {
     // 连接池配置:配合 PostgreSQL max_connections=100
-    // 单进程 max=20,留余量给其他客户端(1Panel、migrator 等)
+    // 单进程 max=20,留余量给其他客户端(部署工具、migrator 等)
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 20,                      // 连接池最大连接数

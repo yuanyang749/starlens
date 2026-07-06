@@ -1090,6 +1090,34 @@
   align-items: center;
 }
 
+.ai-search-report__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 摘要列表条数过多时的"展开全部/收起"按钮 */
+.ai-search-report__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #4f46e5;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-search-report__toggle:hover {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
 .ai-search-report__title-wrap {
   display: flex;
   align-items: center;
@@ -1235,6 +1263,11 @@
   overflow: hidden;
 }
 
+/* 摘要区外层容器，用来定位折叠时底部的渐隐遮罩 */
+.ai-search-report__summary-wrap {
+  position: relative;
+}
+
 /* AI 报告摘要展示区美化 */
 .ai-search-report__summary {
   margin: 0;
@@ -1243,6 +1276,26 @@
   border-left: 4px solid #6366f1;
   border-radius: 8px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.01);
+  /* 折叠态：限制高度，条数一多也不会把下方仓库表格挤小；展开后由 .is-expanded 解除限制 */
+  max-height: 220px;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-search-report__summary.is-expanded {
+  max-height: 2400px;
+}
+
+/* 折叠时在底部叠一层渐隐遮罩，提示"下面还有内容" */
+.ai-search-report__summary-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(to bottom, rgba(248, 250, 252, 0), rgba(248, 250, 252, 0.92));
+  pointer-events: none;
 }
 
 .ai-search-report__summary-flow {

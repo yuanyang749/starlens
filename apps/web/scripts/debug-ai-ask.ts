@@ -14,8 +14,8 @@
 //   --github-login <login>  按 github_accounts.github_login 查 userId（二选一，与 --user-id 互斥）
 //   --max-iterations <n>    默认 50
 //   --model <name>    覆盖 resolveAiRuntimeConfig 解析出来的 model 字段，baseUrl/apiKey 不变——
-//                      仅适用于 baseUrl 是网关型 Provider（本项目场景下是 newapi.520ai.xin，
-//                      一个 OpenAI 兼容的多模型网关）、换个 model 名字就能路由到别的底层模型的情况
+//                      仅适用于 baseUrl 是网关型 Provider（一个 OpenAI 兼容的多模型网关）、
+//                      换个 model 名字就能路由到别的底层模型的情况
 //
 // 注意：--conditions=react-server 是绕过 "server-only" 包运行期硬抛错的必要 node 参数
 // （@starlens/server 下的 db/auth 文件顶部都有 import "server-only"，仅在 react-server
