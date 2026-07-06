@@ -292,7 +292,7 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
                 <video
                   ref={videoRef}
                   className="landing-demo__video"
-                  src="/demo/starlens-demo.mp4"
+                  src="https://r2.jsh5css.cn/starlens-demo.mp4"
                   autoPlay
                   muted={isMuted}
                   loop
