@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
+// 交互元素判定：命中这些元素时恢复原生小手指针，让五角星淡出，避免两种指针叠加。
+// 需要和 landing.css 里的例外规则保持同一批选择器。
+const INTERACTIVE_SELECTOR = "a, button, input, select, textarea, label, summary, [role='button']";
+
 interface Particle {
   x: number;
   y: number;
@@ -24,6 +28,10 @@ export function LandingInteractions() {
   const starRef = useRef({ x: 0, y: 0, rotation: 0, targetRotation: 0 });
   const particlesRef = useRef<Particle[]>([]);
   const animationFrameId = useRef<number>(0);
+
+  // 是否悬停在交互元素上（按钮/链接等）；starAlpha 是它的平滑过渡值，用于让五角星淡入淡出。
+  const isOverInteractiveRef = useRef(false);
+  const starAlphaRef = useRef(1);
 
   useEffect(() => {
     // 检查是否非触控设备 (一般为主机/鼠标设备)
@@ -129,6 +137,10 @@ export function LandingInteractions() {
       // 3. 计算主五角星的呼吸/闪烁效果 (原本 timestamp * 0.012 太快了，降低为 0.003，让波动更平缓；呼吸幅度由 0.1 调为 0.08)
       const breath = 0.92 + Math.sin(timestamp * 0.003) * 0.08;
 
+      // 2.5 悬停在按钮/链接等交互元素上时，让五角星平滑淡出，把原生小手指针让出来。
+      const targetStarAlpha = isOverInteractiveRef.current ? 0 : 1;
+      starAlphaRef.current += (targetStarAlpha - starAlphaRef.current) * 0.2;
+
       // 4. 绘制轨迹粒子
       particlesRef.current = particlesRef.current.filter((p) => {
         p.x += p.vx;
@@ -155,8 +167,8 @@ export function LandingInteractions() {
         return true;
       });
 
-      // 5. 如果鼠标在移动，产生新粒子
-      if (mouse.speed > 1 && !isTouch) {
+      // 5. 如果鼠标在移动，产生新粒子（悬停交互元素时不再产生新粒子，已有的自然消散）
+      if (mouse.speed > 1 && !isTouch && !isOverInteractiveRef.current) {
         const particleCount = Math.min(3, Math.floor(mouse.speed * 0.3));
         for (let i = 0; i < particleCount; i++) {
           const angle = Math.random() * Math.PI * 2;
@@ -176,7 +188,8 @@ export function LandingInteractions() {
       }
 
       // 6. 绘制主跟随五角星 (仅在非触摸设备上绘制，将主五角星原本外径 10 调大至 14，内径由 4 调大至 5.6)
-      if (!isTouch) {
+      // 悬停交互元素时 starAlphaRef 会淡到 0，接近 0 时直接跳过绘制，让原生小手指针独占显示。
+      if (!isTouch && starAlphaRef.current > 0.01) {
         drawStar(
           ctx,
           star.x,
@@ -186,7 +199,7 @@ export function LandingInteractions() {
           5.6 * breath,
           "#0f172a", // 酷黑主题色填充
           "#ffffff", // 亮白描边
-          1.0,
+          starAlphaRef.current,
           star.rotation,
           "rgba(15, 23, 42, 0.35)" // 黑色漫散射阴影
         );
@@ -207,6 +220,13 @@ export function LandingInteractions() {
       const y = event.clientY / window.innerHeight - 0.5;
       document.documentElement.style.setProperty("--landing-pointer-x", x.toFixed(4));
       document.documentElement.style.setProperty("--landing-pointer-y", y.toFixed(4));
+
+      // 命中检测：鼠标下方是否为按钮/链接等交互元素，命中则让五角星淡出，露出原生小手指针
+      // （touch 设备本就不绘制五角星，跳过这次检测省一次 elementFromPoint 调用）。
+      if (!isTouch) {
+        const hitTarget = document.elementFromPoint(event.clientX, event.clientY);
+        isOverInteractiveRef.current = Boolean(hitTarget?.closest(INTERACTIVE_SELECTOR));
+      }
     };
 
     window.addEventListener("pointermove", onPointerMove, { passive: true });

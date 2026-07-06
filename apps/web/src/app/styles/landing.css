@@ -14,6 +14,36 @@ html {
   cursor: none !important;
 }
 
+/* 交互元素例外：悬停在按钮/链接等可点击元素上时恢复原生小手指针。
+   需要和 landing-interactions.tsx 里 INTERACTIVE_SELECTOR 保持一致，
+   那边负责在命中同一批元素时让 Canvas 五角星淡出，避免两种指针叠加。
+   同时要覆盖这些元素内部的所有子元素（图标 svg、文字 span 等）——
+   `cursor` 虽然是继承属性，但上面 `.custom-cursor-enabled *` 直接命中了
+   每个子元素本身，直接命中的规则会盖过从父级继承来的值，仅在 a/button
+   自身加例外不够，鼠标移到子元素上时仍会读到 cursor: none。 */
+.custom-cursor-enabled a,
+.custom-cursor-enabled a *,
+.custom-cursor-enabled button,
+.custom-cursor-enabled button *,
+.custom-cursor-enabled input,
+.custom-cursor-enabled select,
+.custom-cursor-enabled textarea,
+.custom-cursor-enabled label,
+.custom-cursor-enabled label *,
+.custom-cursor-enabled summary,
+.custom-cursor-enabled summary *,
+.custom-cursor-enabled [role="button"],
+.custom-cursor-enabled [role="button"] * {
+  cursor: pointer !important;
+}
+
+/* disabled 按钮例外优先级更高（伪类比普通标签选择器更具体），
+   避免上面这条规则把 disabled 状态也误标成可点击的小手。 */
+.custom-cursor-enabled button:disabled,
+.custom-cursor-enabled button:disabled * {
+  cursor: not-allowed !important;
+}
+
 .landing-page {
   min-height: 100vh;
   overflow-x: clip;
