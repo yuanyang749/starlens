@@ -75,6 +75,12 @@ STARLENS_API_BASE_URL="https://starlens.example.com"
 STARLENS_TOKEN="stl_xxx"
 ```
 
+### 本地环境（此 profile）
+Starlens 实例部署在同一服务器：`https://starlens.520ai.xin`。
+凭证已由 `stars login` 写入 `~/.starlens/agent.env`（内容为 `export STARLENS_API_BASE_URL=...` / `export STARLENS_TOKEN=...`）——
+这一份文件对所有 agent 客户端（Hermes / OpenClaw / Claude Code 等）通用，并非每个客户端各自一份。
+读取方式：`source ~/.starlens/agent.env` 后即可使用上述两个变量，或直接解析该文件取值。
+
 Send every API request with:
 
 ```http
