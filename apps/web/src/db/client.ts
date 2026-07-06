@@ -14,7 +14,14 @@ export function getDb() {
   }
 
   if (!db) {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // 连接池配置:配合 PostgreSQL max_connections=100
+    // 单进程 max=20,留余量给其他客户端(1Panel、migrator 等)
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 20,                      // 连接池最大连接数
+      idleTimeoutMillis: 30000,     // 空闲连接 30 秒后释放
+      connectionTimeoutMillis: 2000, // 建连超时 2 秒,快速失败
+    });
     db = drizzle(pool, { schema });
   }
 
