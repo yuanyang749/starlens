@@ -43,6 +43,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
+              "media-src 'self' https://r2.jsh5css.cn",
               "font-src 'self' data:",
               "connect-src 'self'",
               "frame-ancestors 'none'",
