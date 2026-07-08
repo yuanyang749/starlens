@@ -272,6 +272,30 @@
   - `gemini_native`
 - `v1` 需要在应用层保证同一用户最多只有一条 `is_default = true`
 
+### 4.x `ai_usage_logs`（v1.x 新增，2026-07-08 补充）
+
+用于记录每次 AI 调用的用量，供后续限流/计费/排查参考。
+
+字段：
+
+- `id` `uuid`
+- `user_id` `uuid`（外键 → `users.id`，级联删除）
+- `endpoint` `text`（调用的 AI 能力接口，如 `ai/ask`）
+- `model` `text`
+- `prompt_tokens` `integer`，默认 `0`
+- `completion_tokens` `integer`，默认 `0`
+- `created_at` `timestamptz`
+
+索引：
+
+- `user_id`
+- `created_at`
+
+说明：
+
+- 只记录用量统计，不存储 prompt/completion 原文，不是完整的调用审计日志
+- 与第 8 节历史上"v1 明确不做 AI 调用日志表"的表述不再一致，以本节和实际 schema（`packages/server/src/db/schema.ts`）为准
+
 ## 5. 索引策略
 
 ### 5.1 搜索与列表查询
@@ -377,9 +401,10 @@
 - 全局公共 `repositories` 维表和用户关系表拆分
 - README 全文表
 - embeddings / vector 表
-- AI 调用日志表
 - Token 细粒度权限矩阵表
 - repo note 历史版本表
+
+> 注：轻量级 `ai_usage_logs`（仅用量统计，非完整调用日志）已在 v1.x 中新增，见 4.x 节，不再属于"不做"范围。
 
 这些都可以在后续版本基于当前 schema 再拆分。
 

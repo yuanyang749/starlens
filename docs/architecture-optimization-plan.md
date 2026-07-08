@@ -1,5 +1,17 @@
 # Starlens 架构优化方案
 
+## 0. 执行状态更新（2026-07-08）
+
+- **P0 已完成**：`WorkbenchView` 已拆分（`apps/web/src/components/workbench/` 下的 topbar/sidebar/repo-table-pane/repo-detail-panel 等）；`ai/ask/route.ts` 已拆分为 `intent.ts`/`recall.ts`/`ranking.ts`/`provider.ts`/`rate-limit.ts`/`answer.ts`，路由入口本身已收敛到约 60 行。
+- **P1 尚未完成**：
+  - 限流仍是进程内 `Map`（`packages/server/src/server/ai/rate-limit.ts:7`），未迁移到 Redis/DB，多实例部署下限流状态仍不一致。
+  - 未发现 `sync_runs` 或等价的同步历史持久化表，同步历史仍依赖单进程内存。
+  - Hosted MCP Base URL 仍以硬编码默认值兜底（`apps/web/src/app/api/mcp/route.ts:9`），虽已支持环境变量覆盖，但尚未完全消除硬编码默认值。
+  - 结论：**在真正推进多实例 / Hosted 部署之前，请先处理这三项，再归档本文档。**
+- **P2 已完成**：`scripts/check-api-shims.mjs` 已落地，覆盖 Web/Mobile API shim 一致性校验。
+
+以下第 1-10 节为原始方案全文，作为 P1 剩余项的实施参考保留。
+
 ## 1. 文档目标
 
 这份文档用于把当前项目分析中识别出的主要架构问题整理成一份可执行的优化方案，明确：

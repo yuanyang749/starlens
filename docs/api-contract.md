@@ -778,3 +778,15 @@ Authorization: Bearer <token>
 - repo 更新接口只允许改用户私有字段
 - AI 调用统一由服务端代理发起
 - AI 问答必须先经过数据库候选召回
+
+## 13. v1.x 新增接口（截至 2026-07-08）
+
+以下接口在初版契约之后新增，均遵循第 4 节的通用响应格式；完整请求/响应示例见 `agent-skills/starlens/references/http-api.md`（agent skill 的权威参考，随代码同步维护），此处仅记录路由清单和用途摘要：
+
+- `POST /api/repos/star` / `POST /api/repos/unstar` — 真实调用 GitHub API 修改用户的 GitHub star 状态（区别于 `PATCH /api/repos/:id` 的本地 `isFavorite` 标记）
+- `GET /api/repos/suggestions` — 知识整理建议（重复 / 过时 / 未分类），纯 DB 聚合，不调 AI
+- `GET /api/sync/summary` — 返回最近一次同步的新增 / 消失 / 变化仓库摘要（数据来自 `sync_changes` 表）
+- `POST /api/ai/analyze` — 仓库分析 + AI 生成标签/备注建议（CLI / Web 入口）
+- `POST /api/ai/recommend` — 基于任务描述做 AI 重排的仓库推荐（CLI / Web 入口）
+- `POST /api/ai/related` — 基于给定仓库做 AI 重排的关联仓库发现（CLI / Web 入口）
+- `POST /api/repos/analyze-data` / `POST /api/repos/recommend-data` / `POST /api/repos/related-data` — 上述三个接口的 **数据版**（agent/MCP 场景），不调后端 AI、不消耗 AI 配额，只返回原始 DB/GitHub 数据供调用方自行分析重排
