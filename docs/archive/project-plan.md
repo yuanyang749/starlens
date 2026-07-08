@@ -1,5 +1,7 @@
 # Starlens 项目计划
 
+> **归档说明（2026-07-08）**：v1 目标已基本达成，本文档不再是当前实现的权威参考，仅作为项目早期取舍决策的历史记录保留。当前 API/数据结构以 `docs/api-contract.md`、`docs/database-schema.md` 为准。
+
 ## 1. 项目目标
 
 Starlens 是一个面向个人使用的 GitHub Star 仓库检索与整理工具，目标是解决下面几个问题：
