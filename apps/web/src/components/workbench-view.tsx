@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_SEARCH_SORT, type RepoSummary } from "@starlens-app/core";
 import { X } from "lucide-react";
+import { fetchApi } from "@/lib/api-client";
 import { AISettingsView } from "./ai-settings-view";
 import { GeneralSettingsView } from "./general-settings-view";
 import { RepoDetailPanel } from "./workbench/repo-detail-panel";
@@ -52,6 +53,20 @@ export function WorkbenchView({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [recentMode, setRecentMode] = useState(false);
+  // 中文注释：仅 admin 用户需要在侧边栏"用户管理"旁展示用户总数，复用 /api/admin/users 列表长度，
+  // 不新增专门的 count 接口。非 admin 不发起请求。
+  const [adminUserCount, setAdminUserCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const controller = new AbortController();
+    fetchApi<{ id: string }[]>("/api/admin/users", { signal: controller.signal })
+      .then((rows) => setAdminUserCount(rows.length))
+      .catch(() => {
+        // 拉取失败时静默忽略，侧边栏退化为不展示数量（用户管理页本身仍会展示错误提示）
+      });
+    return () => controller.abort();
+  }, [isAdmin]);
 
   // 数据层
   const data = useWorkbenchData(
@@ -234,6 +249,7 @@ export function WorkbenchView({
           onOpenTokens={() => setContentMode("tokens")}
           isAdmin={isAdmin}
           onOpenAdmin={() => setContentMode("admin")}
+          adminUserCount={adminUserCount}
           onOpenDashboard={() => setContentMode("dashboard")}
           recentActive={recentMode}
           total={allStarsTotal}

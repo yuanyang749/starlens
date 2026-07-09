@@ -15,6 +15,7 @@ type WorkbenchSidebarProps = {
   onOpenTokens: () => void;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
+  adminUserCount?: number | null;
   onOpenDashboard: () => void;
   recentActive: boolean;
   total: number;
@@ -37,6 +38,7 @@ export function WorkbenchSidebar({
   onOpenTokens,
   isAdmin,
   onOpenAdmin,
+  adminUserCount,
   onOpenDashboard,
   recentActive,
   total,
@@ -157,6 +159,7 @@ export function WorkbenchSidebar({
                 <Shield className="h-4 w-4" />
                 <span className="workbench-nav-item__label">用户管理</span>
               </span>
+              {typeof adminUserCount === "number" ? <span>{adminUserCount}</span> : null}
             </button>
           ) : null}
           <button
