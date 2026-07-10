@@ -634,6 +634,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden; /* 保证头像图片完美贴合圆形裁剪 */
   /* 中文注释：头像与气泡内容容器底部对齐（覆盖 MessageAvatar 的 self-end） */
   align-self: flex-end;
 }
@@ -1079,33 +1080,83 @@
 .chat-view__examples {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-  max-width: 560px;
+  gap: 12px;
+  margin-top: 24px;
+  max-width: 600px;
   width: 100%;
 }
 
 .chat-view__example-item {
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line, rgba(226, 232, 240, 0.8));
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--foreground, #334155);
-  font-size: 0.82rem;
-  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #334155;
   cursor: pointer;
-  transition: all 0.15s;
+  /* min-height: 96px; */
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-view__example-item:hover:not(:disabled) {
-  border-color: rgba(99, 102, 241, 0.4);
-  background: rgba(99, 102, 241, 0.04);
-  color: #6366f1;
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.06);
+  transform: translateY(-2px);
 }
 
 .chat-view__example-item:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.chat-view__example-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.chat-view__example-item-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chat-view__example-item:hover:not(:disabled) .chat-view__example-item-icon-wrapper {
+  background: #6366f1;
+  color: #fff;
+}
+
+.chat-view__example-item-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  transition: color 0.2s ease;
+}
+
+.chat-view__example-item:hover:not(:disabled) .chat-view__example-item-title {
+  color: #6366f1;
+}
+
+.chat-view__example-item-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0;
 }
 
 /* ============ 会话列表搜索框 ============ */
@@ -1205,73 +1256,202 @@
 }
 
 /* ============ 工具调用可视化面板 ============ */
-.chat-view__tools {
-  margin-bottom: 6px;
-  border-radius: 8px;
-  border: 1px solid var(--line, rgba(226, 232, 240, 0.8));
-  background: rgba(248, 250, 252, 0.8);
-  overflow: hidden;
-}
-
-.chat-view__tools-toggle {
+/* ============ 工具调用可视化面板 ============ */
+/* ============ 横向工具调用步骤条 ============ */
+.chat-view__tools-horizontal {
+  align-self: flex-start;
+  max-width: 80%;
+  width: 100%;
+  margin-bottom: -4px; /* 紧贴下面的消息框 */
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.7) 0%, rgba(241, 245, 249, 0.7) 100%);
+  backdrop-filter: blur(8px);
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 5px 10px;
-  border: none;
-  background: transparent;
-  color: var(--muted, #64748b);
+  gap: 12px;
+  overflow: visible; /* 必须为 visible，保证 tooltip 能够弹出不被裁切 */
+}
+
+.chat-view__tools-h-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.75rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.chat-view__tools-toggle:hover {
-  background: rgba(99, 102, 241, 0.04);
-}
-
-.chat-view__tools-summary {
-  font-weight: 500;
-}
-
-.chat-view__tools-arrow {
-  font-size: 0.7rem;
-  transition: transform 0.15s;
-}
-
-.chat-view__tools-arrow.is-expanded {
-  transform: rotate(90deg);
-}
-
-.chat-view__tools-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px 10px 6px;
-  border-top: 1px solid var(--line, rgba(226, 232, 240, 0.6));
-}
-
-.chat-view__tools-item {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 0.72rem;
-  line-height: 1.5;
-}
-
-.chat-view__tools-name {
   font-weight: 600;
   color: #6366f1;
-  white-space: nowrap;
+  border-right: 1px solid rgba(99, 102, 241, 0.15);
+  padding-right: 10px;
+  flex-shrink: 0;
+  height: 20px;
+}
+
+.chat-view__tools-h-terminal-icon {
+  opacity: 0.8;
+}
+
+.chat-view__tools-h-steps {
+  display: flex;
+  align-items: center;
+  gap: 0; /* 连线与节点紧密相连 */
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible; /* 允许纵向溢出以显示 tooltip */
+  padding-right: 32px; /* 缓冲最右侧节点与边缘的贴合，留出充足视觉呼吸感 */
+  padding-top: 4px; /* 提供轻微上下空隙容纳 hover 时的 translateY 位移 */
+  padding-bottom: 4px;
+  scrollbar-width: none; /* 隐藏滚动条 */
+}
+.chat-view__tools-h-steps::-webkit-scrollbar {
+  display: none;
+}
+
+.chat-view__tools-h-item {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
-.chat-view__tools-args {
-  color: var(--muted, #64748b);
+.chat-view__tools-h-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+  cursor: help;
+  transition: transform 0.15s ease;
+}
+
+.chat-view__tools-h-node:hover {
+  transform: translateY(-1px);
+}
+
+.chat-view__tools-h-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-view__tools-h-label {
+  font-size: 0.72rem;
+  font-weight: 550;
+  color: #334155;
+  white-space: nowrap;
+}
+
+/* 连线与生长动画 */
+.chat-view__tools-h-connector {
+  width: 24px;
+  height: 2px;
+  background: rgba(99, 102, 241, 0.1);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.chat-view__tools-h-connector::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(99, 102, 241, 0.4);
+  transform-origin: left;
+  animation: growLine 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes growLine {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* 处于活动中/思考中的节点与标签样式 */
+.chat-view__tools-h-node.is-active {
+  cursor: default;
+}
+
+.chat-view__tools-h-badge.is-active {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+.chat-view__tools-h-label.is-active {
+  color: #6366f1;
+  font-weight: 600;
+  animation: pulseOpacity 2.5s infinite ease-in-out;
+}
+
+@keyframes pulseOpacity {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Tooltip 样式 */
+.chat-view__tools-h-tooltip {
+  position: absolute;
+  bottom: 135%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.24);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+/* 小三角 */
+.chat-view__tools-h-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.95) transparent transparent transparent;
+}
+
+.chat-view__tools-h-node:hover .chat-view__tools-h-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.chat-view__tools-h-tooltip-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  letter-spacing: 0.05em;
+}
+
+.chat-view__tools-h-tooltip-code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: #e2e8f0;
   word-break: break-all;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  font-size: 0.68rem;
+  white-space: pre-wrap;
 }
 
 .repo-table-pane__filters,
@@ -2352,4 +2532,77 @@
   height: 1px;
   background: #f1f5f9;
   margin: 2px 0;
+}
+
+/* ============ 侧边栏删除气泡 (Delete Popover) ============ */
+.chat-view__delete-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 120px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(219, 226, 234, 0.92);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+  outline: none;
+  animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chat-view__delete-popover-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.chat-view__delete-popover-btns {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.chat-view__delete-popover-btn {
+  flex: 1;
+  padding: 4px 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.chat-view__delete-popover-btn--confirm {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.chat-view__delete-popover-btn--confirm:hover {
+  background: #dc2626;
+}
+
+.chat-view__delete-popover-btn--cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.chat-view__delete-popover-btn--cancel:hover {
+  background: #e2e8f0;
 }

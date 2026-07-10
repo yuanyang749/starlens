@@ -3,23 +3,39 @@
 // AI 对话视图
 // 职责：会话列表 + 消息流 + 输入区，集成 useChatStream 流式 hook
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
+  BarChart2,
+  BookOpen,
   Bot,
   Check,
+  ChevronRight,
+  CheckCircle2,
+  Compass,
   Copy,
+  Database,
   Download,
+  FileText,
+  Lightbulb,
   Loader2,
   MessageCircle,
   PanelLeft,
   PanelLeftClose,
   Pencil,
+  PieChart,
   Plus,
   RefreshCw,
   Search,
+  Sparkles,
+  Star,
+  StarOff,
+  Stethoscope,
+  Tag,
+  Terminal,
   Trash2,
   User,
+  Wrench,
   X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -37,13 +53,34 @@ import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/compone
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 import { useChatStream, type ChatCandidate, type ChatMessage } from "./use-chat-stream";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-// 中文注释：欢迎页示例问题，覆盖不同工具类型（统计/推荐/分析）
-const EXAMPLE_QUESTIONS: string[] = [
-  "统计我收藏的仓库按语言分布",
-  "推荐适合做 CLI 工具的仓库",
-  "帮我看看收藏里有没有重复或过时的仓库",
-  "我要做一个实时聊天应用，有哪些收藏可以参考",
+// 中文注释：欢迎页示例问题，覆盖不同工具类型（统计/推荐/分析），支持丰富的图文配置
+const EXAMPLE_QUESTIONS = [
+  {
+    title: "语言分布统计",
+    desc: "统计我收藏的仓库按主要语言的分布情况",
+    question: "统计我收藏的仓库按语言分布",
+    icon: PieChart,
+  },
+  {
+    title: "精选命令行工具",
+    desc: "推荐适合做 CLI 工具开发的收藏仓库",
+    question: "推荐适合做 CLI 工具的仓库",
+    icon: Terminal,
+  },
+  {
+    title: "诊断整理建议",
+    desc: "扫描我收藏里有没有重复或过时的仓库",
+    question: "帮我看看收藏里有没有重复或过时的仓库",
+    icon: Stethoscope,
+  },
+  {
+    title: "实时项目参考",
+    desc: "寻找构建实时聊天应用的参考收藏项目",
+    question: "我要做一个实时聊天应用，有哪些收藏可以参考",
+    icon: BookOpen,
+  },
 ];
 
 // 中文注释：代码块语言别名映射，prism 部分语言名需要归一化
@@ -81,7 +118,15 @@ type StoredMessage = {
   createdAt: string;
 };
 
-export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: string) => void }) {
+export function ChatView({
+  userAvatarUrl = null,
+  userName = "GitHub 用户",
+  onNavigateToRepo,
+}: {
+  userAvatarUrl?: string | null;
+  userName?: string;
+  onNavigateToRepo?: (fullName: string) => void;
+}) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -94,6 +139,7 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // 中文注释：标记是否已从本地缓存恢复过会话，避免恢复期间被其他 effect 覆盖
   const restoredRef = useRef(false);
@@ -200,10 +246,9 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
     textareaRef.current?.focus();
   }, [reset]);
 
-  // 删除会话
-  const handleDeleteConversation = useCallback(
-    async (convId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
+  // 确认执行删除会话
+  const confirmDelete = useCallback(
+    async (convId: string) => {
       try {
         await fetchApi<{ deleted: boolean }>(`/api/ai/chat/conversations/${convId}`, { method: "DELETE" });
         setConversations((prev) => prev.filter((c) => c.id !== convId));
@@ -212,6 +257,8 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
         }
       } catch {
         // 静默
+      } finally {
+        setDeleteConfirmId(null);
       }
     },
     [activeConvId, handleNewConversation],
@@ -447,15 +494,59 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </span>
-                        <span
-                          className="chat-view__conv-delete"
-                          onClick={(e) => handleDeleteConversation(c.id, e)}
-                          role="button"
-                          tabIndex={-1}
-                          aria-label="删除对话"
+                        
+                        <Popover 
+                          open={deleteConfirmId === c.id} 
+                          onOpenChange={(open) => {
+                            if (!open) setDeleteConfirmId(null);
+                          }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </span>
+                          <PopoverTrigger asChild>
+                            <span
+                              className="chat-view__conv-delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmId(c.id);
+                              }}
+                              role="button"
+                              tabIndex={-1}
+                              aria-label="删除对话"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </span>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            side="top"
+                            align="end"
+                            sideOffset={4}
+                            className="chat-view__delete-popover"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="chat-view__delete-popover-text">确定删除该会话？</span>
+                            <span className="chat-view__delete-popover-btns">
+                              <button
+                                type="button"
+                                className="chat-view__delete-popover-btn chat-view__delete-popover-btn--confirm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void confirmDelete(c.id);
+                                }}
+                              >
+                                删除
+                              </button>
+                              <button
+                                type="button"
+                                className="chat-view__delete-popover-btn chat-view__delete-popover-btn--cancel"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmId(null);
+                                }}
+                              >
+                                取消
+                              </button>
+                            </span>
+                          </PopoverContent>
+                        </Popover>
                       </span>
                     </>
                   )}
@@ -516,20 +607,29 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
                       支持多轮对话，AI 会基于你收藏的仓库回答问题、推荐项目。
                     </p>
                     <div className="chat-view__examples">
-                      {EXAMPLE_QUESTIONS.map((q) => (
-                        <button
-                          key={q}
-                          type="button"
-                          className="chat-view__example-item"
-                          onClick={() => {
-                            setInput(q);
-                            void sendMessage(q).then(() => loadConversations());
-                          }}
-                          disabled={isStreaming}
-                        >
-                          {q}
-                        </button>
-                      ))}
+                      {EXAMPLE_QUESTIONS.map((item, index) => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            className="chat-view__example-item"
+                            onClick={() => {
+                              setInput(item.question);
+                              void sendMessage(item.question).then(() => loadConversations());
+                            }}
+                            disabled={isStreaming}
+                          >
+                            <div className="chat-view__example-item-header">
+                              <div className="chat-view__example-item-icon-wrapper">
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="chat-view__example-item-title">{item.title}</span>
+                            </div>
+                            <p className="chat-view__example-item-desc">{item.desc}</p>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
@@ -539,6 +639,8 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
                       message={m}
                       isLast={i === messages.length - 1}
                       isStreaming={isStreaming}
+                      userAvatarUrl={userAvatarUrl}
+                      userName={userName}
                       onCopy={() => {}}
                       onRegenerate={() => void regenerate()}
                       onNavigateToRepo={onNavigateToRepo}
@@ -694,11 +796,66 @@ function formatTimestamp(iso?: string): string {
   return `${mm}-${dd} ${hh}:${mi}`;
 }
 
+// 中文注释：工具的显示名称和图标配置
+const TOOL_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  // 核心检索与分析
+  search_repos: { label: "检索仓库列表", icon: Search },
+  get_repo_detail: { label: "读取仓库详情", icon: FileText },
+  get_repo_stats: { label: "分析收藏统计", icon: BarChart2 },
+  run_readonly_query: { label: "执行数据库查询", icon: Database },
+  recommend_for_task: { label: "匹配开发任务", icon: Sparkles },
+  find_related: { label: "寻找关联项目", icon: Compass },
+  suggest_organization: { label: "扫描整理建议", icon: Wrench },
+  
+  // 本地管理与设置
+  add_tag: { label: "添加分类标签", icon: Tag },
+  remove_tag: { label: "移除分类标签", icon: Tag },
+  update_note: { label: "修改仓库备注", icon: Pencil },
+  toggle_favorite: { label: "星标常用仓库", icon: Star },
+  
+  // 危险操作与同步
+  unstar_repo: { label: "取消 GitHub 星标", icon: StarOff },
+  
+  // 流程控制
+  submit_answer: { label: "输出最终解答", icon: CheckCircle2 },
+};
+
+function formatToolArgs(argsStr: string): string {
+  try {
+    const parsed = JSON.parse(argsStr);
+    if (!parsed || typeof parsed !== "object") return argsStr;
+    
+    // 如果有 sql 语句，提取核心部分，去除换行
+    if (parsed.sql) {
+      const sqlClean = parsed.sql.replace(/\s+/g, " ").trim();
+      return sqlClean.length > 55 ? `${sqlClean.slice(0, 55)}...` : sqlClean;
+    }
+    
+    // 常见的 query, org 等核心参数
+    const priorityKeys = ["query", "q", "keyword", "org", "fullName", "name"];
+    for (const key of priorityKeys) {
+      if (parsed[key] !== undefined) {
+        return `${key}: "${parsed[key]}"`;
+      }
+    }
+    
+    // 降级：拼接所有 key-value
+    const parts = Object.entries(parsed)
+      .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+      .join(", ");
+    return parts.length > 60 ? `${parts.slice(0, 60)}...` : parts;
+  } catch {
+    return argsStr;
+  }
+}
+
 // 单条消息气泡
 function MessageBubble({
   message,
   isLast,
   isStreaming,
+  userAvatarUrl = null,
+  userName = "GitHub 用户",
   onCopy,
   onRegenerate,
   onNavigateToRepo,
@@ -707,6 +864,8 @@ function MessageBubble({
   message: ChatMessage;
   isLast: boolean;
   isStreaming: boolean;
+  userAvatarUrl?: string | null;
+  userName?: string;
   onCopy: () => void;
   onRegenerate: () => void;
   onNavigateToRepo?: (fullName: string) => void;
@@ -714,8 +873,22 @@ function MessageBubble({
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
-  // #9 工具调用面板展开状态
-  const [toolsExpanded, setToolsExpanded] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const stepsContainerRef = useRef<HTMLDivElement>(null);
+
+  // 自动滚动到横向步骤条的最右侧，以确保新节点和执行状态完全展出
+  useEffect(() => {
+    if (stepsContainerRef.current) {
+      const container = stepsContainerRef.current;
+      const scrollTimeout = setTimeout(() => {
+        container.scrollTo({
+          left: container.scrollWidth,
+          behavior: "smooth",
+        });
+      }, 50);
+      return () => clearTimeout(scrollTimeout);
+    }
+  }, [message.toolCalls?.length, message.isStreaming]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -741,11 +914,24 @@ function MessageBubble({
               : "chat-view__avatar chat-view__avatar--ai"
           }
         >
-          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+          {isUser ? (
+            userAvatarUrl && !avatarFailed ? (
+              <img
+                src={userAvatarUrl}
+                alt={userName}
+                className="w-full h-full object-cover rounded-full"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <User className="h-4 w-4" />
+            )
+          ) : (
+            <Bot className="h-4 w-4" />
+          )}
         </MessageAvatar>
         <MessageContent>
-          {/* 流式状态提示（正在搜索…/正在生成…） */}
-          {!isUser && message.statusText ? (
+          {/* 流式状态提示（正在搜索…/正在生成…） - 仅在没有工具调用时展示，避免视觉冗余 */}
+          {!isUser && message.statusText && (!message.toolCalls || message.toolCalls.length === 0) ? (
             <Marker variant="default">
               <MarkerIcon>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -754,29 +940,52 @@ function MessageBubble({
             </Marker>
           ) : null}
 
-          {/* #9 工具调用可视化：非流式完成后且存在工具调用记录时展示 */}
-          {!isUser && !message.isStreaming && message.toolCalls && message.toolCalls.length > 0 ? (
-            <div className="chat-view__tools">
-              <button
-                type="button"
-                className="chat-view__tools-toggle"
-                onClick={() => setToolsExpanded((v) => !v)}
-              >
-                <span className="chat-view__tools-summary">
-                  已调用 {message.toolCalls.length} 个工具
-                </span>
-                <span className={`chat-view__tools-arrow ${toolsExpanded ? "is-expanded" : ""}`}>▸</span>
-              </button>
-              {toolsExpanded ? (
-                <div className="chat-view__tools-list">
-                  {message.toolCalls.map((tc, i) => (
-                    <div key={i} className="chat-view__tools-item">
-                      <span className="chat-view__tools-name">{tc.name}</span>
-                      {tc.args ? <span className="chat-view__tools-args">{tc.args}</span> : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+          {/* #9 工具调用可视化：平铺横向步骤条，只要有工具调用记录便展示，流式生成中也可见 */}
+          {!isUser && message.toolCalls && message.toolCalls.length > 0 ? (
+            <div className="chat-view__tools-horizontal">
+              <div className="chat-view__tools-h-title">
+                <Terminal className="h-3.5 w-3.5 chat-view__tools-h-terminal-icon" />
+                <span>{message.isStreaming ? "执行链" : "已执行"}</span>
+              </div>
+              <div ref={stepsContainerRef} className="chat-view__tools-h-steps">
+                {message.toolCalls.map((tc, i) => {
+                  const config = TOOL_CONFIG[tc.name] || { label: tc.name, icon: Wrench };
+                  const isLastItem = i === (message.toolCalls?.length ?? 0) - 1;
+                  const isActive = isLastItem && message.isStreaming && tc.name !== "submit_answer";
+                  const Icon = isActive ? Loader2 : config.icon;
+                  
+                  return (
+                    <Fragment key={i}>
+                      <div 
+                        className={`chat-view__tools-h-node ${isActive ? "is-active" : ""}`} 
+                        data-tool-name={tc.name}
+                      >
+                        <div className={`chat-view__tools-h-badge ${isActive ? "is-active animate-spin" : ""}`}>
+                          <Icon className="h-3 w-3" />
+                        </div>
+                        <span className={`chat-view__tools-h-label ${isActive ? "is-active" : ""}`}>
+                          {config.label}{isActive ? "..." : ""}
+                        </span>
+                        
+                        {/* 悬停时弹出的参数气泡 */}
+                        {tc.args ? (
+                          <div className="chat-view__tools-h-tooltip">
+                            <div className="chat-view__tools-h-tooltip-title">{tc.name} 参数</div>
+                            <code className="chat-view__tools-h-tooltip-code">
+                              {formatToolArgs(tc.args)}
+                            </code>
+                          </div>
+                        ) : null}
+                      </div>
+                      
+                      {/* 连线：最后一个节点后面不放线 */}
+                      {!isLastItem ? (
+                        <div className="chat-view__tools-h-connector" />
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
 
@@ -831,16 +1040,14 @@ function MessageBubble({
                   <RefreshCw className="h-3 w-3" />
                 </button>
               ) : null}
-              {onCopy ? (
-                <button
-                  type="button"
-                  className="chat-view__msg-action-btn"
-                  onClick={handleCopy}
-                  aria-label={copied ? "已复制" : "复制消息"}
-                >
-                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="chat-view__msg-action-btn"
+                onClick={handleCopy}
+                aria-label={copied ? "已复制" : "复制消息"}
+              >
+                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              </button>
             </MessageFooter>
           ) : null}
         </MessageContent>

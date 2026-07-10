@@ -69,6 +69,17 @@ export function WorkbenchSidebar({
           <p className="workbench-nav-section__title">工作台</p>
           <button
             type="button"
+            onClick={onOpenChat}
+            className={contentMode === "chat" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="AI 对话"
+          >
+            <span className="workbench-nav-item__leading">
+              <MessageCircle className="h-4 w-4" />
+              <span className="workbench-nav-item__label">AI 对话</span>
+            </span>
+          </button>
+          <button
+            type="button"
             onClick={onOpenDashboard}
             className={contentMode === "dashboard" ? "workbench-nav-item is-active" : "workbench-nav-item"}
             aria-label="数据看板"
@@ -117,17 +128,6 @@ export function WorkbenchSidebar({
 
         <section className="workbench-nav-section" aria-label="工具">
           <p className="workbench-nav-section__title">工具</p>
-          <button
-            type="button"
-            onClick={onOpenChat}
-            className={contentMode === "chat" ? "workbench-nav-item is-active" : "workbench-nav-item"}
-            aria-label="AI 对话"
-          >
-            <span className="workbench-nav-item__leading">
-              <MessageCircle className="h-4 w-4" />
-              <span className="workbench-nav-item__label">AI 对话</span>
-            </span>
-          </button>
           <button
             type="button"
             onClick={onOpenProviders}
