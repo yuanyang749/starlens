@@ -1094,6 +1094,140 @@
   cursor: not-allowed;
 }
 
+/* ============ 会话列表搜索框 ============ */
+.chat-view__search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line, rgba(226, 232, 240, 0.8));
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.chat-view__search-icon {
+  color: var(--muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.chat-view__search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  color: var(--foreground, #0f172a);
+  outline: none;
+}
+
+.chat-view__search-input::placeholder {
+  color: var(--muted, #94a3b8);
+}
+
+.chat-view__search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.chat-view__search-clear:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #475569;
+}
+
+/* ============ 头部操作区 ============ */
+.chat-view__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ============ 消息时间戳 ============ */
+.chat-view__msg-time {
+  font-size: 0.7rem;
+  color: var(--muted, #94a3b8);
+  white-space: nowrap;
+}
+
+/* ============ 工具调用可视化面板 ============ */
+.chat-view__tools {
+  margin-bottom: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line, rgba(226, 232, 240, 0.8));
+  background: rgba(248, 250, 252, 0.8);
+  overflow: hidden;
+}
+
+.chat-view__tools-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #64748b);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chat-view__tools-toggle:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.chat-view__tools-summary {
+  font-weight: 500;
+}
+
+.chat-view__tools-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+}
+
+.chat-view__tools-arrow.is-expanded {
+  transform: rotate(90deg);
+}
+
+.chat-view__tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 10px 6px;
+  border-top: 1px solid var(--line, rgba(226, 232, 240, 0.6));
+}
+
+.chat-view__tools-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.chat-view__tools-name {
+  font-weight: 600;
+  color: #6366f1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chat-view__tools-args {
+  color: var(--muted, #64748b);
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.68rem;
+}
+
 .repo-table-pane__filters,
 .repo-table-pane__footer {
   display: flex;

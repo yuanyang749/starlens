@@ -24,6 +24,10 @@ export type ChatMessage = {
   // 流式过程中的状态提示（"正在搜索仓库…" 等），token 开始后清空
   statusText?: string;
   isStreaming?: boolean;
+  // 中文注释：消息创建时间（ISO 字符串），用于 hover 显示时间戳
+  createdAt?: string;
+  // 中文注释：工具调用记录，用于可视化展示
+  toolCalls?: { name: string; args: string }[];
 };
 
 // SSE 事件类型（与后端 ChatStreamEvent 对齐）
@@ -111,10 +115,11 @@ export function useChatStream() {
       const assistantMsgId = crypto.randomUUID();
 
       // 乐观添加 user 消息 + assistant 占位消息
+      const now = new Date().toISOString();
       setMessages((prev) => [
         ...prev,
-        { id: userMsgId, role: "user", content: trimmed },
-        { id: assistantMsgId, role: "assistant", content: "", statusText: "正在思考…", isStreaming: true },
+        { id: userMsgId, role: "user", content: trimmed, createdAt: now },
+        { id: assistantMsgId, role: "assistant", content: "", statusText: "正在思考…", isStreaming: true, createdAt: now, toolCalls: [] },
       ]);
       setIsStreaming(true);
 
@@ -175,7 +180,12 @@ export function useChatStream() {
                   case "status":
                     return { ...m, statusText: event.message || STATUS_FALLBACK[event.status] || "处理中…" };
                   case "tool_call":
-                    return { ...m, statusText: `调用 ${event.name}…` };
+                    // 中文注释：收集工具调用记录用于可视化，同时更新状态提示
+                    return {
+                      ...m,
+                      statusText: `调用 ${event.name}…`,
+                      toolCalls: [...(m.toolCalls ?? []), { name: event.name, args: event.arguments }],
+                    };
                   case "error":
                     return { ...m, content: event.message, statusText: undefined, isStreaming: false };
                   default:

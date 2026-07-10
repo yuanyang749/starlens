@@ -9,6 +9,7 @@ import {
   Bot,
   Check,
   Copy,
+  Download,
   Loader2,
   MessageCircle,
   PanelLeft,
@@ -16,6 +17,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
   User,
   X,
@@ -86,6 +88,8 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  // 中文注释：会话列表搜索关键词
+  const [searchQuery, setSearchQuery] = useState("");
   // 中文注释：重命名相关状态。editingId 标记正在编辑的会话，editTitle 存储输入框值
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -129,6 +133,7 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
               id: m.id,
               role: m.role,
               content: m.content,
+              createdAt: m.createdAt,
             })),
           );
         } catch {
@@ -176,6 +181,7 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
             role: m.role,
             content: m.content,
             candidates: m.candidates,
+            createdAt: m.createdAt,
           })),
         );
       } catch {
@@ -274,6 +280,51 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   };
 
+  // 中文注释：按标题/最后问题过滤会话列表
+  const filteredConversations = searchQuery.trim()
+    ? conversations.filter((c) => {
+        const q = searchQuery.toLowerCase();
+        return c.title.toLowerCase().includes(q) || (c.lastQuestion?.toLowerCase().includes(q) ?? false);
+      })
+    : conversations;
+
+  // #12 导出当前会话为 Markdown 文件
+  const handleExport = useCallback(() => {
+    if (messages.length === 0) return;
+    const title = activeConvId
+      ? conversations.find((c) => c.id === activeConvId)?.title ?? "AI 对话"
+      : "AI 对话";
+    const lines: string[] = [`# ${title}\n`];
+    for (const m of messages) {
+      const role = m.role === "user" ? "👤 **用户**" : "🤖 **AI**";
+      lines.push(`### ${role}\n`);
+      lines.push(m.content);
+      lines.push("");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [messages, activeConvId, conversations]);
+
+  // #11 编辑消息：删除该消息及之后的所有内容，将内容填入输入框
+  const handleEditMessage = useCallback(
+    (content: string) => {
+      // 中文注释：编辑 = 删除此消息之后重新提问。这里简化为将内容填入输入框，
+      // 用户修改后发送会作为新消息追加（不删除历史，保持上下文完整）
+      setInput(content);
+      textareaRef.current?.focus();
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+      }
+    },
+    [],
+  );
+
   return (
     <div className="chat-view">
       {sidebarOpen ? (
@@ -293,13 +344,35 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
             <Plus className="h-4 w-4" />
             新建对话
           </button>
+          {/* 中文注释：会话列表搜索框 */}
+          <div className="chat-view__search-wrap">
+            <Search className="chat-view__search-icon h-3.5 w-3.5" />
+            <input
+              className="chat-view__search-input"
+              placeholder="搜索对话…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                className="chat-view__search-clear"
+                onClick={() => setSearchQuery("")}
+                aria-label="清除搜索"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : null}
+          </div>
           <div className="chat-view__conv-list">
             {loadingConversations && conversations.length === 0 ? (
               <div className="chat-view__empty-hint">加载中…</div>
-            ) : conversations.length === 0 ? (
-              <div className="chat-view__empty-hint">暂无对话，开始提问后会自动保存。</div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="chat-view__empty-hint">
+                {searchQuery ? "没有匹配的对话。" : "暂无对话，开始提问后会自动保存。"}
+              </div>
             ) : (
-              conversations.map((c) => (
+              filteredConversations.map((c) => (
                 <div
                   key={c.id}
                   className={`chat-view__conv-item ${c.id === activeConvId ? "is-active" : ""}`}
@@ -408,11 +481,25 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
             {activeConvId ? conversations.find((c) => c.id === activeConvId)?.title ?? "AI 对话" : "AI 对话"}
           </h2>
           {loadingHistory ? <span className="chat-view__loading-hint">加载历史中…</span> : null}
-          {isStreaming ? (
-            <button type="button" className="chat-view__stop-btn" onClick={stop}>
-              停止生成
-            </button>
-          ) : null}
+          <div className="chat-view__header-actions">
+            {isStreaming ? (
+              <button type="button" className="chat-view__stop-btn" onClick={stop}>
+                停止生成
+              </button>
+            ) : null}
+            {/* #12 导出会话为 Markdown */}
+            {messages.length > 0 ? (
+              <button
+                type="button"
+                className="chat-view__icon-btn"
+                onClick={handleExport}
+                aria-label="导出对话"
+                title="导出为 Markdown"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {/* 中文注释：autoScroll 让流式输出时自动滚到底部（ResizeObserver 监听内容高度变化），
@@ -455,6 +542,7 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
                       onCopy={() => {}}
                       onRegenerate={() => void regenerate()}
                       onNavigateToRepo={onNavigateToRepo}
+                      onEdit={handleEditMessage}
                     />
                   ))
                 )}
@@ -584,6 +672,18 @@ function markdownComponents(onNavigate?: (fullName: string) => void) {
   };
 }
 
+// 格式化时间戳（MM-DD HH:mm）
+function formatTimestamp(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${mm}-${dd} ${hh}:${mi}`;
+}
+
 // 单条消息气泡
 function MessageBubble({
   message,
@@ -592,6 +692,7 @@ function MessageBubble({
   onCopy,
   onRegenerate,
   onNavigateToRepo,
+  onEdit,
 }: {
   message: ChatMessage;
   isLast: boolean;
@@ -599,9 +700,12 @@ function MessageBubble({
   onCopy: () => void;
   onRegenerate: () => void;
   onNavigateToRepo?: (fullName: string) => void;
+  onEdit?: (content: string) => void;
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  // #9 工具调用面板展开状态
+  const [toolsExpanded, setToolsExpanded] = useState(false);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -613,6 +717,8 @@ function MessageBubble({
       // 静默
     }
   }, [message.content, onCopy]);
+
+  const timeText = formatTimestamp(message.createdAt);
 
   return (
     <MessageScrollerItem>
@@ -638,6 +744,32 @@ function MessageBubble({
             </Marker>
           ) : null}
 
+          {/* #9 工具调用可视化：非流式完成后且存在工具调用记录时展示 */}
+          {!isUser && !message.isStreaming && message.toolCalls && message.toolCalls.length > 0 ? (
+            <div className="chat-view__tools">
+              <button
+                type="button"
+                className="chat-view__tools-toggle"
+                onClick={() => setToolsExpanded((v) => !v)}
+              >
+                <span className="chat-view__tools-summary">
+                  已调用 {message.toolCalls.length} 个工具
+                </span>
+                <span className={`chat-view__tools-arrow ${toolsExpanded ? "is-expanded" : ""}`}>▸</span>
+              </button>
+              {toolsExpanded ? (
+                <div className="chat-view__tools-list">
+                  {message.toolCalls.map((tc, i) => (
+                    <div key={i} className="chat-view__tools-item">
+                      <span className="chat-view__tools-name">{tc.name}</span>
+                      {tc.args ? <span className="chat-view__tools-args">{tc.args}</span> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {/* 中文注释：包裹 bubble + 操作栏，hover 时显示操作栏 */}
           <div className="chat-view__msg-body">
             {/* 消息正文 */}
@@ -657,28 +789,45 @@ function MessageBubble({
               </Bubble>
             ) : null}
 
-            {/* 消息操作栏：复制（assistant）/ 重新生成（assistant 最后一条且非流式中） */}
-            {!isUser && message.content && !message.isStreaming ? (
+            {/* 消息操作栏：复制/重新生成（assistant）、编辑（user） */}
+            {message.content && !message.isStreaming ? (
               <div className="chat-view__msg-actions">
-                <button
-                  type="button"
-                  className="chat-view__msg-action-btn"
-                  onClick={handleCopy}
-                  aria-label="复制消息"
-                >
-                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                  {copied ? "已复制" : "复制"}
-                </button>
-                {isLast && !isStreaming ? (
+                {/* #7 时间戳 */}
+                {timeText ? <span className="chat-view__msg-time">{timeText}</span> : null}
+                {isUser && onEdit ? (
                   <button
                     type="button"
                     className="chat-view__msg-action-btn"
-                    onClick={onRegenerate}
-                    aria-label="重新生成"
+                    onClick={() => onEdit(message.content)}
+                    aria-label="编辑消息"
                   >
-                    <RefreshCw className="h-3 w-3" />
-                    重新生成
+                    <Pencil className="h-3 w-3" />
+                    编辑
                   </button>
+                ) : null}
+                {!isUser ? (
+                  <>
+                    <button
+                      type="button"
+                      className="chat-view__msg-action-btn"
+                      onClick={handleCopy}
+                      aria-label="复制消息"
+                    >
+                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      {copied ? "已复制" : "复制"}
+                    </button>
+                    {isLast && !isStreaming ? (
+                      <button
+                        type="button"
+                        className="chat-view__msg-action-btn"
+                        onClick={onRegenerate}
+                        aria-label="重新生成"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        重新生成
+                      </button>
+                    ) : null}
+                  </>
                 ) : null}
               </div>
             ) : null}
