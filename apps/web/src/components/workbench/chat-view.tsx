@@ -340,10 +340,6 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
               <PanelLeftClose className="h-4 w-4" />
             </button>
           </div>
-          <button type="button" className="chat-view__new-btn" onClick={handleNewConversation}>
-            <Plus className="h-4 w-4" />
-            新建对话
-          </button>
           {/* 中文注释：会话列表搜索框 */}
           <div className="chat-view__search-wrap">
             <Search className="chat-view__search-icon h-3.5 w-3.5" />
@@ -364,6 +360,10 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
               </button>
             ) : null}
           </div>
+          <button type="button" className="chat-view__new-btn" onClick={handleNewConversation}>
+            <Plus className="h-4 w-4" />
+            新建对话
+          </button>
           <div className="chat-view__conv-list">
             {loadingConversations && conversations.length === 0 ? (
               <div className="chat-view__empty-hint">加载中…</div>
