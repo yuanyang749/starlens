@@ -28,6 +28,8 @@ export type ChatMessage = {
   createdAt?: string;
   // 中文注释：工具调用记录，用于可视化展示
   toolCalls?: { name: string; args: string }[];
+  // 中文注释：本轮对话 token 用量（部分端点可能不返回）
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
 // SSE 事件类型（与后端 ChatStreamEvent 对齐）
@@ -35,7 +37,7 @@ type StreamEvent =
   | { type: "status"; status: string; message: string }
   | { type: "token"; text: string }
   | { type: "tool_call"; name: string; arguments: string }
-  | { type: "done"; answer: string; candidates: ChatCandidate[] }
+  | { type: "done"; answer: string; candidates: ChatCandidate[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
   | { type: "error"; message: string };
 
 // 状态事件兜底文案
@@ -52,7 +54,11 @@ export function useChatStream() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // #15 连接中断标记（区分用户主动停止和网络错误）
+  const [connectionError, setConnectionError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // 中文注释：记录最后一次发送的文本，用于断线重连
+  const lastSentTextRef = useRef<string | null>(null);
 
   // 中文注释：打字机相关 ref。
   // AI 提供商不流式返回 tool_calls.arguments，整个 answer 一次性到达。
@@ -62,7 +68,7 @@ export function useChatStream() {
 
   // 启动打字机：逐字追加 answer 到指定消息
   const startTypewriter = useCallback(
-    (msgId: string, fullText: string, candidates?: ChatCandidate[]) => {
+    (msgId: string, fullText: string, candidates?: ChatCandidate[], usage?: { prompt_tokens?: number; completion_tokens?: number }) => {
       // 停止之前的打字机
       if (typewriterRef.current) clearInterval(typewriterRef.current);
       typewriterActiveRef.current = true;
@@ -84,7 +90,7 @@ export function useChatStream() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === msgId
-                ? { ...m, content: fullText, candidates, isStreaming: false }
+                ? { ...m, content: fullText, candidates, isStreaming: false, usage }
                 : m,
             ),
           );
@@ -111,6 +117,7 @@ export function useChatStream() {
       if (!trimmed || isStreaming) return;
 
       setError(null);
+      setConnectionError(false);
       const userMsgId = crypto.randomUUID();
       const assistantMsgId = crypto.randomUUID();
 
@@ -122,6 +129,9 @@ export function useChatStream() {
         { id: assistantMsgId, role: "assistant", content: "", statusText: "正在思考…", isStreaming: true, createdAt: now, toolCalls: [] },
       ]);
       setIsStreaming(true);
+
+      // 中文注释：记录本次发送的文本，用于断线重连
+      lastSentTextRef.current = trimmed;
 
       const abortController = new AbortController();
       abortRef.current = abortController;
@@ -170,7 +180,7 @@ export function useChatStream() {
             // 根据事件类型更新 assistant 占位消息
             if (event.type === "done") {
               // done 事件：启动打字机，逐字显示完整 answer
-              startTypewriter(assistantMsgId, event.answer, event.candidates);
+              startTypewriter(assistantMsgId, event.answer, event.candidates, event.usage);
               continue;
             }
             setMessages((prev) =>
@@ -202,12 +212,14 @@ export function useChatStream() {
             prev.map((m) => (m.id === assistantMsgId ? { ...m, isStreaming: false, statusText: undefined } : m)),
           );
         } else {
+          // #15 网络错误/连接中断：标记 connectionError，保留占位消息，允许重试
           const msg = err instanceof Error ? err.message : "发送失败";
           setError(msg);
+          setConnectionError(true);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
-                ? { ...m, content: m.content || `出错了：${msg}`, isStreaming: false, statusText: undefined }
+                ? { ...m, content: m.content, isStreaming: false, statusText: undefined }
                 : m,
             ),
           );
@@ -284,5 +296,21 @@ export function useChatStream() {
     }
   }, [isStreaming, sendMessage]);
 
-  return { messages, isStreaming, conversationId, error, sendMessage, stop, loadHistory, reset, regenerate };
+  // #15 断线重连：删除失败的 assistant 占位消息，用上次发送的文本重试
+  const retry = useCallback(async () => {
+    if (isStreaming || !lastSentTextRef.current) return;
+    // 删除最后一条 assistant 消息（失败的占位）
+    setMessages((prev) => {
+      const idx = prev.length - 1;
+      if (prev[idx]?.role === "assistant") {
+        return prev.slice(0, idx);
+      }
+      return prev;
+    });
+    setConnectionError(false);
+    setError(null);
+    await sendMessage(lastSentTextRef.current);
+  }, [isStreaming, sendMessage]);
+
+  return { messages, isStreaming, conversationId, error, connectionError, sendMessage, stop, loadHistory, reset, regenerate, retry };
 }

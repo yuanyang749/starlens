@@ -98,7 +98,7 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
   // 中文注释：标记是否已从本地缓存恢复过会话，避免恢复期间被其他 effect 覆盖
   const restoredRef = useRef(false);
 
-  const { messages, isStreaming, conversationId, error, sendMessage, stop, loadHistory, reset, regenerate } = useChatStream();
+  const { messages, isStreaming, conversationId, error, connectionError, sendMessage, stop, loadHistory, reset, regenerate, retry } = useChatStream();
 
   // 加载会话列表
   const loadConversations = useCallback(async () => {
@@ -551,7 +551,17 @@ export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: s
           </MessageScroller>
         </MessageScrollerProvider>
 
-        {error ? <div className="chat-view__error">{error}</div> : null}
+        {error ? (
+          <div className="chat-view__error">
+            {error}
+            {connectionError && !isStreaming ? (
+              <button type="button" className="chat-view__retry-btn" onClick={() => void retry()}>
+                <RefreshCw className="h-3 w-3" />
+                点击重试
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="chat-view__input-wrap">
           <textarea
@@ -794,6 +804,12 @@ function MessageBubble({
               <div className="chat-view__msg-actions">
                 {/* #7 时间戳 */}
                 {timeText ? <span className="chat-view__msg-time">{timeText}</span> : null}
+                {/* #16 token 用量（仅 assistant 且有 usage 数据时显示） */}
+                {!isUser && message.usage && (message.usage.prompt_tokens || message.usage.completion_tokens) ? (
+                  <span className="chat-view__msg-tokens" title={`输入 ${message.usage.prompt_tokens ?? 0} / 输出 ${message.usage.completion_tokens ?? 0}`}>
+                    {(message.usage.prompt_tokens ?? 0) + (message.usage.completion_tokens ?? 0)} tokens
+                  </span>
+                ) : null}
                 {isUser && onEdit ? (
                   <button
                     type="button"

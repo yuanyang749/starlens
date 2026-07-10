@@ -50,6 +50,8 @@ export type AgentChatMessage =
 export type AgentTurnResult = {
   content: string | null;
   tool_calls?: AgentToolCallPayload[];
+  // 中文注释：本轮 provider 调用的 token 用量（部分端点可能不返回）
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
 // 中文注释：跟其余函数一样走 guardedFetch（SSRF 校验 + 安全跳转），单次请求超时 12 秒
@@ -96,7 +98,7 @@ export async function callChatCompletionsWithTools(opts: {
     const message = payload.choices?.[0]?.message;
     if (!message) return null;
 
-    return { content: message.content ?? null, tool_calls: message.tool_calls };
+    return { content: message.content ?? null, tool_calls: message.tool_calls, usage: payload.usage };
   } catch (error) {
     // 网络错误 / 超时 / JSON 解析失败等——记录原因，不打印 apiKey
     const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
@@ -238,7 +240,7 @@ export async function callChatCompletionsWithToolsStream(opts: {
     }));
 
     if (!contentAccumulated && toolCalls.length === 0) return null;
-    return { content: contentAccumulated || null, tool_calls: toolCalls.length > 0 ? toolCalls : undefined };
+    return { content: contentAccumulated || null, tool_calls: toolCalls.length > 0 ? toolCalls : undefined, usage };
   } catch (error) {
     const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     console.warn(`[ai/chat] stream provider request failed: model=${opts.config.model} baseUrl=${opts.config.baseUrl} error=${msg}`);

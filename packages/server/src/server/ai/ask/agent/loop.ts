@@ -60,7 +60,7 @@ export type ChatStreamEvent =
   | { type: "status"; status: "thinking" | "searching" | "looking_up" | "stats" | "generating"; message: string }
   | { type: "token"; text: string }
   | { type: "tool_call"; name: string; arguments: string }
-  | { type: "done"; answer: string; candidates: RecalledCandidate[] }
+  | { type: "done"; answer: string; candidates: RecalledCandidate[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
   | { type: "error"; message: string };
 
 // 中文注释：预算快用完时（剩余轮次 <= 该阈值）额外插一条提醒——纯静态系统提示词约束不够稳，
@@ -146,6 +146,8 @@ export async function runAgentLoop(
   // 偶发抖动（网关/上游挂了），继续拿它试后面的轮次意义不大，切一次就一直用到底。
   let activeConfig = config;
   let fallbackTried = false;
+  // 中文注释：累积本轮对话所有 provider 调用的 token 用量
+  let totalUsage: { prompt_tokens?: number; completion_tokens?: number } = { prompt_tokens: 0, completion_tokens: 0 };
 
   for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
     onEvent?.({ type: "iteration_start", iteration });
@@ -218,6 +220,12 @@ export async function runAgentLoop(
       return null;
     }
 
+    // 中文注释：累积 token 用量
+    if (turn.usage) {
+      totalUsage.prompt_tokens = (totalUsage.prompt_tokens ?? 0) + (turn.usage.prompt_tokens ?? 0);
+      totalUsage.completion_tokens = (totalUsage.completion_tokens ?? 0) + (turn.usage.completion_tokens ?? 0);
+    }
+
     onEvent?.({
       type: "model_turn",
       iteration,
@@ -251,7 +259,7 @@ export async function runAgentLoop(
       onEvent?.({ type: "submit_answer", iteration, answer: args.answer, repoIds: args.repoIds });
       const result = buildAskResult(args.answer, args.repoIds, cache);
       // 流式模式下发送 done 事件（token 已在流式过程中逐字转发，这里只发最终完整结果 + candidates）
-      onStream?.({ type: "done", answer: result.answer, candidates: result.candidates });
+      onStream?.({ type: "done", answer: result.answer, candidates: result.candidates, usage: totalUsage });
       return result;
     }
 
