@@ -79,7 +79,7 @@ type StoredMessage = {
   createdAt: string;
 };
 
-export function ChatView() {
+export function ChatView({ onNavigateToRepo }: { onNavigateToRepo?: (fullName: string) => void }) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -454,6 +454,7 @@ export function ChatView() {
                       isStreaming={isStreaming}
                       onCopy={() => {}}
                       onRegenerate={() => void regenerate()}
+                      onNavigateToRepo={onNavigateToRepo}
                     />
                   ))
                 )}
@@ -546,8 +547,11 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   );
 }
 
+// 中文注释：匹配 owner/repo 格式的仓库名（如 facebook/react）
+const REPO_PATTERN = /^[\w.-]+\/[\w.-]+$/;
+
 // 自定义 ReactMarkdown 的 code 组件渲染
-function markdownComponents() {
+function markdownComponents(onNavigate?: (fullName: string) => void) {
   return {
     // 中文注释：code 组件区分行内代码和代码块。react-markdown v9 中 code 节点带 className 表示代码块
     code(props: { className?: string; children?: React.ReactNode }) {
@@ -562,6 +566,19 @@ function markdownComponents() {
       if (!className && text.includes("\n")) {
         return <CodeBlock language="text" code={text} />;
       }
+      // 中文注释：行内代码匹配 owner/repo 格式 → 渲染为可点击链接
+      if (onNavigate && !className && REPO_PATTERN.test(text.trim())) {
+        return (
+          <button
+            type="button"
+            className="chat-view__repo-link"
+            onClick={() => onNavigate(text.trim())}
+            title={`查看 ${text.trim()} 详情`}
+          >
+            {text}
+          </button>
+        );
+      }
       return <code className="chat-view__inline-code">{children}</code>;
     },
   };
@@ -574,12 +591,14 @@ function MessageBubble({
   isStreaming,
   onCopy,
   onRegenerate,
+  onNavigateToRepo,
 }: {
   message: ChatMessage;
   isLast: boolean;
   isStreaming: boolean;
   onCopy: () => void;
   onRegenerate: () => void;
+  onNavigateToRepo?: (fullName: string) => void;
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -629,7 +648,7 @@ function MessageBubble({
                     message.content
                   ) : (
                     <div className="chat-view__markdown">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents()}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents(onNavigateToRepo)}>
                         {message.content}
                       </ReactMarkdown>
                     </div>

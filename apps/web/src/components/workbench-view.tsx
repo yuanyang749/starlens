@@ -274,7 +274,16 @@ export function WorkbenchView({
           </section>
         ) : contentMode === "chat" ? (
           <section className="workbench-settings-pane workbench-settings-pane--chat">
-            <ChatView />
+            <ChatView
+              onNavigateToRepo={(fullName) => {
+                // 中文注释：在 repos 列表中按 fullName 查找，找到则切到仓库详情
+                const found = repos.find((r) => r.fullName === fullName);
+                if (found) {
+                  setSelectedId(found.id);
+                  setContentMode("repos");
+                }
+              }}
+            />
           </section>
         ) : (
           <div className="workbench-content-container">
