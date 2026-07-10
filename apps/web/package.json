@@ -12,9 +12,11 @@
     "db:migrate": "drizzle-kit migrate --config ../../drizzle.config.ts"
   },
   "dependencies": {
+    "@ai-sdk/react": "^4.0.19",
     "@gsap/react": "^2.1.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@number-flow/react": "^0.6.0",
+    "@shadcn/react": "^0.2.1",
     "@starlens-app/agent-tools": "workspace:*",
     "@starlens-app/core": "workspace:*",
     "@starlens/mobile": "workspace:*",
@@ -46,6 +48,7 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "server-only": "^0.0.1",
     "shadcn": "^4.7.0",
     "tailwind-merge": "^3.5.0",

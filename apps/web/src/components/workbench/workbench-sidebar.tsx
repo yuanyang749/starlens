@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, Search, Settings2, Shield, Star, LayoutDashboard } from "lucide-react";
+import { BookOpen, Bot, ChevronsLeft, ChevronsRight, Clock3, KeyRound, MessageCircle, Search, Settings2, Shield, Star, LayoutDashboard } from "lucide-react";
 
 type WorkbenchSidebarProps = {
-  contentMode: "repos" | "general" | "providers" | "tokens" | "admin" | "dashboard";
+  contentMode: "repos" | "general" | "providers" | "tokens" | "admin" | "dashboard" | "chat";
   favoritesOnly: boolean;
   aiSearchActive: boolean;
   onFavoritesClick: () => void;
@@ -17,6 +17,7 @@ type WorkbenchSidebarProps = {
   onOpenAdmin?: () => void;
   adminUserCount?: number | null;
   onOpenDashboard: () => void;
+  onOpenChat: () => void;
   recentActive: boolean;
   total: number;
   favoriteCount: number;
@@ -40,6 +41,7 @@ export function WorkbenchSidebar({
   onOpenAdmin,
   adminUserCount,
   onOpenDashboard,
+  onOpenChat,
   recentActive,
   total,
   favoriteCount,
@@ -115,13 +117,17 @@ export function WorkbenchSidebar({
 
         <section className="workbench-nav-section" aria-label="工具">
           <p className="workbench-nav-section__title">工具</p>
-          {/* 中文注释：工作台直接补充文档入口，方便用户从操作界面跳回功能和配置说明。 */}
-          <Link href="/docs" className="workbench-nav-item" aria-label="使用文档" target="_blank" rel="noopener noreferrer">
+          <button
+            type="button"
+            onClick={onOpenChat}
+            className={contentMode === "chat" ? "workbench-nav-item is-active" : "workbench-nav-item"}
+            aria-label="AI 对话"
+          >
             <span className="workbench-nav-item__leading">
-              <BookOpen className="h-4 w-4" />
-              <span className="workbench-nav-item__label">使用文档</span>
+              <MessageCircle className="h-4 w-4" />
+              <span className="workbench-nav-item__label">AI 对话</span>
             </span>
-          </Link>
+          </button>
           <button
             type="button"
             onClick={onOpenProviders}
@@ -144,6 +150,13 @@ export function WorkbenchSidebar({
               <span className="workbench-nav-item__label">API Token</span>
             </span>
           </button>
+          {/* 中文注释：工作台直接补充文档入口，方便用户从操作界面跳回功能和配置说明。 */}
+          <Link href="/docs" className="workbench-nav-item" aria-label="使用文档" target="_blank" rel="noopener noreferrer">
+            <span className="workbench-nav-item__leading">
+              <BookOpen className="h-4 w-4" />
+              <span className="workbench-nav-item__label">使用文档</span>
+            </span>
+          </Link>
         </section>
 
         <section className="workbench-nav-section" aria-label="系统">

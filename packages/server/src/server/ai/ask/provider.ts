@@ -105,4 +105,186 @@ export async function callChatCompletionsWithTools(opts: {
   }
 }
 
+// ─── 流式版本（AI 对话用） ────────────────────────────────────────────────────
+// 中文注释：与 callChatCompletionsWithTools 同构，但请求带 stream: true，
+// 逐 chunk 解析 SSE，通过回调实时转发 content/tool_call arguments 的 delta，
+// 最终返回完整累积的 AgentTurnResult（agent loop 逻辑无需改动）。
+// 仅用于 /api/ai/chat 流式端点；原 /api/ai/ask 保持非流式不变。
+
+type StreamingToolCallAccumulator = {
+  index: number;
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+};
+
+export async function callChatCompletionsWithToolsStream(opts: {
+  messages: AgentChatMessage[];
+  tools: readonly unknown[];
+  config: ChatRuntimeConfig;
+  userId?: string;
+  maxTokens?: number;
+  onContentDelta?: (delta: string) => void;
+  onToolCallDelta?: (toolName: string, argumentsDelta: string) => void;
+  signal?: AbortSignal;
+}): Promise<AgentTurnResult | null> {
+  try {
+    const response = await guardedFetch(resolveChatCompletionsUrl(opts.config.baseUrl), {
+      method: "POST",
+      headers: { ...opts.config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${opts.config.apiKey}` },
+      body: JSON.stringify({
+        model: opts.config.model,
+        temperature: 0.2,
+        max_tokens: opts.maxTokens ?? 800,
+        messages: opts.messages,
+        tools: opts.tools,
+        stream: true,
+      }),
+      signal: opts.signal ?? AbortSignal.timeout(20_000),
+    });
+
+    if (!response.ok || !response.body) {
+      const body = await response.text().catch(() => "");
+      console.warn(
+        `[ai/chat] stream provider returned non-2xx or no body: status=${response.status} model=${opts.config.model} body=${body.slice(0, 500)}`,
+      );
+      return null;
+    }
+
+    // 中文注释：手动解析 SSE 文本流。OpenAI 兼容格式：每条事件以 `data: ` 前缀，
+    // 结束标记为 `data: [DONE]`。逐行读取，遇到不完整行缓存到 buffer。
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let contentAccumulated = "";
+    const toolCallMap = new Map<number, StreamingToolCallAccumulator>();
+    let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+        const data = trimmed.slice(5).trim();
+        if (data === "[DONE]") continue;
+        let chunk: {
+          choices?: Array<{
+            delta?: {
+              content?: string | null;
+              tool_calls?: Array<{
+                index: number;
+                id?: string;
+                type?: string;
+                function?: { name?: string; arguments?: string };
+              }>;
+            };
+          }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+        };
+        try {
+          chunk = JSON.parse(data);
+        } catch {
+          continue; // 跳过畸形 chunk
+        }
+        if (chunk.usage) usage = chunk.usage;
+        const delta = chunk.choices?.[0]?.delta;
+        if (!delta) continue;
+        if (typeof delta.content === "string" && delta.content) {
+          contentAccumulated += delta.content;
+          opts.onContentDelta?.(delta.content);
+        }
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const existing = toolCallMap.get(tc.index);
+            if (existing) {
+              if (tc.function?.arguments) {
+                existing.function.arguments += tc.function.arguments;
+                opts.onToolCallDelta?.(existing.function.name, tc.function.arguments);
+              }
+            } else {
+              const name = tc.function?.name ?? "";
+              const args = tc.function?.arguments ?? "";
+              toolCallMap.set(tc.index, {
+                index: tc.index,
+                id: tc.id ?? `call_${tc.index}`,
+                type: "function",
+                function: { name, arguments: args },
+              });
+              if (args) opts.onToolCallDelta?.(name, args);
+            }
+          }
+        }
+      }
+    }
+
+    if (opts.userId && (usage?.prompt_tokens || usage?.completion_tokens)) {
+      trackAiUsage({
+        userId: opts.userId,
+        endpoint: "chat/agent",
+        model: opts.config.model,
+        promptTokens: usage.prompt_tokens ?? 0,
+        completionTokens: usage.completion_tokens ?? 0,
+      });
+    }
+
+    const toolCalls = Array.from(toolCallMap.values()).map((tc) => ({
+      id: tc.id,
+      type: "function" as const,
+      function: { name: tc.function.name, arguments: tc.function.arguments },
+    }));
+
+    if (!contentAccumulated && toolCalls.length === 0) return null;
+    return { content: contentAccumulated || null, tool_calls: toolCalls.length > 0 ? toolCalls : undefined };
+  } catch (error) {
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[ai/chat] stream provider request failed: model=${opts.config.model} baseUrl=${opts.config.baseUrl} error=${msg}`);
+    return null;
+  }
+}
+
+// ─── 纯文本生成（compaction 摘要用，不带 tools） ──────────────────────────────
+
+export async function callChatCompletionsText(opts: {
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  config: ChatRuntimeConfig;
+  userId?: string;
+  maxTokens?: number;
+  signal?: AbortSignal;
+}): Promise<string | null> {
+  try {
+    const response = await guardedFetch(resolveChatCompletionsUrl(opts.config.baseUrl), {
+      method: "POST",
+      headers: { ...opts.config.extraHeaders, "content-type": "application/json", authorization: `Bearer ${opts.config.apiKey}` },
+      body: JSON.stringify({
+        model: opts.config.model,
+        temperature: 0,
+        max_tokens: opts.maxTokens ?? 400,
+        messages: opts.messages,
+      }),
+      signal: opts.signal ?? AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as OpenAiCompatibleResponse;
+    const text = payload.choices?.[0]?.message?.content ?? null;
+    if (opts.userId && payload.usage) {
+      trackAiUsage({
+        userId: opts.userId,
+        endpoint: "chat/summary",
+        model: opts.config.model,
+        promptTokens: payload.usage.prompt_tokens ?? 0,
+        completionTokens: payload.usage.completion_tokens ?? 0,
+      });
+    }
+    return text;
+  } catch (error) {
+    const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[ai/chat] summary request failed: model=${opts.config.model} error=${msg}`);
+    return null;
+  }
+}
+
 

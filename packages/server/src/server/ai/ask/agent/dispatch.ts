@@ -1,6 +1,18 @@
 import "server-only";
 
-import { getRepoDetail, getRepoStats, searchRepos } from "../../../repos/repository";
+import {
+  addRepoTag,
+  deleteRepoTag,
+  getRepoDetail,
+  getRepoStats,
+  searchRepos,
+  searchReposRanked,
+  updateRepoCuration,
+} from "../../../repos/repository";
+import { unstarRepoOnGithubForUser } from "../../../repos/github-star";
+import { hasStarredRepos } from "../../recommend";
+import { recallByLanguage, recallByOwner, recallByTopics, resolveTargetRepo } from "../../related";
+import { suggestOrganization, type OrganizationFocus } from "../../../repos/organization";
 import type { SearchRepoItem } from "../types";
 import { buildSingleRepoContext } from "../ranking";
 import { runReadonlyQuery } from "./sql-executor";
@@ -93,6 +105,147 @@ async function runReadonlyQueryTool(userId: string, args: Record<string, unknown
   }
 }
 
+// ─── 写操作工具 ──────────────────────────────────────────────────────────────
+
+async function runAddTag(userId: string, args: Record<string, unknown>) {
+  const repoId = typeof args.repoId === "string" ? args.repoId : "";
+  const tag = typeof args.tag === "string" ? args.tag : "";
+  if (!repoId || !tag) return { error: "repoId and tag are required" };
+  const updated = await addRepoTag(userId, repoId, tag);
+  if (!updated) return { error: "repo not found or tag invalid" };
+  return { success: true, repo: compactRepo(updated as SearchRepoItem) };
+}
+
+async function runRemoveTag(userId: string, args: Record<string, unknown>) {
+  const repoId = typeof args.repoId === "string" ? args.repoId : "";
+  const tag = typeof args.tag === "string" ? args.tag : "";
+  if (!repoId || !tag) return { error: "repoId and tag are required" };
+  const updated = await deleteRepoTag(userId, repoId, tag);
+  if (!updated) return { error: "repo not found" };
+  return { success: true, repo: compactRepo(updated as SearchRepoItem) };
+}
+
+async function runUpdateNote(userId: string, args: Record<string, unknown>) {
+  const repoId = typeof args.repoId === "string" ? args.repoId : "";
+  const note = typeof args.note === "string" ? args.note : "";
+  if (!repoId) return { error: "repoId is required" };
+  const updated = await updateRepoCuration(userId, repoId, { note });
+  if (!updated) return { error: "repo not found" };
+  return { success: true, repo: compactRepo(updated as SearchRepoItem) };
+}
+
+async function runToggleFavorite(userId: string, args: Record<string, unknown>) {
+  const repoId = typeof args.repoId === "string" ? args.repoId : "";
+  const isFavorite = typeof args.isFavorite === "boolean" ? args.isFavorite : undefined;
+  if (!repoId || typeof isFavorite !== "boolean") return { error: "repoId and isFavorite are required" };
+  const updated = await updateRepoCuration(userId, repoId, { isFavorite });
+  if (!updated) return { error: "repo not found" };
+  return { success: true, repo: compactRepo(updated as SearchRepoItem) };
+}
+
+async function runUnstarRepo(userId: string, args: Record<string, unknown>) {
+  const repoId = typeof args.repoId === "string" ? args.repoId : "";
+  if (!repoId) return { error: "repoId is required" };
+  try {
+    const updated = await unstarRepoOnGithubForUser(userId, repoId);
+    return { success: true, repo: compactRepo(updated as SearchRepoItem) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "unstar failed" };
+  }
+}
+
+// ─── 深度分析工具（只读，基于 DB 召回不做 AI 重排） ──────────────────────────
+
+async function runRecommendForTask(userId: string, args: Record<string, unknown>, cache: Map<string, SearchRepoItem>) {
+  const taskDescription = typeof args.taskDescription === "string" ? args.taskDescription : "";
+  if (!taskDescription.trim()) return { error: "taskDescription is required" };
+  const limit = Math.min(typeof args.limit === "number" ? args.limit : 10, 30);
+
+  const hasRepos = await hasStarredRepos(userId);
+  if (!hasRepos) return { empty: true, hint: "请先同步 GitHub 收藏" };
+
+  const candidates = await searchReposRanked(userId, taskDescription, limit);
+  for (const c of candidates) cache.set(c.id, c as SearchRepoItem);
+
+  return {
+    total: candidates.length,
+    items: candidates.map((c) => ({
+      id: c.id,
+      fullName: c.fullName,
+      description: c.description,
+      stars: c.stargazersCount,
+      language: c.language,
+      topics: c.topics,
+      tags: c.tags,
+      note: c.note,
+      repoSummary: c.repoSummary,
+      tsRank: c.tsRank,
+    })),
+  };
+}
+
+async function runFindRelated(userId: string, args: Record<string, unknown>, cache: Map<string, SearchRepoItem>) {
+  const repo = typeof args.repo === "string" ? args.repo : "";
+  if (!repo.trim()) return { error: "repo is required" };
+  const limit = Math.min(typeof args.limit === "number" ? args.limit : 10, 30);
+
+  const target = await resolveTargetRepo(userId, repo);
+  if (!target) return { error: "repo not found in your starred list" };
+
+  const [byOwner, byLanguage, byTopics] = await Promise.all([
+    recallByOwner(userId, target.ownerLogin, target.id),
+    recallByLanguage(userId, target.language, target.id),
+    recallByTopics(userId, target.topics ?? [], target.id),
+  ]);
+
+  // 去重 + 记录召回原因（owner 优先 → language → topics）
+  const candidateMap = new Map<string, { row: typeof target; reasons: string[] }>();
+  for (const row of byOwner) {
+    const entry = candidateMap.get(row.id) ?? { row, reasons: [] };
+    if (!entry.reasons.includes("同 owner")) entry.reasons.push("同 owner");
+    candidateMap.set(row.id, entry);
+  }
+  for (const row of byLanguage) {
+    const entry = candidateMap.get(row.id) ?? { row, reasons: [] };
+    if (!entry.reasons.includes("同 language")) entry.reasons.push("同 language");
+    candidateMap.set(row.id, entry);
+  }
+  for (const row of byTopics) {
+    const entry = candidateMap.get(row.id) ?? { row, reasons: [] };
+    if (!entry.reasons.includes("同 topic")) entry.reasons.push("同 topic");
+    candidateMap.set(row.id, entry);
+  }
+
+  const items = Array.from(candidateMap.values())
+    .slice(0, limit)
+    .map(({ row, reasons }) => {
+      cache.set(row.id, row as unknown as SearchRepoItem);
+      return {
+        id: row.id,
+        fullName: row.fullName,
+        description: row.description ?? "",
+        stars: row.stargazersCount,
+        language: row.language ?? "",
+        topics: row.topics ?? [],
+        recallReasons: reasons,
+      };
+    });
+
+  return {
+    target: { id: target.id, fullName: target.fullName },
+    total: items.length,
+    items,
+  };
+}
+
+async function runSuggestOrganization(userId: string, args: Record<string, unknown>) {
+  const focus = typeof args.focus === "string" ? args.focus : "all";
+  const validFocuses: OrganizationFocus[] = ["duplicates", "stale", "untagged", "all"];
+  if (!validFocuses.includes(focus as OrganizationFocus)) return { error: "invalid focus" };
+
+  return suggestOrganization(userId, { focus: focus as OrganizationFocus });
+}
+
 export async function executeToolCall(
   toolCall: AgentToolCall,
   userId: string,
@@ -119,6 +272,30 @@ export async function executeToolCall(
         break;
       case "run_readonly_query":
         payload = await runReadonlyQueryTool(userId, args);
+        break;
+      case "add_tag":
+        payload = await runAddTag(userId, args);
+        break;
+      case "remove_tag":
+        payload = await runRemoveTag(userId, args);
+        break;
+      case "update_note":
+        payload = await runUpdateNote(userId, args);
+        break;
+      case "toggle_favorite":
+        payload = await runToggleFavorite(userId, args);
+        break;
+      case "unstar_repo":
+        payload = await runUnstarRepo(userId, args);
+        break;
+      case "recommend_for_task":
+        payload = await runRecommendForTask(userId, args, cache);
+        break;
+      case "find_related":
+        payload = await runFindRelated(userId, args, cache);
+        break;
+      case "suggest_organization":
+        payload = await runSuggestOrganization(userId, args);
         break;
       default:
         payload = { error: "unknown tool" };

@@ -73,6 +73,134 @@ export const agentToolSchemas = [
       },
     },
   },
+  // ─── 写操作工具（低风险，直接执行） ──────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "add_tag",
+      description: "给仓库添加标签（本地标记，不影响 GitHub）。标签自动小写归一化，已存在则无操作。",
+      parameters: {
+        type: "object",
+        properties: {
+          repoId: { type: "string", description: "仓库 id，来自之前工具结果" },
+          tag: { type: "string", description: "标签名" },
+        },
+        required: ["repoId", "tag"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remove_tag",
+      description: "删除仓库的标签（本地标记，不影响 GitHub）。",
+      parameters: {
+        type: "object",
+        properties: {
+          repoId: { type: "string", description: "仓库 id" },
+          tag: { type: "string", description: "要删除的标签名" },
+        },
+        required: ["repoId", "tag"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_note",
+      description: "设置或更新仓库备注。传空字符串清空备注。",
+      parameters: {
+        type: "object",
+        properties: {
+          repoId: { type: "string", description: "仓库 id" },
+          note: { type: "string", description: "备注内容，空字符串表示清空" },
+        },
+        required: ["repoId", "note"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "toggle_favorite",
+      description: "设置仓库的收藏★标记（Starlens 应用内标记，不影响 GitHub star 本身）。",
+      parameters: {
+        type: "object",
+        properties: {
+          repoId: { type: "string", description: "仓库 id" },
+          isFavorite: { type: "boolean", description: "true=标记收藏，false=取消收藏" },
+        },
+        required: ["repoId", "isFavorite"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ─── 写操作工具（高风险，不可逆） ──────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "unstar_repo",
+      description: "取消 GitHub star（真实调用 GitHub API，不可逆操作）。仅在用户明确要求取消某个仓库的 star 时调用，调用前在回答中复述仓库全名让用户确认意图。repoId 可以是仓库 id 或 owner/repo 全名。",
+      parameters: {
+        type: "object",
+        properties: {
+          repoId: { type: "string", description: "仓库 id 或 owner/repo 全名" },
+        },
+        required: ["repoId"],
+        additionalProperties: false,
+      },
+    },
+  },
+  // ─── 深度分析工具（只读，基于 DB 召回不做 AI 重排） ──────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "recommend_for_task",
+      description: "按编码任务描述召回候选仓库（基于全文检索排序）。适用于\"我要做 XX，有哪些仓库可以参考\"类问题。",
+      parameters: {
+        type: "object",
+        properties: {
+          taskDescription: { type: "string", description: "编码任务描述，如'我要做一个实时聊天应用'" },
+          limit: { type: "integer", description: "返回条数，最多 30，默认 10" },
+        },
+        required: ["taskDescription"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_related",
+      description: "查找与指定仓库相关的其他收藏仓库（按同 owner/同 language/同 topic 三维度召回）。",
+      parameters: {
+        type: "object",
+        properties: {
+          repo: { type: "string", description: "仓库 id 或 owner/repo 全名" },
+          limit: { type: "integer", description: "返回条数，最多 30，默认 10" },
+        },
+        required: ["repo"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "suggest_organization",
+      description: "扫描收藏仓库，找出重复/过时/未分类三类问题并给出整理建议。不自动修改，只返回建议。",
+      parameters: {
+        type: "object",
+        properties: {
+          focus: { type: "string", enum: ["duplicates", "stale", "untagged", "all"], description: "关注的问题类型，默认 all" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -96,4 +224,12 @@ export type AgentToolName =
   | "get_repo_detail"
   | "get_repo_stats"
   | "run_readonly_query"
+  | "add_tag"
+  | "remove_tag"
+  | "update_note"
+  | "toggle_favorite"
+  | "unstar_repo"
+  | "recommend_for_task"
+  | "find_related"
+  | "suggest_organization"
   | "submit_answer";

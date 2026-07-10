@@ -215,3 +215,51 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
 }));
 
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+
+// ─── AI 对话相关表 ──────────────────────────────────────────────────────────
+// 中文注释：AI 对话功能持久化。conversations 存会话元信息，chat_messages 存每条消息。
+// 滑动窗口+摘要策略（对齐 Claude Code）：超出窗口的早期消息压缩成 summary，
+// summarizedUpTo 标记已被摘要覆盖的最后一条消息 id。
+
+export const conversations = pgTable("conversations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default("新对话"),
+  lastQuestion: text("last_question"),
+  // 滑动窗口+摘要策略：超出窗口的早期消息压缩成摘要存这里，每次 compaction 更新
+  summary: text("summary"),
+  // 已被摘要覆盖的最新消息 id（下次 compaction 从这里之后开始）
+  summarizedUpTo: uuid("summarized_up_to"),
+  ...timestamps,
+}, (table) => ({
+  userIndex: index("conversations_user_idx").on(table.userId),
+  userUpdatedIndex: index("conversations_user_updated_idx").on(table.userId, table.updatedAt),
+}));
+
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => conversations.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // "user" | "assistant"
+  content: text("content").notNull(),
+  // assistant 消息携带候选仓库（与 /api/ai/ask 的 candidates 同构）
+  candidates: jsonb("candidates").$type<Array<{
+    id: string;
+    fullName: string;
+    reason: string;
+    source?: string;
+    score?: number;
+  }>>().notNull().default([]),
+  ...timestamps,
+}, (table) => ({
+  convIndex: index("chat_messages_conv_idx").on(table.conversationId),
+}));
+
+export type Conversation = typeof conversations.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;

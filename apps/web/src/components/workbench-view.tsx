@@ -15,6 +15,7 @@ import { TokensSettingsView } from "./tokens-settings-view";
 import { AdminUsersView } from "./admin-users-view";
 import { DashboardView } from "./workbench/dashboard-view";
 import { AiSearchReport } from "./workbench/ai-search-report";
+import { ChatView } from "./workbench/chat-view";
 import { useWorkbenchData } from "./workbench/use-workbench-data";
 import { useWorkbenchActions } from "./workbench/use-workbench-actions";
 
@@ -49,7 +50,7 @@ export function WorkbenchView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // 中文注释：默认进入 "repos" 模式,保证 RepoTablePane / RepoDetailPanel 立即可见,
   // 也是 workbench-view.test.tsx 的契约(11 个用例依赖此默认值)。DashboardView 通过侧边栏导航进入。
-  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard">("repos");
+  const [contentMode, setContentMode] = useState<"repos" | "general" | "providers" | "tokens" | "admin" | "dashboard" | "chat">("repos");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const [recentMode, setRecentMode] = useState(false);
@@ -149,7 +150,7 @@ export function WorkbenchView({
   const displayedRepos = aiSearchMode ? aiSearchPagedRepos : repos;
   const displayedTotal = aiSearchMode ? aiSearchTotal : total;
   const displayedSort = aiSearchMode ? "relevance" : sort;
-  const showingSettingsPanel = contentMode !== "repos" && contentMode !== "dashboard";
+  const showingSettingsPanel = contentMode !== "repos" && contentMode !== "dashboard" && contentMode !== "chat";
 
   let settingsPanelContent: React.ReactNode = null;
 
@@ -251,6 +252,7 @@ export function WorkbenchView({
           onOpenAdmin={() => setContentMode("admin")}
           adminUserCount={adminUserCount}
           onOpenDashboard={() => setContentMode("dashboard")}
+          onOpenChat={() => setContentMode("chat")}
           recentActive={recentMode}
           total={allStarsTotal}
           favoriteCount={favoriteCount}
@@ -269,6 +271,10 @@ export function WorkbenchView({
         ) : contentMode === "dashboard" ? (
           <section className="workbench-settings-pane">
             <DashboardView />
+          </section>
+        ) : contentMode === "chat" ? (
+          <section className="workbench-settings-pane workbench-settings-pane--chat">
+            <ChatView />
           </section>
         ) : (
           <div className="workbench-content-container">

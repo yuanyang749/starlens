@@ -1,28 +1,66 @@
 import "server-only";
 
-import { callChatCompletionsWithTools, stripThinkBlocks, wrapUserQuestion, type AgentChatMessage } from "../provider";
+import { callChatCompletionsWithTools, callChatCompletionsWithToolsStream, stripThinkBlocks, wrapUserQuestion, type AgentChatMessage, type AgentTurnResult } from "../provider";
 import { toRecalledCandidate } from "../ranking";
-import { type AskResult, ANSWER_CANDIDATE_LIMIT, MAX_AGENT_ITERATIONS, type ChatRuntimeConfig, type SearchRepoItem } from "../types";
+import { type AskResult, ANSWER_CANDIDATE_LIMIT, MAX_AGENT_ITERATIONS, type ChatRuntimeConfig, type RecalledCandidate, type SearchRepoItem } from "../types";
 import { agentToolSchemas } from "./tool-schemas";
 import { executeToolCall } from "./dispatch";
+import { extractAnswerString } from "./partial-json";
 
 function buildAgentSystemPrompt(today: string): string {
-  return `你是 Starlens 的仓库检索助手，通过工具查询用户的 GitHub 收藏仓库来回答问题。今天日期：${today}
+  return `你是 Starlens 的仓库助手，通过工具查询和管理用户的 GitHub 收藏仓库来回答问题。今天日期：${today}
 
 工具使用指南：
-- search_repos 是首选工具，覆盖绝大多数过滤/排序/关键词类问题，优先用它。先用一个宽泛的核心关键词搜一次，评估结果是否够用——如果不够，换成真正不同的角度（按 language/tag/owner 过滤，或换一个语义上完全不同的词），不要反复用同义词/近义词变体搜同一个概念（比如"agent"→"local agent"→"agent tool"这种换词不换意的重试，不算真正的新尝试，是浪费）
+- search_repos 是首选检索工具，覆盖绝大多数过滤/排序/关键词类问题，优先用它。先用一个宽泛的核心关键词搜一次，评估结果是否够用——如果不够，换成真正不同的角度（按 language/tag/owner 过滤，或换一个语义上完全不同的词），不要反复用同义词/近义词变体搜同一个概念（比如"agent"→"local agent"→"agent tool"这种换词不换意的重试，不算真正的新尝试，是浪费）
 - search_repos 最多尝试 3 次单独关键词。像"content"→"generation"→"creator"→"video"→"image"→"audio"→"prompt"→"writing"这种逐个试单词、指望撞中一个的策略，即使每次换的词表面不同，本质上也是同一种低效重试，一样要避免——第 3 次搜索仍不满意时，直接改用 run_readonly_query 写一条 SQL，用 description ILIKE '%关键词A%' OR description ILIKE '%关键词B%' OR ... 一次性覆盖多个关键词，而不是继续一个词一个词地试
 - get_repo_detail 用于深入了解某个已经在之前工具结果里出现过的具体仓库
 - get_repo_stats 用于统计/分布类问题；注意它返回的仓库不带 id，如果之后要具体引用某个仓库，需要再调 search_repos 或 get_repo_detail 补一个 id
 - run_readonly_query 是长尾兜底，只有当 search_repos 的参数表达不了你需要的复杂过滤/聚合/join 逻辑时才用，优先尝试用 search_repos 解决
+- recommend_for_task 适用于"我要做 XX，有哪些仓库可以参考"类任务推荐，基于全文检索召回候选
+- find_related 用于查找与某个仓库相关的其他收藏（同 owner/同语言/同 topic）
+- suggest_organization 用于扫描收藏仓库找出重复/过时/未分类问题并给出整理建议
+
+写操作工具（仅在用户明确要求时调用）：
+- add_tag / remove_tag：给仓库添加/删除标签（本地标记，不影响 GitHub）
+- update_note：设置或清空仓库备注
+- toggle_favorite：设置仓库的收藏★标记（应用内标记，不影响 GitHub star）
+- unstar_repo：取消 GitHub star（真实调用 GitHub API，不可逆）。调用前在回答中复述仓库全名确认意图
 
 严格规则：
 - 只能引用工具结果里真实出现过的仓库（id、名称、star 数等），绝对不能凭空编造
 - 如果多次尝试后确实找不到匹配的仓库，如实告诉用户"没有找到匹配的仓库"，不要为了给出答案而编造或用不相关的结果凑数
+- 写操作执行后，在回答中告知用户操作结果（成功/失败）
 - 你的工具调用预算比较充裕（最多约 ${MAX_AGENT_ITERATIONS - 1} 次），不需要因为怕超预算而仓促给答案，但每次调用都应该带来新信息，不要浪费在语义重复的搜索上；预算快用完时系统会额外提醒你
 - 必须以调用 submit_answer 结束整个流程，这是唯一被接受的终止方式。一旦你觉得信息已经足够写出答案，下一步动作就必须是调用 submit_answer，不能先用纯文字回复"总结"一遍再等下一轮才提交——那一轮会被视为无效，白白浪费预算
 - 回答风格：简洁中文，直接引用工具结果里的真实数据（如 Star 数），不要猜测；如果用户的收藏里有相关的备注或标签，优先提及`;
 }
+
+// ─── AI 对话专用系统提示词（多轮上下文） ──────────────────────────────────────
+// 中文注释：在原 buildAgentSystemPrompt 基础上补充多轮语境指引。
+// 原 /api/ai/ask 仍用 buildAgentSystemPrompt，不受影响。
+function buildChatSystemPrompt(today: string, hasSummary: boolean): string {
+  const base = buildAgentSystemPrompt(today);
+  const multiTurnGuide = `
+
+多轮对话指引：
+- 用户可能基于上文追问，例如"第二个仓库详细说说"、"刚才 star 最多的那个"、"有没有用 React 的"。结合上下文理解指代
+- 如果上文已检索到的仓库仍与当前问题相关，可直接引用，无需重复检索；但若用户问的是全新的角度，仍需主动检索
+${hasSummary ? "- 对话早期内容已被压缩成摘要（见上方「之前的对话摘要」），其中提到的仓库 id 仍可引用\n" : ""}- 回答时可以自然承接上文，如「除了刚才提到的 X，还有 Y」`;
+  return base + multiTurnGuide;
+}
+
+// ─── 历史消息策略常量（滑动窗口 + 自动摘要，对齐 Claude Code compaction） ──────
+export const CHAT_RECENT_WINDOW = 20;      // 保留最近 20 条消息原文（10 轮 Q&A）
+export const CHAT_COMPACT_THRESHOLD = 24;  // 超过 24 条触发 compaction（留 4 条余量，减少摘要调用频率）
+export const CHAT_SUMMARY_MAX_TOKENS = 800; // 容纳更多仓库引用和决策细节
+
+// ─── SSE 流式事件类型（AI 对话端点用） ─────────────────────────────────────────
+export type ChatStreamEvent =
+  | { type: "status"; status: "thinking" | "searching" | "looking_up" | "stats" | "generating"; message: string }
+  | { type: "token"; text: string }
+  | { type: "tool_call"; name: string; arguments: string }
+  | { type: "done"; answer: string; candidates: RecalledCandidate[] }
+  | { type: "error"; message: string };
 
 // 中文注释：预算快用完时（剩余轮次 <= 该阈值）额外插一条提醒——纯静态系统提示词约束不够稳，
 // 观测到模型有时会在该收尾时先扔一段纯文字总结、忘了调 submit_answer，白白烧掉一轮预算。
@@ -50,6 +88,12 @@ export type RunAgentLoopOptions = {
   // 覆盖 MAX_AGENT_ITERATIONS，仅供调试脚本使用；不传时行为与生产环境完全一致
   maxIterations?: number;
   onEvent?: (event: AgentLoopEvent) => void;
+  // 多轮上下文：之前的 Q&A 原文 + 摘要 system 消息（不含工具调用细节），由 SSE 路由组装
+  priorContext?: AgentChatMessage[];
+  // 是否有摘要（影响聊天系统提示词的多轮指引文案）
+  hasSummary?: boolean;
+  // 流式回调（存在时改用 callChatCompletionsWithToolsStream，实时转发 token/status）
+  onStream?: (event: ChatStreamEvent) => void;
 };
 
 function buildAskResult(answer: string, repoIds: unknown, cache: Map<string, SearchRepoItem>): AskResult {
@@ -77,13 +121,23 @@ export async function runAgentLoop(
 ): Promise<AskResult | null> {
   const today = new Date().toISOString().slice(0, 10);
   const cache = new Map<string, SearchRepoItem>();
+
+  // 中文注释：聊天模式（priorContext 存在）用 buildChatSystemPrompt，补充多轮指引；
+  // 一次性问答（/api/ai/ask，无 priorContext）仍用 buildAgentSystemPrompt，行为不变。
+  const useChatMode = Boolean(opts?.priorContext && opts.priorContext.length > 0);
+  const systemPrompt = useChatMode
+    ? buildChatSystemPrompt(today, opts?.hasSummary ?? false)
+    : buildAgentSystemPrompt(today);
+
   const messages: AgentChatMessage[] = [
-    { role: "system", content: buildAgentSystemPrompt(today) },
+    { role: "system", content: systemPrompt },
+    ...(opts?.priorContext ?? []),
     { role: "user", content: wrapUserQuestion(question) },
   ];
 
   const maxIterations = opts?.maxIterations ?? MAX_AGENT_ITERATIONS;
   const onEvent = opts?.onEvent;
+  const onStream = opts?.onStream;
   let noToolCallStreak = 0;
   let searchReposCallCount = 0;
   let searchReposNudgeSent = false;
@@ -94,30 +148,72 @@ export async function runAgentLoop(
 
   for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
     onEvent?.({ type: "iteration_start", iteration });
+    onStream?.({ type: "status", status: "thinking", message: "正在思考…" });
 
-    let turn = await callChatCompletionsWithTools({
-      messages,
-      tools: agentToolSchemas,
-      config: activeConfig,
-      userId,
-      maxTokens: 800,
-    });
+    // 中文注释：流式模式下用 callChatCompletionsWithToolsStream，实时转发 status/tool_call/token。
+    // submit_answer 的 arguments 是逐 chunk 到达的不完整 JSON，用 extractAnswerString 提取 answer
+    // 字段的字符串值，与上次提取结果做差得到 delta，通过 onStream({type:"token"}) 实时转发。
+    const callProvider = async (cfg: ChatRuntimeConfig): Promise<AgentTurnResult | null> => {
+      if (!onStream) {
+        return callChatCompletionsWithTools({
+          messages, tools: agentToolSchemas, config: cfg, userId, maxTokens: 800,
+        });
+      }
+
+      let submitAnswerArgs = "";
+      let lastExtractedAnswer = "";
+      const emittedToolStatuses = new Set<string>();
+
+      return callChatCompletionsWithToolsStream({
+        messages,
+        tools: agentToolSchemas,
+        config: cfg,
+        userId,
+        maxTokens: 800,
+        onToolCallDelta: (toolName, argumentsDelta) => {
+          // 每个工具首次出现时发一次 status + tool_call 事件（避免逐 delta 重复发）
+          if (!emittedToolStatuses.has(toolName)) {
+            emittedToolStatuses.add(toolName);
+            if (toolName === "submit_answer") {
+              onStream({ type: "status", status: "generating", message: "正在生成回答…" });
+            } else if (toolName === "search_repos") {
+              onStream({ type: "status", status: "searching", message: "正在搜索仓库…" });
+            } else if (toolName === "get_repo_detail") {
+              onStream({ type: "status", status: "looking_up", message: "正在查看仓库详情…" });
+            } else if (toolName === "get_repo_stats") {
+              onStream({ type: "status", status: "stats", message: "正在统计仓库…" });
+            } else if (toolName === "run_readonly_query") {
+              onStream({ type: "status", status: "searching", message: "正在查询数据库…" });
+            }
+            onStream({ type: "tool_call", name: toolName, arguments: "" });
+          }
+
+          // submit_answer 终止轮：提取 answer 字段并逐字转发
+          if (toolName === "submit_answer") {
+            submitAnswerArgs += argumentsDelta;
+            const currentAnswer = extractAnswerString(submitAnswerArgs) ?? "";
+            if (currentAnswer.length > lastExtractedAnswer.length) {
+              const textDelta = currentAnswer.slice(lastExtractedAnswer.length);
+              lastExtractedAnswer = currentAnswer;
+              onStream({ type: "token", text: textDelta });
+            }
+          }
+        },
+      });
+    };
+
+    let turn = await callProvider(activeConfig);
 
     if (!turn && !fallbackTried && config.fallbackModel && config.fallbackModel !== activeConfig.model) {
       fallbackTried = true;
       onEvent?.({ type: "provider_fallback", iteration, fromModel: activeConfig.model, toModel: config.fallbackModel });
       activeConfig = { ...config, model: config.fallbackModel };
-      turn = await callChatCompletionsWithTools({
-        messages,
-        tools: agentToolSchemas,
-        config: activeConfig,
-        userId,
-        maxTokens: 800,
-      });
+      turn = await callProvider(activeConfig);
     }
 
     if (!turn) {
       onEvent?.({ type: "provider_failed", iteration });
+      onStream?.({ type: "error", message: "AI 服务暂时不可用，请稍后重试。" });
       return null;
     }
 
@@ -143,14 +239,19 @@ export async function runAgentLoop(
         const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
         console.warn(`[ai/ask] submit_answer arguments JSON parse failed: error=${msg} args=${(submitCall.function.arguments || "").slice(0, 500)}`);
         onEvent?.({ type: "give_up", reason: `submit_answer arguments JSON parse failed: ${msg}` });
+        onStream?.({ type: "error", message: "回答生成失败，请重试。" });
         return null;
       }
       if (typeof args.answer !== "string" || !args.answer.trim()) {
         onEvent?.({ type: "give_up", reason: "submit_answer called with empty/invalid answer" });
+        onStream?.({ type: "error", message: "回答生成失败，请重试。" });
         return null;
       }
       onEvent?.({ type: "submit_answer", iteration, answer: args.answer, repoIds: args.repoIds });
-      return buildAskResult(args.answer, args.repoIds, cache);
+      const result = buildAskResult(args.answer, args.repoIds, cache);
+      // 流式模式下发送 done 事件（token 已在流式过程中逐字转发，这里只发最终完整结果 + candidates）
+      onStream?.({ type: "done", answer: result.answer, candidates: result.candidates });
+      return result;
     }
 
     if (toolCalls.length === 0) {
@@ -159,6 +260,7 @@ export async function runAgentLoop(
       // 连续两轮都不调用任何工具——判定这个 Provider 不支持/不配合 tool-calling，没有真实数据支撑，直接放弃
       if (noToolCallStreak >= 2) {
         onEvent?.({ type: "give_up", reason: "provider did not call any tool for 2 consecutive turns" });
+        onStream?.({ type: "error", message: "AI 服务不支持工具调用，请检查 Provider 配置。" });
         return null;
       }
       messages.push({
@@ -195,5 +297,6 @@ export async function runAgentLoop(
 
   // 循环耗尽都没有 submit_answer——不猜测、不拼凑答案，直接判失败
   onEvent?.({ type: "give_up", reason: `exhausted ${maxIterations} iterations without submit_answer` });
+  onStream?.({ type: "error", message: "检索超时，未能生成回答，请换个问法重试。" });
   return null;
 }
