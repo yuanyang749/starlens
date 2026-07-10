@@ -8,18 +8,21 @@ import {
   ArrowUp,
   Bot,
   Check,
+  Copy,
   Loader2,
   MessageCircle,
   PanelLeft,
   PanelLeftClose,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2,
   User,
   X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Highlight, themes } from "prism-react-renderer";
 import { fetchApi } from "@/lib/api-client";
 import {
   MessageScroller,
@@ -32,6 +35,31 @@ import { Message, MessageAvatar, MessageContent } from "@/components/ui/message"
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 import { useChatStream, type ChatCandidate, type ChatMessage } from "./use-chat-stream";
+
+// 中文注释：欢迎页示例问题，覆盖不同工具类型（统计/推荐/分析）
+const EXAMPLE_QUESTIONS: string[] = [
+  "统计我收藏的仓库按语言分布",
+  "推荐适合做 CLI 工具的仓库",
+  "帮我看看收藏里有没有重复或过时的仓库",
+  "我要做一个实时聊天应用，有哪些收藏可以参考",
+];
+
+// 中文注释：代码块语言别名映射，prism 部分语言名需要归一化
+const LANGUAGE_ALIASES: Record<string, string> = {
+  ts: "typescript",
+  tsx: "tsx",
+  js: "javascript",
+  jsx: "jsx",
+  py: "python",
+  sh: "bash",
+  shell: "bash",
+  yml: "yaml",
+};
+function resolveLanguage(lang: string | undefined): string {
+  if (!lang) return "text";
+  const lower = lang.toLowerCase();
+  return LANGUAGE_ALIASES[lower] ?? lower;
+}
 
 // 会话列表项类型（与后端 GET /api/ai/chat/conversations 返回一致）
 type ConversationSummary = {
@@ -66,7 +94,7 @@ export function ChatView() {
   // 中文注释：标记是否已从本地缓存恢复过会话，避免恢复期间被其他 effect 覆盖
   const restoredRef = useRef(false);
 
-  const { messages, isStreaming, conversationId, error, sendMessage, stop, loadHistory, reset } = useChatStream();
+  const { messages, isStreaming, conversationId, error, sendMessage, stop, loadHistory, reset, regenerate } = useChatStream();
 
   // 加载会话列表
   const loadConversations = useCallback(async () => {
@@ -400,9 +428,34 @@ export function ChatView() {
                     <p className="chat-view__welcome-hint">
                       支持多轮对话，AI 会基于你收藏的仓库回答问题、推荐项目。
                     </p>
+                    <div className="chat-view__examples">
+                      {EXAMPLE_QUESTIONS.map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          className="chat-view__example-item"
+                          onClick={() => {
+                            setInput(q);
+                            void sendMessage(q).then(() => loadConversations());
+                          }}
+                          disabled={isStreaming}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  messages.map((m) => <MessageBubble key={m.id} message={m} />)
+                  messages.map((m, i) => (
+                    <MessageBubble
+                      key={m.id}
+                      message={m}
+                      isLast={i === messages.length - 1}
+                      isStreaming={isStreaming}
+                      onCopy={() => {}}
+                      onRegenerate={() => void regenerate()}
+                    />
+                  ))
                 )}
               </MessageScrollerContent>
             </MessageScrollerViewport>
@@ -436,9 +489,111 @@ export function ChatView() {
   );
 }
 
+// 代码块组件：语法高亮 + 复制按钮
+function CodeBlock({ language, code }: { language: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 剪贴板权限被拒绝时静默
+    }
+  }, [code]);
+
+  return (
+    <div className="chat-view__code-block">
+      <div className="chat-view__code-header">
+        <span className="chat-view__code-lang">{language}</span>
+        <button
+          type="button"
+          className="chat-view__code-copy"
+          onClick={handleCopy}
+          aria-label="复制代码"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3 w-3" />
+              已复制
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" />
+              复制
+            </>
+          )}
+        </button>
+      </div>
+      <Highlight theme={themes.nightOwl} code={code.trim()} language={language}>
+        {({ className, style, tokens, getLineProps, getTokenProps }) => (
+          <pre className={`chat-view__code-pre ${className}`} style={style}>
+            {tokens.map((line, i) => {
+              const lineProps = getLineProps({ line });
+              return (
+                <div key={i} {...lineProps}>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                  ))}
+                </div>
+              );
+            })}
+          </pre>
+        )}
+      </Highlight>
+    </div>
+  );
+}
+
+// 自定义 ReactMarkdown 的 code 组件渲染
+function markdownComponents() {
+  return {
+    // 中文注释：code 组件区分行内代码和代码块。react-markdown v9 中 code 节点带 className 表示代码块
+    code(props: { className?: string; children?: React.ReactNode }) {
+      const { className, children } = props;
+      const text = String(children ?? "");
+      const match = /language-(\w+)/.exec(className ?? "");
+      // 中文注释：有 language-xxx 且内容含换行 → 代码块；否则行内代码
+      if (match && text.includes("\n")) {
+        return <CodeBlock language={resolveLanguage(match[1])} code={text} />;
+      }
+      // 无 className 但内容含换行（无语言标记的代码块）
+      if (!className && text.includes("\n")) {
+        return <CodeBlock language="text" code={text} />;
+      }
+      return <code className="chat-view__inline-code">{children}</code>;
+    },
+  };
+}
+
 // 单条消息气泡
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  isLast,
+  isStreaming,
+  onCopy,
+  onRegenerate,
+}: {
+  message: ChatMessage;
+  isLast: boolean;
+  isStreaming: boolean;
+  onCopy: () => void;
+  onRegenerate: () => void;
+}) {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      onCopy();
+    } catch {
+      // 静默
+    }
+  }, [message.content, onCopy]);
 
   return (
     <MessageScrollerItem>
@@ -464,20 +619,51 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             </Marker>
           ) : null}
 
-          {/* 消息正文 */}
-          {message.content ? (
-            <Bubble variant={isUser ? "default" : "secondary"} align={isUser ? "end" : "start"}>
-              <BubbleContent>
-                {isUser ? (
-                  message.content
-                ) : (
-                  <div className="chat-view__markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-                  </div>
-                )}
-              </BubbleContent>
-            </Bubble>
-          ) : null}
+          {/* 中文注释：包裹 bubble + 操作栏，hover 时显示操作栏 */}
+          <div className="chat-view__msg-body">
+            {/* 消息正文 */}
+            {message.content ? (
+              <Bubble variant={isUser ? "default" : "secondary"} align={isUser ? "end" : "start"}>
+                <BubbleContent>
+                  {isUser ? (
+                    message.content
+                  ) : (
+                    <div className="chat-view__markdown">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents()}>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                </BubbleContent>
+              </Bubble>
+            ) : null}
+
+            {/* 消息操作栏：复制（assistant）/ 重新生成（assistant 最后一条且非流式中） */}
+            {!isUser && message.content && !message.isStreaming ? (
+              <div className="chat-view__msg-actions">
+                <button
+                  type="button"
+                  className="chat-view__msg-action-btn"
+                  onClick={handleCopy}
+                  aria-label="复制消息"
+                >
+                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {copied ? "已复制" : "复制"}
+                </button>
+                {isLast && !isStreaming ? (
+                  <button
+                    type="button"
+                    className="chat-view__msg-action-btn"
+                    onClick={onRegenerate}
+                    aria-label="重新生成"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    重新生成
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </MessageContent>
       </Message>
     </MessageScrollerItem>

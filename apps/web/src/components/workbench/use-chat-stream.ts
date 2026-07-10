@@ -249,5 +249,30 @@ export function useChatStream() {
     setError(null);
   }, []);
 
-  return { messages, isStreaming, conversationId, error, sendMessage, stop, loadHistory, reset };
+  // 重新生成：删除最后一条 assistant 消息，用上一条 user 消息重新提问
+  const regenerate = useCallback(async () => {
+    if (isStreaming) return;
+    // 找到最后一条 user 消息
+    let lastUserText: string | null = null;
+    setMessages((prev) => {
+      // 从末尾找 user 消息
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].role === "user") {
+          lastUserText = prev[i].content;
+          break;
+        }
+      }
+      // 删除最后一条 assistant 消息
+      const idx = prev.length - 1;
+      if (prev[idx]?.role === "assistant") {
+        return prev.slice(0, idx);
+      }
+      return prev;
+    });
+    if (lastUserText) {
+      await sendMessage(lastUserText);
+    }
+  }, [isStreaming, sendMessage]);
+
+  return { messages, isStreaming, conversationId, error, sendMessage, stop, loadHistory, reset, regenerate };
 }

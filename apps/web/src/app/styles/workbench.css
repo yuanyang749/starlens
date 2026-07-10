@@ -937,6 +937,143 @@
   cursor: not-allowed;
 }
 
+/* ============ 代码块（语法高亮 + 复制按钮） ============ */
+.chat-view__code-block {
+  margin: 0 0 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+}
+
+.chat-view__code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+.chat-view__code-lang {
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+.chat-view__code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chat-view__code-copy:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+.chat-view__code-pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/* 行内代码（覆盖 markdown 默认 code 样式，避免与代码块冲突） */
+.chat-view__inline-code {
+  font-size: 0.82rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #4338ca;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/* ============ 消息操作栏（复制 / 重新生成） ============ */
+.chat-view__msg-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.chat-view__msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+/* hover 消息体时显示操作栏 */
+.chat-view__msg-body:hover .chat-view__msg-actions {
+  opacity: 1;
+}
+
+.chat-view__msg-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #94a3b8);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chat-view__msg-action-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+}
+
+/* ============ 欢迎页示例问题 ============ */
+.chat-view__examples {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  max-width: 560px;
+  width: 100%;
+}
+
+.chat-view__example-item {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line, rgba(226, 232, 240, 0.8));
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--foreground, #334155);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chat-view__example-item:hover:not(:disabled) {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.04);
+  color: #6366f1;
+}
+
+.chat-view__example-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .repo-table-pane__filters,
 .repo-table-pane__footer {
   display: flex;
