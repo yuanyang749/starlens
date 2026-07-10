@@ -19,6 +19,7 @@ import { compactConversationIfNeeded } from "@starlens/server/server/chat/compac
 import {
   appendMessage,
   createConversation,
+  deleteLastAssistantMessage,
   getConversation,
   updateConversationLastQuestion,
   type ChatCandidate,
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
       ? body.conversationId.trim()
       : undefined;
 
+  // 中文注释：regenerate 场景——重新生成最后一条 assistant 回答。
+  // 后端需删除旧 assistant 消息，且不再追加 user 消息（已存在）。
+  const isRegenerate = body.regenerate === true;
+
   const runtimeResolution = await resolveAiRuntimeConfig(user.id, "chat_completions");
   const chatConfig = asChatRuntimeConfig(runtimeResolution.config);
 
@@ -73,6 +78,10 @@ export async function POST(request: Request) {
     const owned = await getConversation(user.id, activeConversationId);
     if (!owned) {
       return fail("conversation_not_found", "Conversation was not found.", 404);
+    }
+    // regenerate：先删除旧的 assistant 回答，避免刷新后旧回答重现
+    if (isRegenerate) {
+      await deleteLastAssistantMessage(user.id, activeConversationId);
     }
   } else {
     // 新建会话，标题取问题前 30 字符
@@ -97,8 +106,10 @@ export async function POST(request: Request) {
   }
   const hasSummary = Boolean(compaction.summary);
 
-  // 先写入 user 消息到 DB
-  await appendMessage(user.id, activeConversationId, "user", question);
+  // 写入 user 消息到 DB（regenerate 场景下 user 消息已存在，跳过）
+  if (!isRegenerate) {
+    await appendMessage(user.id, activeConversationId, "user", question);
+  }
 
   // 中文注释：SSE 流式响应。用 ReadableStream + controller 写入事件。
   // onStream 回调把 agent loop 的事件实时写入 SSE 流，实现逐字输出。

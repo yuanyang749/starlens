@@ -169,6 +169,26 @@ export async function appendMessage(
   return row;
 }
 
+// 中文注释：删除会话最后一条 assistant 消息（regenerate 场景：重新生成前先删旧回答）
+export async function deleteLastAssistantMessage(
+  userId: string,
+  conversationId: string,
+): Promise<boolean> {
+  const db = getDb();
+  const owned = await getConversation(userId, conversationId);
+  if (!owned) return false;
+  // 取该会话最后一条 assistant 消息
+  const rows = await db
+    .select({ id: chatMessages.id })
+    .from(chatMessages)
+    .where(and(eq(chatMessages.conversationId, conversationId), eq(chatMessages.role, "assistant")))
+    .orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+    .limit(1);
+  if (rows.length === 0) return false;
+  await db.delete(chatMessages).where(eq(chatMessages.id, rows[0].id));
+  return true;
+}
+
 // compaction 用：取 summarizedUpTo 之后的全部消息（用于判断窗口 + 取溢出部分）
 export async function listMessagesAfter(
   userId: string,

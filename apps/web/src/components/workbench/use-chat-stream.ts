@@ -114,9 +114,9 @@ export function useChatStream() {
   );
 
   // 发送消息并接收流式响应
-  // 选项 skipAddUser：regenerate 场景下 user 消息已存在，只添加 assistant 占位
+  // 选项 skipAddUser/regenerate：regenerate 场景下 user 消息已存在，只添加 assistant 占位
   const sendMessage = useCallback(
-    async (text: string, opts?: { skipAddUser?: boolean }) => {
+    async (text: string, opts?: { skipAddUser?: boolean; regenerate?: boolean }) => {
       const trimmed = text.trim();
       if (!trimmed || isStreaming) return;
 
@@ -153,6 +153,7 @@ export function useChatStream() {
           body: JSON.stringify({
             question: trimmed,
             conversationId: conversationId ?? undefined,
+            regenerate: opts?.regenerate === true,
           }),
           signal: abortController.signal,
         });
@@ -293,8 +294,8 @@ export function useChatStream() {
     const lastUserText = list[userIdx].content;
     // 只删除 assistant 回答，保留 user 消息
     setMessages((prev) => prev.slice(0, idx));
-    // skipAddUser：user 消息已存在，只添加 assistant 占位
-    await sendMessage(lastUserText, { skipAddUser: true });
+    // skipAddUser + regenerate：user 消息已存在，后端也跳过追加并删除旧 assistant 回答
+    await sendMessage(lastUserText, { skipAddUser: true, regenerate: true });
   }, [isStreaming, sendMessage]);
 
   // #15 断线重连：删除失败的 assistant 占位消息，用上次发送的文本重试
