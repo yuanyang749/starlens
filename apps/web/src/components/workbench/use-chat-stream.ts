@@ -57,6 +57,9 @@ export function useChatStream() {
   // #15 连接中断标记（区分用户主动停止和网络错误）
   const [connectionError, setConnectionError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // 中文注释：messages 同步 ref，regenerate/retry 需要立即读取最新消息列表
+  const messagesRef = useRef<ChatMessage[]>([]);
+  messagesRef.current = messages;
   // 中文注释：记录最后一次发送的文本，用于断线重连
   const lastSentTextRef = useRef<string | null>(null);
 
@@ -111,23 +114,30 @@ export function useChatStream() {
   );
 
   // 发送消息并接收流式响应
+  // 选项 skipAddUser：regenerate 场景下 user 消息已存在，只添加 assistant 占位
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: { skipAddUser?: boolean }) => {
       const trimmed = text.trim();
       if (!trimmed || isStreaming) return;
 
       setError(null);
       setConnectionError(false);
-      const userMsgId = crypto.randomUUID();
       const assistantMsgId = crypto.randomUUID();
 
-      // 乐观添加 user 消息 + assistant 占位消息
+      // 添加 assistant 占位消息；skipAddUser 时不重复添加 user 消息
       const now = new Date().toISOString();
-      setMessages((prev) => [
-        ...prev,
-        { id: userMsgId, role: "user", content: trimmed, createdAt: now },
-        { id: assistantMsgId, role: "assistant", content: "", statusText: "正在思考…", isStreaming: true, createdAt: now, toolCalls: [] },
-      ]);
+      setMessages((prev) =>
+        opts?.skipAddUser
+          ? [
+              ...prev,
+              { id: assistantMsgId, role: "assistant", content: "", statusText: "正在思考…", isStreaming: true, createdAt: now, toolCalls: [] },
+            ]
+          : [
+              ...prev,
+              { id: crypto.randomUUID(), role: "user", content: trimmed, createdAt: now },
+              { id: assistantMsgId, role: "assistant", content: "", statusText: "正在思考…", isStreaming: true, createdAt: now, toolCalls: [] },
+            ],
+      );
       setIsStreaming(true);
 
       // 中文注释：记录本次发送的文本，用于断线重连
@@ -271,29 +281,20 @@ export function useChatStream() {
     setError(null);
   }, []);
 
-  // 重新生成：删除最后一条 assistant 消息，用上一条 user 消息重新提问
+  // 重新生成：只删除最后一条 assistant 回答，保留 user 消息，重新触发 AI 生成
   const regenerate = useCallback(async () => {
     if (isStreaming) return;
-    // 找到最后一条 user 消息
-    let lastUserText: string | null = null;
-    setMessages((prev) => {
-      // 从末尾找 user 消息
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].role === "user") {
-          lastUserText = prev[i].content;
-          break;
-        }
-      }
-      // 删除最后一条 assistant 消息
-      const idx = prev.length - 1;
-      if (prev[idx]?.role === "assistant") {
-        return prev.slice(0, idx);
-      }
-      return prev;
-    });
-    if (lastUserText) {
-      await sendMessage(lastUserText);
-    }
+    // 中文注释：通过 ref 同步读取最新消息，避免 setMessages updater 异步执行导致取不到值
+    const list = messagesRef.current;
+    const idx = list.length - 1;
+    if (idx < 0 || list[idx]?.role !== "assistant") return;
+    const userIdx = idx - 1;
+    if (userIdx < 0 || list[userIdx]?.role !== "user") return;
+    const lastUserText = list[userIdx].content;
+    // 只删除 assistant 回答，保留 user 消息
+    setMessages((prev) => prev.slice(0, idx));
+    // skipAddUser：user 消息已存在，只添加 assistant 占位
+    await sendMessage(lastUserText, { skipAddUser: true });
   }, [isStreaming, sendMessage]);
 
   // #15 断线重连：删除失败的 assistant 占位消息，用上次发送的文本重试

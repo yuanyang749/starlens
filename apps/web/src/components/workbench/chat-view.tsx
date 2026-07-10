@@ -33,7 +33,7 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { Message, MessageAvatar, MessageContent } from "@/components/ui/message";
+import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/components/ui/message";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 import { useChatStream, type ChatCandidate, type ChatMessage } from "./use-chat-stream";
@@ -780,8 +780,8 @@ function MessageBubble({
             </div>
           ) : null}
 
-          {/* 中文注释：包裹 bubble + 操作栏，hover 时显示操作栏 */}
-          <div className="chat-view__msg-body">
+          {/* 中文注释：包裹 bubble，user 消息靠右对齐 */}
+          <div className={`chat-view__msg-body ${isUser ? "is-user" : ""}`}>
             {/* 消息正文 */}
             {message.content ? (
               <Bubble variant={isUser ? "default" : "secondary"} align={isUser ? "end" : "start"}>
@@ -798,56 +798,51 @@ function MessageBubble({
                 </BubbleContent>
               </Bubble>
             ) : null}
-
-            {/* 消息操作栏：复制/重新生成（assistant）、编辑（user） */}
-            {message.content && !message.isStreaming ? (
-              <div className="chat-view__msg-actions">
-                {/* #7 时间戳 */}
-                {timeText ? <span className="chat-view__msg-time">{timeText}</span> : null}
-                {/* #16 token 用量（仅 assistant 且有 usage 数据时显示） */}
-                {!isUser && message.usage && (message.usage.prompt_tokens || message.usage.completion_tokens) ? (
-                  <span className="chat-view__msg-tokens" title={`输入 ${message.usage.prompt_tokens ?? 0} / 输出 ${message.usage.completion_tokens ?? 0}`}>
-                    {(message.usage.prompt_tokens ?? 0) + (message.usage.completion_tokens ?? 0)} tokens
-                  </span>
-                ) : null}
-                {isUser && onEdit ? (
-                  <button
-                    type="button"
-                    className="chat-view__msg-action-btn"
-                    onClick={() => onEdit(message.content)}
-                    aria-label="编辑消息"
-                  >
-                    <Pencil className="h-3 w-3" />
-                    编辑
-                  </button>
-                ) : null}
-                {!isUser ? (
-                  <>
-                    <button
-                      type="button"
-                      className="chat-view__msg-action-btn"
-                      onClick={handleCopy}
-                      aria-label="复制消息"
-                    >
-                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                      {copied ? "已复制" : "复制"}
-                    </button>
-                    {isLast && !isStreaming ? (
-                      <button
-                        type="button"
-                        className="chat-view__msg-action-btn"
-                        onClick={onRegenerate}
-                        aria-label="重新生成"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        重新生成
-                      </button>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            ) : null}
           </div>
+
+          {/* 中文注释：消息操作栏（时间戳、操作按钮），放在 MessageFooter 中让头像正确对齐 */}
+          {message.content && !message.isStreaming ? (
+            <MessageFooter className={`chat-view__msg-footer ${isUser ? "is-user" : ""}`}>
+              {/* #7 时间戳 */}
+              {timeText ? <span className="chat-view__msg-time">{timeText}</span> : null}
+              {/* #16 token 用量（仅 assistant 且有 usage 数据时显示） */}
+              {!isUser && message.usage && (message.usage.prompt_tokens || message.usage.completion_tokens) ? (
+                <span className="chat-view__msg-tokens" title={`输入 ${message.usage.prompt_tokens ?? 0} / 输出 ${message.usage.completion_tokens ?? 0}`}>
+                  {(message.usage.prompt_tokens ?? 0) + (message.usage.completion_tokens ?? 0)} tokens
+                </span>
+              ) : null}
+              {isUser && onEdit ? (
+                <button
+                  type="button"
+                  className="chat-view__msg-action-btn"
+                  onClick={() => onEdit(message.content)}
+                  aria-label="编辑消息"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              ) : null}
+              {!isUser && isLast && !isStreaming && onRegenerate ? (
+                <button
+                  type="button"
+                  className="chat-view__msg-action-btn"
+                  onClick={onRegenerate}
+                  aria-label="重新生成"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+              ) : null}
+              {onCopy ? (
+                <button
+                  type="button"
+                  className="chat-view__msg-action-btn"
+                  onClick={handleCopy}
+                  aria-label={copied ? "已复制" : "复制消息"}
+                >
+                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                </button>
+              ) : null}
+            </MessageFooter>
+          ) : null}
         </MessageContent>
       </Message>
     </MessageScrollerItem>

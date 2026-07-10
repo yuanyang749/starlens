@@ -634,6 +634,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  /* 中文注释：头像与气泡内容容器底部对齐（覆盖 MessageAvatar 的 self-end） */
+  align-self: flex-end;
 }
 
 .chat-view__avatar--user {
@@ -1028,7 +1030,13 @@
   gap: 2px;
 }
 
-.chat-view__msg-actions {
+/* 中文注释：user 消息靠右对齐 */
+.chat-view__msg-body.is-user {
+  align-items: flex-end;
+}
+
+/* 消息 footer（时间戳 + 操作按钮），放在 MessageFooter 组件中让头像正确对齐 */
+.chat-view__msg-footer {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1037,8 +1045,14 @@
   transition: opacity 0.15s;
 }
 
-/* hover 消息体时显示操作栏 */
-.chat-view__msg-body:hover .chat-view__msg-actions {
+/* 中文注释：user 消息的 footer 右对齐 */
+.chat-view__msg-footer.is-user {
+  justify-content: flex-end;
+}
+
+/* hover 消息体或 footer 时显示操作栏 */
+.chat-view__msg-body:hover + .chat-view__msg-footer,
+.chat-view__msg-footer:hover {
   opacity: 1;
 }
 
