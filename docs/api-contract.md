@@ -781,7 +781,7 @@ Authorization: Bearer <token>
 
 ## 13. v1.x 新增接口（截至 2026-07-08）
 
-以下接口在初版契约之后新增，均遵循第 4 节的通用响应格式；完整请求/响应示例见 `agent-skills/starlens/references/http-api.md`（agent skill 的权威参考，随代码同步维护），此处仅记录路由清单和用途摘要：
+以下接口在初版契约之后新增，均遵循第 4 节的通用响应格式；完整请求/响应示例见 `skills/starlens/references/http-api.md`（agent skill 的权威参考，随代码同步维护），此处仅记录路由清单和用途摘要：
 
 - `POST /api/repos/star` / `POST /api/repos/unstar` — 真实调用 GitHub API 修改用户的 GitHub star 状态（区别于 `PATCH /api/repos/:id` 的本地 `isFavorite` 标记）
 - `GET /api/repos/suggestions` — 知识整理建议（重复 / 过时 / 未分类），纯 DB 聚合，不调 AI

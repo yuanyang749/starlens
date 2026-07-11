@@ -104,7 +104,7 @@ Never print, log, summarize, or store `STARLENS_TOKEN` in model-visible output.
 - **Codex / Claude Code（终端 agent）**：MCP 优先（已配置时），HTTP + Skill 作为 fallback。两者都走本 Skill 的触发描述。
 - **Cursor / opencode（IDE 内 agent）**：MCP。工具的 `description` 字段即触发器，依赖 `packages/agent-tools` 中工具定义的触发式描述。
 
-CLI 的 `install-skill` 向导已按 agent 类型分发配置，本 Skill 不维护多份副本。
+Skill 安装通过 `npx skills add https://github.com/yuanyang749/starlens` 完成；MCP 配置通过 `stars setup` 或 `stars install-mcp` 按 agent 类型分发。本 Skill 不维护多份副本。
 
 ## Workflow
 

@@ -39,8 +39,8 @@ export function defaultTokenPath() {
 }
 
 // CLI 配置文件路径：~/.config/starlens/config.json
-// install-skill 写入 { apiBaseUrl }，parseGlobalOptions 读取作为回退默认值，
-// 让 ask/search/sync 等命令自动使用 install-skill 配置的服务地址。
+// setup/install-mcp 写入 { apiBaseUrl }，parseGlobalOptions 读取作为回退默认值，
+// 让 ask/search/sync 等命令自动使用配置的服务地址。
 export function cliConfigPath() {
   return join(homedir(), ".config", "starlens", "config.json");
 }
@@ -55,7 +55,7 @@ export function readCliConfig() {
   }
 }
 
-// agent.env 路径（供 install-skill 与 token 复用读取）
+// agent.env 路径（供 setup/install-mcp 与 token 复用读取）
 export function agentEnvPath() {
   return join(homedir(), ".starlens", "agent.env");
 }

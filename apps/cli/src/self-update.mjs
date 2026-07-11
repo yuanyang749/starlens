@@ -1,13 +1,13 @@
 // stars update：检查/更新 CLI 本体（npm），成功后自动刷新已安装的 skill 文件。
 // --skill-only 跳过版本检查/npm 安装，只做刷新这一步。
+// 重构: skill 刷新改为调用 npx skills add(agentskills.io 标准方式)
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { CliError } from "./errors.mjs";
 import { readOption, readFlag } from "./args.mjs";
 import { getCliVersion } from "./config.mjs";
 import { fetchWithTimeout } from "./api.mjs";
-import { parseClientList, refreshInstalledSkills } from "./install-skill/update-skill.mjs";
-import { renderUpdateSkill } from "./renderers.mjs";
+import { refreshInstalledSkills } from "./install-mcp/update-skill.mjs";
 
 const NPM_PACKAGE = "@starlens-app/cli";
 const REGISTRY_LATEST_URL = `https://registry.npmjs.org/${NPM_PACKAGE}/latest`;
@@ -58,31 +58,31 @@ function runNpmGlobalInstall() {
   });
 }
 
-async function refreshSkillsAndRender(cwd, explicitClients, config) {
-  const results = await refreshInstalledSkills(cwd, explicitClients);
-  if (results.length === 0) {
-    console.log("No installed Starlens skill found to refresh. Run 'stars install-skill' first, or pass --client <names>.");
-    return;
+async function refreshSkillsAndRender() {
+  console.log("Refreshing skill files via npx skills add...");
+  const ok = await refreshInstalledSkills();
+  if (!ok) {
+    console.log("⚠  npx skills add failed. Run it manually: npx skills add https://github.com/yuanyang749/starlens");
   }
-  renderUpdateSkill(results, config.format);
 }
 
-// stars update [--yes] [--skill-only] [--client <names>]
+// stars update [--yes] [--skill-only]
 export async function runUpdateCommand(args, config) {
   let rest = [...args];
   const yesFlag = readFlag(rest, "--yes");
   rest = yesFlag.rest;
   const skillOnlyFlag = readFlag(rest, "--skill-only");
   rest = skillOnlyFlag.rest;
+  // --client 选项已移除(npx skills add 自动处理客户端发现),保留解析以给出友好错误
   const clientArg = readOption(rest, "--client");
   rest = clientArg.rest;
+  if (clientArg.value) {
+    throw new CliError("--client is no longer supported. npx skills add auto-detects installed clients.");
+  }
   if (rest.length > 0) throw new CliError(`Unknown update arguments: ${rest.join(" ")}`);
 
-  const explicitClients = clientArg.value ? parseClientList(clientArg.value) : undefined;
-  const cwd = process.cwd();
-
   if (skillOnlyFlag.found) {
-    await refreshSkillsAndRender(cwd, explicitClients, config);
+    await refreshSkillsAndRender();
     return;
   }
 
@@ -110,5 +110,5 @@ export async function runUpdateCommand(args, config) {
   }
 
   console.log(`\n✓ Updated to v${latest}. Refreshing installed skill files...`);
-  await refreshSkillsAndRender(cwd, explicitClients, config);
+  await refreshSkillsAndRender();
 }

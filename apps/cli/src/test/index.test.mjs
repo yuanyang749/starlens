@@ -609,14 +609,14 @@ test("--timeout-ms below minimum exits with an error (fix #36)", async () => {
   assert.match(result.stderr, /--timeout-ms must be an integer greater than or equal to 1000/);
 });
 
-test("install-skill --hosted and --local are mutually exclusive (fix #12)", async () => {
-  const result = await runCli(["install-skill", "--hosted", "--local", "--client", "claude"]);
+test("install-mcp --hosted and --local are mutually exclusive (fix #12)", async () => {
+  const result = await runCli(["install-mcp", "--hosted", "--local", "--client", "claude", "--lang", "en"]);
   assert.equal(result.code, 1);
   assert.match(result.stderr, /mutually exclusive/);
 });
 
-test("install-skill with invalid --client value exits with an error", async () => {
-  const result = await runCli(["install-skill", "--client", "nope"]);
+test("install-mcp with invalid --client value exits with an error", async () => {
+  const result = await runCli(["install-mcp", "--client", "nope", "--lang", "en"]);
   assert.equal(result.code, 1);
   assert.match(result.stderr, /no valid value/);
 });
@@ -695,7 +695,7 @@ test("apiRequest retries on 5xx responses (fix #2)", async () => {
 // ── 单元测试：纯函数 ──────────────────────────────────────────────────────
 
 test("appendTomlSection is idempotent and creates parent dirs (fix #19, #29)", async () => {
-  const { appendTomlSection } = await import("../install-skill/mcp-config.mjs");
+  const { appendTomlSection } = await import("../install-mcp/mcp-config.mjs");
   const dir = await mkdtemp(join(tmpdir(), "starlens-toml-"));
   // 故意使用嵌套路径，验证 dirname() 创建父目录（原正则切目录在 / 上会失败）
   const tomlPath = join(dir, "nested", "deep", "config.toml");
@@ -731,21 +731,21 @@ test("displayWidth counts CJK and emoji as width 2 (fix #25)", async () => {
 
 test("wizardPromptSecret uses explicit control char escapes (fix #1 smoke)", async () => {
   // 仅验证模块可加载且常量已导出（控制字符行为需 TTY，无法在 CI 单测）
-  const mod = await import("../install-skill/prompts.mjs");
+  const mod = await import("../install-mcp/prompts.mjs");
   assert.equal(typeof mod.wizardPromptSecret, "function");
   assert.equal(typeof mod.maskToken, "function");
   assert.equal(mod.maskToken("stl_abcdef1234"), "stl_...234");
   assert.equal(mod.maskToken("short"), "***");
 });
 
-// install-skill 非交互烟雾测试：跳过 skill 与 mcp，验证能干净退出
-test("install-skill --client claude skips cleanly when answering n to prompts", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "starlens-installskill-"));
+// install-mcp 非交互烟雾测试：跳过 mcp 配置，验证能干净退出
+test("install-mcp --client claude skips cleanly when answering N to mcp prompt", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "starlens-installmcp-"));
   try {
     const result = await runCli(
-      ["install-skill", "--client", "claude", "--hosted", "--token", "stl_test_ci"],
+      ["install-mcp", "--client", "claude", "--hosted", "--token", "stl_test_ci", "--lang", "en"],
       { HOME: dir, STARLENS_API_BASE_URL: "https://starlens.520ai.xin" },
-      "n\nn\n", // 跳过 skill 安装；跳过 mcp 配置
+      "N\n", // 跳过 mcp 配置
     );
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /Setup complete/);
@@ -770,43 +770,16 @@ test("update --unknown-flag exits with an error before touching the network", as
   assert.match(result.stderr, /Unknown update arguments/);
 });
 
-test("update --skill-only --client claude copies skill files to the claude target directory", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "starlens-update-"));
-  try {
-    const result = await runCli(["update", "--skill-only", "--client", "claude", "--format", "json"], { HOME: dir });
-    assert.equal(result.code, 0, result.stderr);
-    const skillPath = join(dir, ".claude", "skills", "starlens", "SKILL.md");
-    assert.equal((await readFile(skillPath, "utf8")).includes("# StarLens"), true);
-    const parsed = JSON.parse(result.stdout);
-    assert.equal(parsed.results[0].client, "claude");
-    assert.equal(parsed.results[0].ok, true);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+test("update --skill-only --client is no longer supported", async () => {
+  // --client 已移除:npx skills add 自动发现已安装的客户端
+  const result = await runCli(["update", "--skill-only", "--client", "claude"]);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /--client is no longer supported/);
 });
 
-test("update --skill-only with nothing installed reports no skill found (not an error)", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "starlens-update-"));
-  try {
-    const result = await runCli(["update", "--skill-only"], { HOME: dir });
-    assert.equal(result.code, 0, result.stderr);
-    assert.match(result.stdout, /No installed Starlens skill found/);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-test("update --skill-only auto-detects a previously installed client", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "starlens-update-"));
-  try {
-    const first = await runCli(["update", "--skill-only", "--client", "claude"], { HOME: dir });
-    assert.equal(first.code, 0, first.stderr);
-
-    const second = await runCli(["update", "--skill-only", "--format", "json"], { HOME: dir });
-    assert.equal(second.code, 0, second.stderr);
-    const parsed = JSON.parse(second.stdout);
-    assert.equal(parsed.results.some((r) => r.client === "claude" && r.ok === true), true);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+test("update --skill-only refreshes via npx skills add", async () => {
+  // npx skills add 在 CI 中可能失败,但 CLI 应优雅处理(打印失败提示,exit 0)
+  const result = await runCli(["update", "--skill-only"]);
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /Refreshing skill files via npx skills add/);
 });

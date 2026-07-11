@@ -20,7 +20,7 @@ import {
   suggestCommand,
   analyzeCommand,
 } from "./commands.mjs";
-import { runInstallSkillWizard } from "./install-skill/index.mjs";
+import { runSetupWizard, runInstallMcpWizard } from "./install-mcp/index.mjs";
 import { runUpdateCommand } from "./self-update.mjs";
 
 const helpText = [
@@ -49,21 +49,24 @@ const helpText = [
   "    Suggest organization improvements for starred repos (duplicates, stale, untagged).",
   "  stars analyze <repo-id|owner/repo> [--apply] [--api-base-url <url>] [--token-path <path>] [--format table|json]",
   "    Analyze a repo and suggest tags/notes. --apply writes suggestions to starred repos.",
-  "  stars install-skill [--client <names>] [--token <token>|--token-stdin] [--api-base-url <url>] [--hosted|--local]",
-  "    Launch interactive wizard to configure Starlens Skill and MCP Server.",
-  "    --client       comma-separated clients (claude, cursor, codex, opencode, vscode, openclaw, hermes, other)",
+  "  stars setup [--client <names>] [--token <token>|--token-stdin] [--api-base-url <url>] [--hosted|--local] [--lang en|zh]",
+  "    Full setup wizard: installs Agent Skill (via npx skills add) + configures MCP Server.",
+  "    --client       comma-separated clients for MCP config (claude, cursor, codex, opencode, vscode, openclaw, hermes, other)",
   "    --token        pre-fill API token (skips token input step)",
   "    --token-stdin  read token from stdin (avoids argv leak)",
   "    --hosted       use hosted service (starlens.520ai.xin), skip mode prompt",
   "    --local        use self-hosted service, skip mode prompt",
-  "  stars update [--yes] [--skill-only] [--client <names>]",
-  "    Check npm for a newer @starlens-app/cli version, update it, then refresh installed skill files.",
+  "    --lang         interface language: en or zh (skips language prompt)",
+  "  stars install-mcp [--client <names>] [--token <token>|--token-stdin] [--api-base-url <url>] [--hosted|--local] [--lang en|zh]",
+  "    MCP-only wizard: configures MCP Server without installing Skill files.",
+  "    (same flags as setup, minus skill installation)",
+  "  stars update [--yes] [--skill-only]",
+  "    Check npm for a newer @starlens-app/cli version, update it, then refresh installed skill files (via npx skills add).",
   "    --yes         skip the update confirmation prompt (non-interactive)",
-  "    --skill-only  skip the CLI version check/update; just refresh already-installed skill files",
-  "    --client      comma-separated clients to refresh (default: auto-detect installed ones)",
+  "    --skill-only  skip the CLI version check/update; just refresh skill files",
   "  stars version",
   "",
-  "  'setup' is an alias for 'install-skill'.",
+  "  Skill can also be installed independently: npx skills add https://github.com/yuanyang749/starlens",
   "",
   "Configuration:",
   "  --api-base-url, STARLENS_API_BASE_URL   API base URL (default: http://localhost:3000)",
@@ -108,8 +111,18 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   if (command === "suggest") return suggestCommand(rest, config);
   if (command === "analyze") return analyzeCommand(rest, config);
 
-  if (command === "install-skill" || command === "setup") {
-    return runInstallSkillWizard(rest, config, env);
+  if (command === "setup") {
+    return runSetupWizard(rest, config, env);
+  }
+
+  if (command === "install-mcp") {
+    return runInstallMcpWizard(rest, config, env);
+  }
+
+  // 向后兼容: install-skill 命令重定向到 setup
+  if (command === "install-skill") {
+    console.log("Note: 'install-skill' has been renamed to 'setup'. Redirecting...");
+    return runSetupWizard(rest, config, env);
   }
 
   if (command === "update") return runUpdateCommand(rest, config);

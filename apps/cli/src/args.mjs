@@ -83,7 +83,7 @@ export function parseGlobalOptions(args, env = process.env) {
   }
 
   // apiBaseUrl 优先级：--api-base-url > STARLENS_API_BASE_URL env > CLI 配置文件 > DEFAULT_API_BASE_URL
-  // CLI 配置文件由 install-skill 写入，让 ask/search 等命令自动使用 install-skill 配置的服务地址
+  // CLI 配置文件由 setup/install-mcp 向导写入，让 ask/search 等命令自动使用配置的服务地址
   const cliConfig = readCliConfig();
   const apiBaseUrl = (option("--api-base-url") ?? env.STARLENS_API_BASE_URL ?? cliConfig.apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
   const tokenPath = option("--token-path") ?? env.STARLENS_TOKEN_PATH ?? defaultTokenPath();

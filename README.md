@@ -15,7 +15,7 @@ The project is currently in active `v1` development. The main goal is to make a 
 - Supports advanced search filters: star count range, starred date range, last push date, note content, and note presence.
 - Supports AI-powered natural language queries with 8 intent types: count, existence, comparison, stats, recommendation, single-repo analysis, structured filtering, and semantic search.
 - Exposes personal API tokens for CLI, MCP, and agent workflows.
-- One-command Agent Skill install for Claude Code, Cursor, Codex, opencode and more via `stars install-skill`.
+- One-command setup: Agent Skill (via `npx skills add`) + MCP Server config via `stars setup`, or MCP-only via `stars install-mcp`.
 - Includes static product documentation under `/docs`.
 
 ## Current Scope
@@ -28,7 +28,7 @@ Implemented or actively wired:
 - Shared API route implementation through `packages/server`.
 - GitHub Stars sync and repository search with advanced filters.
 - AI provider configuration, validation, and AI ask route with 8 intent types.
-- CLI (`@starlens-app/cli`) published to npm: `stars` commands for login, status, sync, search, show, open, ask, favorite, notes, tags, and `install-skill`.
+- CLI (`@starlens-app/cli`) published to npm: `stars` commands for login, status, sync, search, show, open, ask, favorite, notes, tags, `setup`, and `install-mcp`.
 - MCP stdio server for IDE and local agent clients.
 - HTTP MCP endpoint for hosted clients (Claude Code, Cursor).
 - Agent Skill one-click install for Claude Code, Cursor, Codex, opencode, OpenClaw, Hermes, and VS Code.
@@ -212,13 +212,19 @@ stars note owner/repo --set "Review for MCP integration"
 stars tag add owner/repo agent
 ```
 
-One-command install of the Agent Skill for your AI clients:
+One-command setup — installs the Agent Skill (via `npx skills add`) and configures MCP Server:
 
 ```bash
-stars install-skill
+stars setup
 ```
 
-The wizard walks you through selecting clients (Claude Code, Cursor, Codex, opencode, and more), installs the Skill file, and optionally writes MCP config entries.
+Or configure MCP Server only (skip Skill installation):
+
+```bash
+stars install-mcp
+```
+
+The `setup` wizard runs `npx skills add https://github.com/yuanyang749/starlens` to install the Skill across detected AI clients, then walks you through MCP Server configuration (deployment mode, API token, client config writes).
 
 If you prefer to run directly from the monorepo during development:
 

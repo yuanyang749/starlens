@@ -12,21 +12,22 @@ export const messages = {
     // Step 0: 语言选择(双语展示,所以只有一份)
     languagePrompt: "Language / 语言:\n  1) English\n  2) 中文",
 
-    // 欢迎与提示
-    wizardTitle: "Starlens Install Wizard",
-    wizardIntro: "This wizard guides you through Skill installation and optional MCP Server setup.",
+    // 欢迎与提示 — setup 向导
+    wizardTitle: "Starlens Setup Wizard",
+    wizardIntro: "This wizard installs the Agent Skill (via npx skills add) and configures MCP Server.",
+    // install-mcp 向导(只配 MCP)
+    mcpWizardTitle: "Starlens MCP Config Wizard",
+    mcpWizardIntro: "This wizard configures MCP Server for your AI clients. Skill installation is separate (use npx skills add).",
+
     sourceTip: "Tip: you are running from source. To use `stars` globally,\n      install first: npm install -g @starlens-app/cli",
 
-    // Step 2: 安装 Skill
-    installSkillPrompt: "Install Starlens Skill files? (Y/n)",
-    installingSkill: "Installing Starlens Agent Skill...",
-    skillSkippedAuto: "{0}: skipped auto-install (will output snippet later)",
-    skillInstalled: "✓ Skill installed: {0}",
+    // Step 1: 安装 Skill (仅 setup 向导)
+    installingSkill: "Installing Starlens Agent Skill via npx skills add...",
     skillInstallFailed: "⚠  Skill install failed: {0} ({1})",
-    skillInstallClientFailed: "⚠  {0}: {1}",
-    skillSkipped: "Skipped Skill installation.",
+    skillInstallFailedReason: "command failed or not found",
+    skillManualHint: "  Run manually later: {0}",
 
-    // Step 3: 配置 MCP
+    // Step 2: 配置 MCP
     mcpNoSupportedClients: "Selected clients do not support MCP. Skipping MCP configuration.",
     mcpConfigurePrompt: "Configure MCP Server? (supports {0}) (y/N)",
     hostedModeFlag: "✓ Hosted service mode (--hosted)",
@@ -86,21 +87,22 @@ export const messages = {
     // Step 0: 语言选择(双语展示,所以只有一份)
     languagePrompt: "Language / 语言:\n  1) English\n  2) 中文",
 
-    // 欢迎与提示
+    // 欢迎与提示 — setup 向导
     wizardTitle: "Starlens 安装向导",
-    wizardIntro: "本向导将引导你完成 Skill 安装和可选的 MCP Server 配置。",
+    wizardIntro: "本向导将安装 Agent Skill(通过 npx skills add)并配置 MCP Server。",
+    // install-mcp 向导(只配 MCP)
+    mcpWizardTitle: "Starlens MCP 配置向导",
+    mcpWizardIntro: "本向导将为你的 AI 客户端配置 MCP Server。Skill 安装是独立的(使用 npx skills add)。",
+
     sourceTip: "提示:你正在从源码运行。要全局使用 `stars`,\n      请先安装:npm install -g @starlens-app/cli",
 
-    // Step 2: 安装 Skill
-    installSkillPrompt: "安装 Starlens Skill 文件? (Y/n)",
-    installingSkill: "正在安装 Starlens Agent Skill...",
-    skillSkippedAuto: "{0}:跳过自动安装(稍后输出配置片段)",
-    skillInstalled: "✓ Skill 已安装:{0}",
+    // Step 1: 安装 Skill (仅 setup 向导)
+    installingSkill: "正在通过 npx skills add 安装 Starlens Agent Skill...",
     skillInstallFailed: "⚠  Skill 安装失败:{0} ({1})",
-    skillInstallClientFailed: "⚠  {0}: {1}",
-    skillSkipped: "已跳过 Skill 安装。",
+    skillInstallFailedReason: "命令失败或未找到",
+    skillManualHint: "  稍后手动运行:{0}",
 
-    // Step 3: 配置 MCP
+    // Step 2: 配置 MCP
     mcpNoSupportedClients: "所选客户端不支持 MCP,跳过 MCP 配置。",
     mcpConfigurePrompt: "配置 MCP Server?(支持 {0}) (y/N)",
     hostedModeFlag: "✓ 托管服务模式 (--hosted)",
