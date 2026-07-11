@@ -1,6 +1,6 @@
 "use client";
 
-// AI 对话流式 Hook
+// AI 对话流式 Hook（Web 端与移动端共享）
 // 职责：通过 SSE 接收 /api/ai/chat 的流式响应，管理消息状态与流式过程
 // 不依赖 @ai-sdk/react，直接用 fetch + ReadableStream 解析自定义 SSE 协议
 
@@ -24,7 +24,7 @@ export type ChatMessage = {
   // 流式过程中的状态提示（"正在搜索仓库…" 等），token 开始后清空
   statusText?: string;
   isStreaming?: boolean;
-  // 中文注释：消息创建时间（ISO 字符串），用于 hover 显示时间戳
+  // 中文注释：消息创建时间（ISO 字符串），用于显示时间戳
   createdAt?: string;
   // 中文注释：工具调用记录，用于可视化展示
   toolCalls?: { name: string; args: string }[];

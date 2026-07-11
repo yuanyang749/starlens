@@ -52,7 +52,7 @@ import {
 import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/components/ui/message";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
-import { useChatStream, type ChatCandidate, type ChatMessage } from "./use-chat-stream";
+import { useChatStream, type ChatCandidate, type ChatMessage } from "@starlens/workbench";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // 中文注释：欢迎页示例问题，覆盖不同工具类型（统计/推荐/分析），支持丰富的图文配置

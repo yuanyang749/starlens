@@ -21,6 +21,7 @@
     "@starlens-app/core": "workspace:*",
     "@starlens/mobile": "workspace:*",
     "@starlens/server": "workspace:*",
+    "@starlens/workbench": "workspace:*",
     "@visx/curve": "4.0.1-alpha.0",
     "@visx/event": "4.0.1-alpha.0",
     "@visx/gradient": "4.0.1-alpha.0",

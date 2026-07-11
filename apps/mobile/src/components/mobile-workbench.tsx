@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AiConfig, ProviderType, RepoSummary, TokenRecord } from "@starlens-app/core";
 import {
   Bot,
@@ -27,6 +27,7 @@ import {
   Star,
   Tag,
   Trash2,
+  Wrench,
   X,
 } from "lucide-react";
 import {
@@ -35,6 +36,7 @@ import {
   type SettingsSection,
   type WorkbenchMode,
 } from "@starlens/workbench";
+import { MobileChat } from "./mobile-chat";
 import {
   formatCompactNumber,
   formatDateTime,
@@ -46,6 +48,7 @@ type MobileWorkbenchProps = {
   basePath?: string;
   userName: string;
   userAvatarUrl?: string | null;
+  isAdmin?: boolean;
 };
 
 type ProviderForm = {
@@ -67,9 +70,11 @@ const providerOptions: Array<{ label: string; value: ProviderType }> = [
   { label: "DeepSeek Native", value: "deepseek_native" },
 ];
 
-const tabs: Array<{ mode: WorkbenchMode; label: string; icon: typeof Search }> = [
+// 中文注释：5 列 tab，AI 居中突出（药丸高亮填充）
+const tabs: Array<{ mode: WorkbenchMode; label: string; icon: typeof Search; isCenter?: boolean }> = [
   { mode: "all", label: "Stars", icon: Search },
   { mode: "favorites", label: "重点", icon: Star },
+  { mode: "chat", label: "AI", icon: Sparkles, isCenter: true },
   { mode: "recent", label: "最近", icon: Clock },
   { mode: "settings", label: "设置", icon: Settings2 },
 ];
@@ -339,6 +344,7 @@ function MobileSettings({
   section,
   providers,
   tokens,
+  isAdmin,
   onSectionChange,
   onReload,
   onError,
@@ -347,6 +353,7 @@ function MobileSettings({
   section: SettingsSection;
   providers: AiConfig[];
   tokens: TokenRecord[];
+  isAdmin: boolean;
   onSectionChange: (section: SettingsSection) => void;
   onReload: () => void;
   onError: (message: string | null) => void;
@@ -363,6 +370,53 @@ function MobileSettings({
   });
   const [tokenNote, setTokenNote] = useState("");
   const [copyableTokens, setCopyableTokens] = useState<Record<string, string>>({});
+
+  interface SystemDefaultStatus {
+    configured: boolean;
+    enabled: boolean;
+    model?: string;
+    providerType?: string;
+    baseUrl?: string;
+  }
+
+  const [systemDefault, setSystemDefault] = useState<SystemDefaultStatus | null>(null);
+
+  const loadSystemDefaultStatus = useCallback(async () => {
+    try {
+      const res = await fetchApi<SystemDefaultStatus>("/api/ai/system-default");
+      setSystemDefault(res);
+    } catch {
+      // 静默失败
+    }
+  }, []);
+
+  useEffect(() => {
+    if (section === "providers") {
+      void loadSystemDefaultStatus();
+    }
+  }, [section, loadSystemDefaultStatus]);
+
+  async function toggleDefaultProvider(id: string, isDefault: boolean) {
+    try {
+      await fetchApi<AiConfig>(`/api/ai/configs/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isDefault }),
+      });
+      onMessage(isDefault ? "已设为默认 Provider" : "已取消默认，系统将回退到默认 AI");
+      onReload();
+      void loadSystemDefaultStatus();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : "Provider 更新失败。");
+    }
+  }
+
+  async function activateSystemDefault() {
+    const activeUserConfig = providers.find((p) => p.isDefault);
+    if (activeUserConfig) {
+      await toggleDefaultProvider(activeUserConfig.id, false);
+    }
+  }
 
   async function createProvider() {
     try {
@@ -498,14 +552,56 @@ function MobileSettings({
               </button>
             </div>
           </article>
+
+          {/* ── 系统默认 AI Provider 卡片 ── */}
+          {systemDefault?.configured && systemDefault?.enabled ? (
+            (() => {
+              const hasUserDefault = providers.some((p) => p.isDefault);
+              const isUsingSystemDefault = !hasUserDefault;
+              return (
+                <article className="mobile-settings-card">
+                  <div className="mobile-settings-card__head">
+                    <strong>系统默认 AI</strong>
+                    {isUsingSystemDefault ? <span className="mobile-badge mobile-badge--active">使用中</span> : null}
+                  </div>
+                  <p className="mobile-settings-card__sub">
+                    {isAdmin
+                      ? `${systemDefault.providerType} · ${systemDefault.model || "默认模型"}`
+                      : "系统默认 AI 已启用"}
+                  </p>
+                  {!isUsingSystemDefault ? (
+                    <div className="mobile-settings-card__actions">
+                      <button type="button" className="mobile-button mobile-button--accent" onClick={activateSystemDefault}>
+                        <Bot className="h-4 w-4" />
+                        使用系统默认
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })()
+          ) : null}
+
+          {/* ── 自定义 Provider 列表 ── */}
           {providers.map((provider) => (
             <article key={provider.id} className="mobile-settings-card">
               <div className="mobile-settings-card__head">
                 <strong>{provider.displayName}</strong>
-                {provider.isDefault ? <span className="mobile-badge">默认</span> : null}
+                {provider.isDefault ? <span className="mobile-badge mobile-badge--active">使用中</span> : null}
               </div>
               <p className="mobile-settings-card__sub">{provider.providerType} · {provider.model}</p>
               <div className="mobile-settings-card__actions">
+                {provider.isDefault ? (
+                  <button type="button" className="mobile-button mobile-button--accent" onClick={() => toggleDefaultProvider(provider.id, false)}>
+                    <Wrench className="h-4 w-4" />
+                    取消默认
+                  </button>
+                ) : (
+                  <button type="button" className="mobile-button mobile-button--accent" onClick={() => toggleDefaultProvider(provider.id, true)}>
+                    <Check className="h-4 w-4" />
+                    设为默认
+                  </button>
+                )}
                 <button type="button" className="mobile-button mobile-button--ghost" onClick={() => validateProvider(provider.id)}>
                   <ShieldCheck className="h-4 w-4" />
                   验证
@@ -562,7 +658,7 @@ function MobileSettings({
   );
 }
 
-export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: MobileWorkbenchProps) {
+export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl, isAdmin = false }: MobileWorkbenchProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const repoParam = searchParams.get("repo");
@@ -607,6 +703,7 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
   const canSearch = Boolean(workbench.queryDraft.trim());
   const showingDetail = Boolean(repoParam && workbench.selectedRepo);
   const isSettings = workbench.mode === "settings";
+  const isChat = workbench.mode === "chat";
 
   return (
     <main className="mobile-shell">
@@ -627,7 +724,7 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
             </div>
           </div>
           <div className="mobile-title-actions">
-            {!isSettings ? (
+            {!isSettings && !isChat ? (
               <button
                 type="button"
                 className="mobile-icon-button"
@@ -638,7 +735,7 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
                 <RefreshCw className={workbench.syncing ? "h-5 w-5 animate-spin" : "h-5 w-5"} />
               </button>
             ) : null}
-            {!isSettings ? (
+            {!isSettings && !isChat ? (
               <button
                 type="button"
                 className="mobile-icon-button"
@@ -674,14 +771,14 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
           </div>
         </div>
 
-        {!isSettings && searchCollapsed ? (
+        {!isSettings && !isChat && searchCollapsed ? (
           <button type="button" className="mobile-search-summary" onClick={() => setSearchCollapsed(false)}>
             <Search className="h-4 w-4" />
             <span>{workbench.submittedQuery || workbench.queryDraft || "搜索区已收起"}</span>
           </button>
         ) : null}
 
-        {!isSettings && !searchCollapsed ? (
+        {!isSettings && !isChat && !searchCollapsed ? (
           <>
             <div className="mobile-search">
               <button
@@ -767,10 +864,31 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
           section={workbench.settingsSection}
           providers={workbench.providers}
           tokens={workbench.tokens}
+          isAdmin={isAdmin}
           onSectionChange={actions.setSettingsSection}
           onReload={() => void actions.loadSettings()}
           onError={actions.setError}
           onMessage={actions.setMessage}
+        />
+      ) : isChat ? (
+        <MobileChat
+          userName={userName}
+          userAvatarUrl={userAvatarUrl}
+          onNavigateToRepo={(fullNameOrId) => {
+            // 中文注释：智能兼容本地 ID 跳转与正文仓库名(fullName)跳转/GitHub 外部链接降级
+            if (fullNameOrId.includes("/")) {
+              const found = workbench.repos.find((r) => r.fullName === fullNameOrId);
+              if (found) {
+                actions.setSelectedId(found.id);
+                router.push(`${basePath}?repo=${encodeURIComponent(found.id)}`, { scroll: false });
+              } else {
+                window.open(`https://github.com/${fullNameOrId}`, "_blank", "noopener,noreferrer");
+              }
+            } else {
+              actions.setSelectedId(fullNameOrId);
+              router.push(`${basePath}?repo=${encodeURIComponent(fullNameOrId)}`, { scroll: false });
+            }
+          }}
         />
       ) : (
         <>
@@ -837,11 +955,15 @@ export function MobileWorkbench({ basePath = "/", userName, userAvatarUrl }: Mob
       ) : null}
 
       <nav className="mobile-tabbar" aria-label="移动端工作台导航">
-        {tabs.map(({ mode, label, icon: Icon }) => (
+        {tabs.map(({ mode, label, icon: Icon, isCenter }) => (
           <button
             key={mode}
             type="button"
-            className={workbench.mode === mode ? "mobile-tab-button is-active" : "mobile-tab-button"}
+            className={[
+              "mobile-tab-button",
+              workbench.mode === mode ? "is-active" : "",
+              isCenter ? "is-center" : "",
+            ].filter(Boolean).join(" ")}
             aria-current={workbench.mode === mode}
             onClick={() => actions.setMode(mode)}
           >

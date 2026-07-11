@@ -10,6 +10,10 @@ import {
   type TokenRecord,
 } from "@starlens-app/core";
 
+// 中文注释：共享 AI 对话流式 Hook 及类型，供 Web 端和移动端导入
+export { useChatStream } from "./use-chat-stream";
+export type { ChatCandidate, ChatMessage } from "./use-chat-stream";
+
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = { ok: false; error: { code: string; message: string } };
 type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
@@ -48,7 +52,7 @@ export type AiAskResult = {
   providerConfigSource?: "user_default" | "system_default" | "none";
 };
 
-export type WorkbenchMode = "all" | "favorites" | "recent" | "settings";
+export type WorkbenchMode = "all" | "favorites" | "recent" | "chat" | "settings";
 
 export type SettingsSection = "general" | "providers" | "tokens";
 
@@ -156,7 +160,8 @@ function buildSearchParams(input: {
 }
 
 export function useMobileWorkbench(): MobileWorkbenchState {
-  const [mode, setMode] = useState<WorkbenchMode>("all");
+  // 中文注释：默认进入 chat 模式（中间 tab，视觉突出的 AI 对话入口）
+  const [mode, setMode] = useState<WorkbenchMode>("chat");
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("general");
   const [queryDraft, setQueryDraft] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
@@ -238,7 +243,7 @@ export function useMobileWorkbench(): MobileWorkbenchState {
   }, [fetchSearchPage]);
 
   const loadMore = useCallback(async () => {
-    if (mode === "settings" || loadingRepos || loadingMore || !hasMore) return;
+    if (mode === "settings" || mode === "chat" || loadingRepos || loadingMore || !hasMore) return;
 
     if (aiSearchMode) {
       setPage((current) => Math.min(current + 1, totalPages));
@@ -266,7 +271,7 @@ export function useMobileWorkbench(): MobileWorkbenchState {
   }, [aiSearchMode, fetchSearchPage, hasMore, loadingMore, loadingRepos, mode, page, totalPages]);
 
   useEffect(() => {
-    if (mode === "settings" || aiSearchMode) return;
+    if (mode === "settings" || mode === "chat" || aiSearchMode) return;
     const controller = new AbortController();
     void refreshList(controller.signal);
     return () => controller.abort();
@@ -311,7 +316,7 @@ export function useMobileWorkbench(): MobileWorkbenchState {
   const selectMode = useCallback((nextMode: WorkbenchMode) => {
     setMode(nextMode);
     setPage(1);
-    if (nextMode !== "settings") {
+    if (nextMode !== "settings" && nextMode !== "chat") {
       setAiSearchMode(false);
     }
     if (nextMode === "recent") setSort("recent");
@@ -453,14 +458,23 @@ export function useMobileWorkbench(): MobileWorkbenchState {
   }, []);
 
   useEffect(() => {
-    if (mode === "settings") void loadSettings();
-  }, [loadSettings, mode]);
+    if (mode === "settings") {
+      void loadSettings();
+    } else if (mode === "chat") {
+      // 中文注释：进入 chat 模式时触发仓库列表首次加载（之前 chat 模式跳过了 refreshList effect）
+      // 这样切到 Stars/重点/最近 时不需等待
+      if (repos.length === 0 && !loadingRepos) {
+        const controller = new AbortController();
+        void refreshList(controller.signal);
+      }
+    }
+  }, [loadSettings, mode, repos.length, loadingRepos, refreshList]);
 
   // 中文注释：首次登录时若仓库列表为空（无任何筛选条件），自动触发同步，避免用户手动点击。
   useEffect(() => {
     if (loadingRepos) return;
     if (hasAutoSyncedRef.current) return;
-    if (total > 0 || aiSearchMode || mode === "settings") return;
+    if (total > 0 || aiSearchMode || mode === "settings" || mode === "chat") return;
     if (submittedQuery || language || tagFilter) return;
     hasAutoSyncedRef.current = true;
     void syncNow();
