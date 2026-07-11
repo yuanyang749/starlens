@@ -76,14 +76,14 @@ Starlens is structured as a monorepo workspace managed by `pnpm`.
 - **Top-level support directories** (not part of the app build graph):
   - `scripts/`: Workspace helper scripts.
     - `with-env.mjs`: Loads a `.env` file then runs the wrapped command (used by `dev`, `build`, `db:*` scripts).
-    - `sync-skill.mjs`: Copies `agent-skills/starlens` into the published CLI package so `stars install-skill` can ship it. Runs automatically on `pnpm install` (postinstall). **Edit the skill in `agent-skills/starlens`, never a generated copy.**
+    - `sync-skill.mjs`: Copies `skills/starlens` into the published CLI package so `stars setup` can ship it. Runs automatically on `pnpm install` (postinstall). **Edit the skill in `skills/starlens`, never a generated copy.**
     - `check-api-shims.mjs`: Web↔Mobile API route parity check (see below).
     - `deploy.mjs`: Deployment helper.
     - `bin/`: Small CLI shims.
   - `drizzle/`: Drizzle ORM migration files and snapshots.
   - `docs/`: User-facing product docs (features, architecture, integrations, deployment) plus internal design notes (`project-plan`, `environments`, `api-contract`, `database-schema`, `sync-flow-design`, `agent-integration`).
   - `deploy/`: Self-hosting assets — `docker-compose.yml`, `.env.production.example`, an OpenResty config template (`.example`), and a Let's Encrypt TLS script (`issue-letsencrypt.sh`).
-  - `agent-skills/starlens`: Source of truth for the one-click installable Agent Skill (`SKILL.md`, `agents/openai.yaml`, `references/http-api.md`). Synced into the CLI by `scripts/sync-skill.mjs`.
+  - `skills/starlens`: Source of truth for the Agent Skill (`SKILL.md`, `agents/openai.yaml`, `references/http-api.md`). Compatible with `npx skills add`. Synced into the CLI by `scripts/sync-skill.mjs`.
   - `discuss/`: Design discussions and marketing drafts (e.g. workbench refactor plans, contest/WeChat write-ups). Context only.
   - `design-assets/`, `marketing-video/`: Static media assets; never compiled or bundled.
 

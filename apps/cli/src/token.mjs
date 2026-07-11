@@ -54,7 +54,7 @@ export async function readStdin() {
   return input.trim();
 }
 
-// 从 ~/.starlens/agent.env 读取已存的 token，供 install-skill 向导复用。
+// 从 ~/.starlens/agent.env 读取已存的 token，供 setup/install-mcp 向导复用。
 // 修复：兼容单引号 / 无引号 / 双引号三种写法。
 export async function readExistingToken() {
   const envPath = agentEnvPath();
@@ -94,7 +94,7 @@ export async function agentEnvExists() {
   }
 }
 
-// 写入 CLI 配置文件（~/.config/starlens/config.json），持久化 install-skill 选择的 apiBaseUrl，
+// 写入 CLI 配置文件（~/.config/starlens/config.json），持久化 setup/install-mcp 选择的 apiBaseUrl，
 // 让 ask/search/sync 等命令自动使用同一服务地址，无需每次传 --api-base-url。
 export async function saveCliConfig(updates) {
   const path = cliConfigPath();

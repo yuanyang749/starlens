@@ -176,7 +176,7 @@ describe("tokens settings interactions", () => {
     await act(async () => agentTabBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
     expect(el.textContent).toContain("STARLENS_TOKEN");
-    expect(el.textContent).toContain("agent-skills/starlens/SKILL.md");
+    expect(el.textContent).toContain("skills/starlens/SKILL.md");
     expect(el.textContent).not.toContain("stl_secret_token");
     expect(el.textContent).toContain("stl_secret********_token");
 
@@ -194,7 +194,7 @@ describe("tokens settings interactions", () => {
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_TOKEN"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("stl_secret_token"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("STARLENS_SKILL_FILE"));
-    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("agent-skills/starlens/SKILL.md"));
+    expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("skills/starlens/SKILL.md"));
     expect(writeTextMock).toHaveBeenNthCalledWith(2, expect.stringContaining("/api/search"));
     expect(writeTextMock).toHaveBeenNthCalledWith(3, expect.stringContaining("STARLENS_TOKEN"));
     expect(writeTextMock).toHaveBeenNthCalledWith(3, expect.stringContaining("stl_secret_token"));

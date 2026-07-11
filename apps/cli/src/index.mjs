@@ -33,4 +33,4 @@ if (isMainEntry()) {
 
 export { main } from "./main.mjs";
 export { CliError } from "./errors.mjs";
-export { appendTomlSection } from "./install-skill/mcp-config.mjs";
+export { appendTomlSection } from "./install-mcp/mcp-config.mjs";

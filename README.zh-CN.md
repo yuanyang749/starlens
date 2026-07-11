@@ -15,7 +15,7 @@ Starlens 是一个面向个人使用的 GitHub Stars 知识工作台。它会把
 - 支持高级搜索过滤：Star 数区间、收藏时间范围、最近推送时间、备注内容关键词等。
 - 支持基于自然语言的 AI 问答，内置 8 种意图类型：统计数量、存在性检查、双仓库对比、分布统计、推荐、单仓库分析、条件过滤和语义搜索。
 - 为 CLI、MCP 和 Agent 工作流提供个人 API Token。
-- 通过 `stars install-skill` 一键安装 Agent Skill，支持 Claude Code、Cursor、Codex、opencode 等主流 AI 客户端。
+- 通过 `stars setup` 一键安装 Agent Skill（基于 `npx skills add`）并配置 MCP Server，或通过 `stars install-mcp` 仅配置 MCP。
 - 在 `/docs` 提供静态产品文档。
 
 ## 当前范围
@@ -28,7 +28,7 @@ Starlens 是一个面向个人使用的 GitHub Stars 知识工作台。它会把
 - 通过 `packages/server` 统一承载 API route 实现。
 - GitHub Stars 同步与仓库搜索（含高级过滤字段）。
 - AI provider 配置、校验和 8 种意图的 AI 问答链路。
-- CLI（`@starlens-app/cli`）已发布至 npm：`stars` 命令支持登录、状态、同步、搜索、查看、打开、问答、收藏、备注、标签和 `install-skill`。
+- CLI（`@starlens-app/cli`）已发布至 npm：`stars` 命令支持登录、状态、同步、搜索、查看、打开、问答、收藏、备注、标签、`setup` 和 `install-mcp`。
 - MCP stdio server，供 IDE 和本地 Agent 使用。
 - HTTP MCP 端点，供托管客户端（Claude Code、Cursor）使用。
 - Agent Skill 一键安装，支持 Claude Code、Cursor、Codex、opencode、OpenClaw、Hermes 和 VS Code。
@@ -212,13 +212,19 @@ stars note owner/repo --set "Review for MCP integration"
 stars tag add owner/repo agent
 ```
 
-一键安装 Agent Skill：
+一键安装 Agent Skill（基于 `npx skills add`）并配置 MCP Server：
 
 ```bash
-stars install-skill
+stars setup
 ```
 
-向导会引导你选择客户端（Claude Code、Cursor、Codex、opencode 等），自动安装 Skill 文件，并可选写入 MCP 配置。
+或仅配置 MCP Server（跳过 Skill 安装）：
+
+```bash
+stars install-mcp
+```
+
+`setup` 向导会执行 `npx skills add https://github.com/yuanyang749/starlens` 自动安装 Skill 到检测到的 AI 客户端，然后引导你完成 MCP Server 配置（部署模式、API Token、客户端配置写入）。
 
 如果在 monorepo 内开发时直接调用：
 

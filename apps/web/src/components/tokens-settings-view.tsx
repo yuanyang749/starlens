@@ -37,7 +37,7 @@ function buildCliSetupSnippet(rawToken: string) {
 
 function buildAgentSkillSnippet(rawToken: string) {
   return [
-    "STARLENS_SKILL_FILE=/path/to/starlens/agent-skills/starlens/SKILL.md",
+    "STARLENS_SKILL_FILE=/path/to/starlens/skills/starlens/SKILL.md",
     `STARLENS_TOKEN=${shellQuote(rawToken)}`,
     `STARLENS_API_BASE_URL=${shellQuote(currentApiBaseUrl())}`,
     "",
