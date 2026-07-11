@@ -141,19 +141,19 @@ corepack pnpm dev:mobile
 
 ## Environment Variables
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | PostgreSQL connection string. |
-| `AUTH_SECRET` | Yes | NextAuth session secret. |
-| `NEXTAUTH_URL` | Yes | Public app URL, for example `http://localhost:3000`. |
-| `AUTH_GITHUB_ID` | Yes | GitHub OAuth client ID. |
-| `AUTH_GITHUB_SECRET` | Yes | GitHub OAuth client secret. |
-| `TOKEN_ENCRYPTION_SECRET` | Yes | Secret used to encrypt provider keys and personal tokens. |
-| `SYSTEM_AI_API_KEY` | Optional | System-level AI key used only when the user has no default provider. |
-| `SYSTEM_AI_BASE_URL` | Optional | System-level OpenAI-compatible fallback base URL. |
-| `SYSTEM_AI_MODEL` | Optional | System-level fallback model name. |
-| `SYSTEM_AI_PROVIDER_TYPE` | Optional | System-level provider type, defaults to `openai_compatible`. |
-| `SYSTEM_AI_ENABLED` | Optional | Set to `false` to disable the system-level fallback. |
+| Variable                  | Required | Purpose                                                              |
+| ------------------------- | -------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`            | Yes      | PostgreSQL connection string.                                        |
+| `AUTH_SECRET`             | Yes      | NextAuth session secret.                                             |
+| `NEXTAUTH_URL`            | Yes      | Public app URL, for example `http://localhost:3000`.                 |
+| `AUTH_GITHUB_ID`          | Yes      | GitHub OAuth client ID.                                              |
+| `AUTH_GITHUB_SECRET`      | Yes      | GitHub OAuth client secret.                                          |
+| `TOKEN_ENCRYPTION_SECRET` | Yes      | Secret used to encrypt provider keys and personal tokens.            |
+| `SYSTEM_AI_API_KEY`       | Optional | System-level AI key used only when the user has no default provider. |
+| `SYSTEM_AI_BASE_URL`      | Optional | System-level OpenAI-compatible fallback base URL.                    |
+| `SYSTEM_AI_MODEL`         | Optional | System-level fallback model name.                                    |
+| `SYSTEM_AI_PROVIDER_TYPE` | Optional | System-level provider type, defaults to `openai_compatible`.         |
+| `SYSTEM_AI_ENABLED`       | Optional | Set to `false` to disable the system-level fallback.                 |
 
 Legacy `OPENAI_*` keys are still read for migration compatibility, but new deployments should use `SYSTEM_AI_*`.
 
@@ -161,20 +161,20 @@ For hosted Neon validation, copy `.env.neon.example` to `.env.neon` and use the 
 
 ## Development Commands
 
-| Command | Description |
-| --- | --- |
-| `corepack pnpm dev` | Start the Web app with `.env`. |
-| `corepack pnpm dev:mobile` | Start the Mobile app with `.env`. |
-| `corepack pnpm build` | Build the Web app. |
-| `corepack pnpm build:mobile` | Build the Mobile app. |
-| `corepack pnpm build:packages` | Build internal packages (run this first if you see type errors). |
-| `corepack pnpm lint` | Run Web lint checks. |
-| `corepack pnpm lint:mobile` | Run Mobile lint checks. |
-| `corepack pnpm test` | Run Web tests. |
-| `corepack pnpm test:mobile` | Run Mobile tests. |
-| `corepack pnpm db:migrate:local` | Apply migrations to local PostgreSQL. |
-| `corepack pnpm db:check:local` | Check the local database connection. |
-| `corepack pnpm mcp:start` | Start the local Starlens MCP server. |
+| Command                          | Description                                                      |
+| -------------------------------- | ---------------------------------------------------------------- |
+| `corepack pnpm dev`              | Start the Web app with `.env`.                                   |
+| `corepack pnpm dev:mobile`       | Start the Mobile app with `.env`.                                |
+| `corepack pnpm build`            | Build the Web app.                                               |
+| `corepack pnpm build:mobile`     | Build the Mobile app.                                            |
+| `corepack pnpm build:packages`   | Build internal packages (run this first if you see type errors). |
+| `corepack pnpm lint`             | Run Web lint checks.                                             |
+| `corepack pnpm lint:mobile`      | Run Mobile lint checks.                                          |
+| `corepack pnpm test`             | Run Web tests.                                                   |
+| `corepack pnpm test:mobile`      | Run Mobile tests.                                                |
+| `corepack pnpm db:migrate:local` | Apply migrations to local PostgreSQL.                            |
+| `corepack pnpm db:check:local`   | Check the local database connection.                             |
+| `corepack pnpm mcp:start`        | Start the local Starlens MCP server.                             |
 
 Package-level tests:
 
@@ -189,7 +189,7 @@ corepack pnpm --filter @starlens/workbench test
 The CLI is available as a standalone npm package:
 
 ```bash
-npm install -g @starlens-app/cli
+npm install -g @starlens-app/cli@latest
 ```
 
 Create a personal token in the Web app, then log in:
@@ -316,24 +316,24 @@ Cursor-style stdio config:
 
 ### Available MCP Tools
 
-| Tool | Purpose |
-| --- | --- |
-| `search_stars` | Search and filter starred repositories |
-| `show_star` | View a single repository's detail |
-| `sync_stars` | Trigger a GitHub Stars sync |
-| `favorite_star` | Mark a repository as favorite (local flag only — does not change your real GitHub star) |
-| `unfavorite_star` | Remove favorite state (local flag only — does not change your real GitHub star) |
-| `star_repo` | Actually star a repository on GitHub (any owner/repo, even one you've never starred) |
-| `unstar_repo` | Actually remove your GitHub star from a repository |
-| `set_star_note` | Set or clear a repository note |
-| `add_star_tag` | Add a tag to a repository |
-| `remove_star_tag` | Remove a tag from a repository |
-| `ask_stars` | Natural language AI query over your Stars |
-| `analyze_repo` | Analyze a repo and suggest tags/notes (starred or not) |
-| `recommend_for_task` | Recommend starred repos relevant to a coding task |
-| `find_related` | Find starred repos related to a given repo |
-| `suggest_organization` | Suggest duplicates/stale/untagged repos to clean up |
-| `get_sync_summary` | Summarize what changed since the last sync |
+| Tool                   | Purpose                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `search_stars`         | Search and filter starred repositories                                                  |
+| `show_star`            | View a single repository's detail                                                       |
+| `sync_stars`           | Trigger a GitHub Stars sync                                                             |
+| `favorite_star`        | Mark a repository as favorite (local flag only — does not change your real GitHub star) |
+| `unfavorite_star`      | Remove favorite state (local flag only — does not change your real GitHub star)         |
+| `star_repo`            | Actually star a repository on GitHub (any owner/repo, even one you've never starred)    |
+| `unstar_repo`          | Actually remove your GitHub star from a repository                                      |
+| `set_star_note`        | Set or clear a repository note                                                          |
+| `add_star_tag`         | Add a tag to a repository                                                               |
+| `remove_star_tag`      | Remove a tag from a repository                                                          |
+| `ask_stars`            | Natural language AI query over your Stars                                               |
+| `analyze_repo`         | Analyze a repo and suggest tags/notes (starred or not)                                  |
+| `recommend_for_task`   | Recommend starred repos relevant to a coding task                                       |
+| `find_related`         | Find starred repos related to a given repo                                              |
+| `suggest_organization` | Suggest duplicates/stale/untagged repos to clean up                                     |
+| `get_sync_summary`     | Summarize what changed since the last sync                                              |
 
 Do not commit real API tokens or MCP client configs containing secrets.
 

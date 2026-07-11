@@ -141,19 +141,19 @@ corepack pnpm dev:mobile
 
 ## 环境变量
 
-| 变量 | 是否必填 | 用途 |
-| --- | --- | --- |
-| `DATABASE_URL` | 是 | PostgreSQL 连接串。 |
-| `AUTH_SECRET` | 是 | NextAuth 会话密钥。 |
-| `NEXTAUTH_URL` | 是 | 对外访问地址，例如 `http://localhost:3000`。 |
-| `AUTH_GITHUB_ID` | 是 | GitHub OAuth Client ID。 |
-| `AUTH_GITHUB_SECRET` | 是 | GitHub OAuth Client Secret。 |
-| `TOKEN_ENCRYPTION_SECRET` | 是 | 用于加密 provider key 和个人 token。 |
-| `SYSTEM_AI_API_KEY` | 可选 | 系统级默认 AI 密钥，仅在用户没有默认 Provider 时使用。 |
-| `SYSTEM_AI_BASE_URL` | 可选 | 系统级 OpenAI-compatible 兜底 Base URL。 |
-| `SYSTEM_AI_MODEL` | 可选 | 系统级兜底模型名。 |
-| `SYSTEM_AI_PROVIDER_TYPE` | 可选 | 系统级 Provider 类型，默认 `openai_compatible`。 |
-| `SYSTEM_AI_ENABLED` | 可选 | 设为 `false` 可关闭系统级兜底。 |
+| 变量                      | 是否必填 | 用途                                                   |
+| ------------------------- | -------- | ------------------------------------------------------ |
+| `DATABASE_URL`            | 是       | PostgreSQL 连接串。                                    |
+| `AUTH_SECRET`             | 是       | NextAuth 会话密钥。                                    |
+| `NEXTAUTH_URL`            | 是       | 对外访问地址，例如 `http://localhost:3000`。           |
+| `AUTH_GITHUB_ID`          | 是       | GitHub OAuth Client ID。                               |
+| `AUTH_GITHUB_SECRET`      | 是       | GitHub OAuth Client Secret。                           |
+| `TOKEN_ENCRYPTION_SECRET` | 是       | 用于加密 provider key 和个人 token。                   |
+| `SYSTEM_AI_API_KEY`       | 可选     | 系统级默认 AI 密钥，仅在用户没有默认 Provider 时使用。 |
+| `SYSTEM_AI_BASE_URL`      | 可选     | 系统级 OpenAI-compatible 兜底 Base URL。               |
+| `SYSTEM_AI_MODEL`         | 可选     | 系统级兜底模型名。                                     |
+| `SYSTEM_AI_PROVIDER_TYPE` | 可选     | 系统级 Provider 类型，默认 `openai_compatible`。       |
+| `SYSTEM_AI_ENABLED`       | 可选     | 设为 `false` 可关闭系统级兜底。                        |
 
 旧的 `OPENAI_*` 变量仍会被读取以兼容迁移，但新部署应使用 `SYSTEM_AI_*`。
 
@@ -161,20 +161,20 @@ corepack pnpm dev:mobile
 
 ## 常用命令
 
-| 命令 | 说明 |
-| --- | --- |
-| `corepack pnpm dev` | 用 `.env` 启动 Web。 |
-| `corepack pnpm dev:mobile` | 用 `.env` 启动 Mobile。 |
-| `corepack pnpm build` | 构建 Web。 |
-| `corepack pnpm build:mobile` | 构建 Mobile。 |
-| `corepack pnpm build:packages` | 构建内部包（遇到类型报错时先执行这个）。 |
-| `corepack pnpm lint` | 运行 Web lint。 |
-| `corepack pnpm lint:mobile` | 运行 Mobile lint。 |
-| `corepack pnpm test` | 运行 Web 测试。 |
-| `corepack pnpm test:mobile` | 运行 Mobile 测试。 |
-| `corepack pnpm db:migrate:local` | 应用本地数据库迁移。 |
-| `corepack pnpm db:check:local` | 检查本地数据库连接。 |
-| `corepack pnpm mcp:start` | 启动本地 Starlens MCP server。 |
+| 命令                             | 说明                                     |
+| -------------------------------- | ---------------------------------------- |
+| `corepack pnpm dev`              | 用 `.env` 启动 Web。                     |
+| `corepack pnpm dev:mobile`       | 用 `.env` 启动 Mobile。                  |
+| `corepack pnpm build`            | 构建 Web。                               |
+| `corepack pnpm build:mobile`     | 构建 Mobile。                            |
+| `corepack pnpm build:packages`   | 构建内部包（遇到类型报错时先执行这个）。 |
+| `corepack pnpm lint`             | 运行 Web lint。                          |
+| `corepack pnpm lint:mobile`      | 运行 Mobile lint。                       |
+| `corepack pnpm test`             | 运行 Web 测试。                          |
+| `corepack pnpm test:mobile`      | 运行 Mobile 测试。                       |
+| `corepack pnpm db:migrate:local` | 应用本地数据库迁移。                     |
+| `corepack pnpm db:check:local`   | 检查本地数据库连接。                     |
+| `corepack pnpm mcp:start`        | 启动本地 Starlens MCP server。           |
 
 包级测试：
 
@@ -189,7 +189,7 @@ corepack pnpm --filter @starlens/workbench test
 CLI 已发布到 npm，可全局安装：
 
 ```bash
-npm install -g @starlens-app/cli
+npm install -g @starlens-app/cli@latest
 ```
 
 先在 Web 里创建个人 token，再登录：
@@ -316,24 +316,24 @@ Cursor 风格的 stdio 配置：
 
 ### 可用 MCP 工具
 
-| 工具 | 用途 |
-| --- | --- |
-| `search_stars` | 搜索和过滤 starred repositories |
-| `show_star` | 查看单个仓库详情 |
-| `sync_stars` | 触发 GitHub Stars 同步 |
-| `favorite_star` | 标记重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态） |
-| `unfavorite_star` | 取消重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态） |
-| `star_repo` | 真实调用 GitHub star API（支持任意 owner/repo，哪怕之前从未收藏过） |
-| `unstar_repo` | 真实调用 GitHub unstar API，从 GitHub 上移除 star |
-| `set_star_note` | 设置或清空备注 |
-| `add_star_tag` | 添加标签 |
-| `remove_star_tag` | 删除标签 |
-| `ask_stars` | 对收藏仓库发起自然语言 AI 问答 |
-| `analyze_repo` | 分析仓库并给出标签/备注建议（已收藏或未收藏均可） |
-| `recommend_for_task` | 根据编码任务从收藏中推荐相关仓库 |
-| `find_related` | 发现与某个仓库相关的收藏仓库 |
-| `suggest_organization` | 建议清理重复/过时/未打标签的仓库 |
-| `get_sync_summary` | 汇总自上次同步以来的变化 |
+| 工具                   | 用途                                                                |
+| ---------------------- | ------------------------------------------------------------------- |
+| `search_stars`         | 搜索和过滤 starred repositories                                     |
+| `show_star`            | 查看单个仓库详情                                                    |
+| `sync_stars`           | 触发 GitHub Stars 同步                                              |
+| `favorite_star`        | 标记重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态）        |
+| `unfavorite_star`      | 取消重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态）        |
+| `star_repo`            | 真实调用 GitHub star API（支持任意 owner/repo，哪怕之前从未收藏过） |
+| `unstar_repo`          | 真实调用 GitHub unstar API，从 GitHub 上移除 star                   |
+| `set_star_note`        | 设置或清空备注                                                      |
+| `add_star_tag`         | 添加标签                                                            |
+| `remove_star_tag`      | 删除标签                                                            |
+| `ask_stars`            | 对收藏仓库发起自然语言 AI 问答                                      |
+| `analyze_repo`         | 分析仓库并给出标签/备注建议（已收藏或未收藏均可）                   |
+| `recommend_for_task`   | 根据编码任务从收藏中推荐相关仓库                                    |
+| `find_related`         | 发现与某个仓库相关的收藏仓库                                        |
+| `suggest_organization` | 建议清理重复/过时/未打标签的仓库                                    |
+| `get_sync_summary`     | 汇总自上次同步以来的变化                                            |
 
 不要把真实 token 或包含 secret 的 MCP 配置提交到仓库。
 
