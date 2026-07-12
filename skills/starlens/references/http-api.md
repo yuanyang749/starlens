@@ -43,6 +43,11 @@ Query parameters:
 | `owner` | string | Filter by GitHub owner. |
 | `tag` | string | Filter by StarLens tag. |
 | `favorite` | boolean | Filter favorites. |
+| `minStars` / `maxStars` | integer | Filter by non-negative GitHub star-count bounds. |
+| `starredAfter` / `starredBefore` | ISO timestamp | Filter by the time the user starred the repository. |
+| `pushedAfter` | ISO timestamp | Filter by the repository's latest push time. |
+| `hasNote` | boolean | Filter by whether a non-empty personal note exists. |
+| `noteContains` | string | Case-insensitive substring match over personal notes. |
 
 Use this endpoint before detail lookup when the user provides a topic, partial name, or ambiguous repository reference.
 
@@ -139,9 +144,9 @@ Remove a tag:
 { "question": "哪些 starred repos 适合做本地 RAG 原型？" }
 ```
 
-Use this endpoint for synthesis, comparison, recommendations, and natural-language questions over the user's starred repositories.
+Use this endpoint for one-shot synthesis, comparison, recommendations, and natural-language questions over the user's starred repositories. The server runs a tool-calling Agent that may search, inspect, aggregate, recommend, organize, or perform explicitly requested repository updates. It only returns a successful answer after the Agent submits results grounded in real tool output.
 
-The server chooses the user's default AI Provider first and falls back to the system default AI configuration when no user default is available.
+The server chooses the user's default AI Provider first and falls back to the system default AI configuration when no compatible user default is available. The Provider must expose OpenAI-compatible Chat Completions with tool calling.
 
 ## AI Recommend For Task
 
@@ -551,7 +556,7 @@ Use this endpoint when the user mentions organizing, cleaning up, deduplicating,
 
 `GET /api/sync/summary`
 
-同步变化摘要。返回最近一次同步的新增 / 消失 / 变化仓库。Pull-based，agent 在新会话或用户问"最近变化"时主动调用。数据来源为 `sync_changes` 表（在 sync 流程中对比前后快照写入）。
+同步变化摘要。Pull-based，agent 在新会话或用户问"最近变化"时主动调用。当前是轻量实现：`added` 根据 `last_synced_at` 推断，可能包含元数据更新过的仓库；`removed` 根据 `unstarred_at` 推断；`changed` 暂为空。不要把结果描述成精确的逐字段变更历史。
 
 Query parameters:
 
@@ -573,24 +578,29 @@ Response:
 {
   "ok": true,
   "data": {
-    "lastSyncAt": "2026-07-03T10:00:00Z",
-    "added": [
-      { "repoFullName": "new/repo", "stargazersCount": 5000 }
-    ],
-    "removed": [
-      { "repoFullName": "gone/repo" }
-    ],
-    "changed": [
-      {
-        "repoFullName": "updated/repo",
-        "changes": {
-          "stargazersCount": { "from": 1000, "to": 1200 }
+    "data": {
+      "lastSyncAt": "2026-07-03T10:00:00.000Z",
+      "since": "2026-07-01T00:00:00.000Z",
+      "added": [
+        {
+          "repoId": "uuid",
+          "fullName": "new/repo",
+          "description": "Repository description",
+          "htmlUrl": "https://github.com/new/repo",
+          "stargazersCount": 5000,
+          "language": "TypeScript",
+          "detectedAt": "2026-07-03T10:00:00.000Z"
         }
-      }
-    ],
-    "totalCount": { "added": 1, "removed": 1, "changed": 1 }
+      ],
+      "removed": [],
+      "changed": [],
+      "totalCount": { "added": 1, "removed": 0, "changed": 0 }
+    },
+    "meta": { "empty": false },
+    "suggestedNextActions": [],
+    "reasoningHints": "当前为轻量实现，added 可能包含 changed。"
   }
 }
 ```
 
-Use this endpoint when the user starts a new session, asks "what's new", or wants to know what changed since their last sync.
+Use this endpoint when the user asks "what's new" or wants a lightweight summary since a known timestamp. Explain the inference limitation when precision matters.

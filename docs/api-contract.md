@@ -1,5 +1,9 @@
 # Starlens API 契约文档
 
+> 当前工程参考。最后按 `packages/server/src/routes/` 和
+> `skills/starlens/references/http-api.md` 核对：2026-07-11。
+> 路由实现是最终权威来源；本文用于稳定跨 Web、Mobile、CLI 和 Agent 的公共约定。
+
 ## 1. 文档目标
 
 这份文档用于定义 Starlens `v1` 的 HTTP API 契约，作为前后端、CLI 和 agent 的共同实现依据。
@@ -24,8 +28,9 @@
 ### 2.2 数据格式
 
 - 请求体：`application/json`
-- 响应体：`application/json`
-- 文件上传和流式响应不在 `v1` 范围内
+- 常规响应体：`application/json`
+- AI 多轮对话：`text/event-stream`（SSE）
+- 文件上传不在 `v1` 范围内
 
 ### 2.3 时间格式
 
@@ -76,9 +81,10 @@ Authorization: Bearer <token>
 - 查看仓库详情
 - 更新标签 / 备注 / 收藏
 - 触发同步
-- 访问 AI 配置读取和 AI 能力接口
+- 读取和修改 AI 配置，调用 AI 能力接口
 
-`v1` 不做细粒度权限矩阵，只通过 token 所属用户隔离数据。
+`v1` 不做细粒度权限矩阵，只通过 token 所属用户隔离数据。个人 Token
+当前是账号级粗粒度凭据；只有 Token 的创建、列表和撤销接口强制要求浏览器会话。
 
 ## 4. 通用响应格式
 
@@ -230,7 +236,9 @@ Authorization: Bearer <token>
 {
   "id": "uuid",
   "name": "CLI on MacBook",
+  "note": "Used by my laptop",
   "tokenPrefix": "stl_abc",
+  "tokenSuffix": "xyz123",
   "lastUsedAt": "2026-05-05T10:00:00.000Z",
   "expiresAt": null,
   "revokedAt": null,
@@ -252,22 +260,40 @@ Authorization: Bearer <token>
 {}
 ```
 
-响应：
+响应（同步在当前请求内完成）：
 
 ```json
 {
   "ok": true,
   "data": {
-    "status": "started",
-    "startedAt": "2026-05-05T12:00:00.000Z"
+    "status": "success",
+    "startedAt": "2026-05-05T12:00:00.000Z",
+    "finishedAt": "2026-05-05T12:00:03.000Z",
+    "durationMs": 3000,
+    "pageCount": 2,
+    "failedCount": 0,
+    "errorSummary": null,
+    "errorLevel": null,
+    "counts": {
+      "fetched": 135,
+      "insertedOrUpdated": 135,
+      "unstarred": 0
+    },
+    "history": [],
+    "scheduler": {
+      "enabled": false,
+      "trigger": "cron every 30 minutes",
+      "retryPolicy": "up to 3 retries with exponential backoff (30s, 2m, 10m)"
+    }
   }
 }
 ```
 
 说明：
 
-- `v1` 先定义为“触发同步任务”
-- 不要求阻塞直到全部同步完成
+- 当前实现会等待本次同步完成，再返回统计和进程内历史记录。
+- 同步业务失败仍返回 `{ ok: true, data: { status: "error", ... } }`，调用方必须检查 `data.status`。
+- `scheduler.enabled` 当前固定为 `false`；字段只描述计划中的调度钩子，不表示已启用定时同步。
 
 ### 6.2 `GET /api/search`
 
@@ -284,7 +310,12 @@ Authorization: Bearer <token>
 - `owner`：可空
 - `tag`：可空
 - `favorite`：`true|false` 可空
-- `sort`：默认 `relevance`
+- `sort`：默认 `recent`
+- `minStars` / `maxStars`：非负整数，按仓库 Star 数区间过滤
+- `starredAfter` / `starredBefore`：可被 `Date` 解析的时间，按用户收藏时间过滤
+- `pushedAfter`：可被 `Date` 解析的时间，按仓库最近推送时间过滤
+- `hasNote`：`true|false`，按是否存在非空备注过滤
+- `noteContains`：备注内容的模糊匹配关键词
 
 允许的 `sort`：
 
@@ -427,7 +458,8 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "name": "CLI on MacBook"
+  "name": "CLI on MacBook",
+  "note": "Used by my laptop"
 }
 ```
 
@@ -440,7 +472,9 @@ Authorization: Bearer <token>
     "token": "stl_xxx_generated_once",
     "id": "uuid",
     "name": "CLI on MacBook",
+    "note": "Used by my laptop",
     "tokenPrefix": "stl_xxx",
+    "tokenSuffix": "xyz123",
     "lastUsedAt": null,
     "expiresAt": null,
     "revokedAt": null,
@@ -509,6 +543,7 @@ Authorization: Bearer <token>
   - `openai_compatible`
   - `anthropic_native`
   - `gemini_native`
+  - `deepseek_native`
 
 响应：
 
@@ -518,6 +553,7 @@ Authorization: Bearer <token>
 
 - `apiKey` 只在请求中接收，服务端加密保存，响应中不返回明文
 - 如果 `isDefault = true`，同一用户其他配置会自动取消默认状态
+- 当前问答运行时只使用 `openai_compatible` Chat Completions；Native 类型用于配置和模型列表验证
 
 ### 8.3 `PATCH /api/ai/configs/:id`
 
@@ -644,20 +680,13 @@ Authorization: Bearer <token>
 
 用途：
 
-- 基于候选仓库进行自然语言问答
+- 使用工具调用 Agent 对用户仓库进行一次性自然语言问答
 
 请求体：
 
 ```json
 {
-  "question": "我之前收藏过一个做 React 表格虚拟滚动的库，帮我找找",
-  "providerConfigId": "uuid",
-  "modelOverride": null,
-  "search": {
-    "q": "react table virtualized",
-    "favorite": null,
-    "language": "TypeScript"
-  }
+  "question": "我之前收藏过一个做 React 表格虚拟滚动的库，帮我找找"
 }
 ```
 
@@ -668,21 +697,27 @@ Authorization: Bearer <token>
   "ok": true,
   "data": {
     "answer": "Most likely candidates are ...",
-    "matches": [
+    "candidates": [
       {
-        "repoId": "uuid",
+        "id": "uuid",
         "fullName": "owner/repo",
-        "reason": "Matches React table virtualization use case"
+        "reason": "Matches React table virtualization use case",
+        "source": "search",
+        "score": 0.92
       }
-    ]
+    ],
+    "providerConfigId": "uuid-or-system-default-id",
+    "providerConfigSource": "user_default"
   }
 }
 ```
 
 说明：
 
-- 服务端必须先做数据库召回，再把候选仓库交给 AI
-- 不允许 AI 直接替代数据库主搜索链路
+- Agent 可组合 `search_repos`、`get_repo_detail`、`get_repo_stats`、`run_readonly_query`、任务推荐、关联发现、整理建议和受控写操作工具。
+- 最终答案必须通过 `submit_answer` 提交，只能引用本轮工具结果中真实出现过的仓库 ID。
+- `run_readonly_query` 只允许读取 `starred_repos`、`repo_tags` 和 `repo_notes`，并由数据库只读角色与 RLS 隔离用户数据。
+- 问答需要支持 OpenAI-compatible tool calling 的可用 Provider；失败时返回 `ask_failed`，不会拼接不确定的兜底答案。
 
 ### 9.2 `POST /api/ai/rerank`
 
@@ -744,6 +779,56 @@ Authorization: Bearer <token>
 }
 ```
 
+### 9.4 `POST /api/ai/chat`
+
+用途：
+
+- 发起或继续一段持久化的多轮 AI 对话。
+- 通过 SSE 发送执行事件、错误事件和最终回答。
+
+请求体：
+
+```json
+{
+  "question": "最近收藏的本地 Agent 框架有哪些？",
+  "conversationId": "optional-uuid",
+  "regenerate": false
+}
+```
+
+响应头：
+
+```http
+Content-Type: text/event-stream
+X-Conversation-Id: <uuid>
+Cache-Control: no-cache
+```
+
+事件格式：
+
+```text
+data: {"type":"tool_start","tool":"search_repos"}
+
+data: {"type":"done","answer":"...","candidates":[]}
+```
+
+说明：
+
+- 新对话省略 `conversationId`，服务端创建会话并通过 `X-Conversation-Id` 返回 ID。
+- `regenerate=true` 会删除该会话最后一条 assistant 消息，并重新生成最后一个问题的回答。
+- SSE 用于实时传递执行事件和最终结果；上游 Provider 不保证逐 token 输出，客户端可能对最终答案使用打字机展示。
+- 消息会持久化到 `conversations` 和 `chat_messages`。
+
+### 9.5 `/api/ai/chat/conversations`
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| `GET` | `/api/ai/chat/conversations?limit=30&offset=0` | 按更新时间倒序列出会话，`limit` 范围为 1–100 |
+| `POST` | `/api/ai/chat/conversations` | 创建空会话，可选请求体 `{ "title": "..." }` |
+| `GET` | `/api/ai/chat/conversations/:id` | 返回会话元数据及最多 200 条消息 |
+| `PATCH` | `/api/ai/chat/conversations/:id` | 使用 `{ "title": "..." }` 修改标题 |
+| `DELETE` | `/api/ai/chat/conversations/:id` | 删除会话并级联删除消息 |
+
 ## 10. 错误码建议
 
 建议统一使用以下错误码集合：
@@ -767,7 +852,7 @@ Authorization: Bearer <token>
 - 批量 mutation 接口
 - Webhook 回调接口
 - 公共匿名 API
-- 流式 AI 输出协议
+- WebSocket 对话协议（当前只提供 SSE）
 - 复杂 token scope 权限模型
 
 ## 12. 当前默认决策
@@ -778,15 +863,17 @@ Authorization: Bearer <token>
 - repo 更新接口只允许改用户私有字段
 - AI 调用统一由服务端代理发起
 - AI 问答必须先经过数据库候选召回
+- 多轮聊天使用 SSE，历史消息持久化到 PostgreSQL
 
-## 13. v1.x 新增接口（截至 2026-07-08）
+## 13. v1.x 新增接口（截至 2026-07-11）
 
 以下接口在初版契约之后新增，均遵循第 4 节的通用响应格式；完整请求/响应示例见 `skills/starlens/references/http-api.md`（agent skill 的权威参考，随代码同步维护），此处仅记录路由清单和用途摘要：
 
 - `POST /api/repos/star` / `POST /api/repos/unstar` — 真实调用 GitHub API 修改用户的 GitHub star 状态（区别于 `PATCH /api/repos/:id` 的本地 `isFavorite` 标记）
 - `GET /api/repos/suggestions` — 知识整理建议（重复 / 过时 / 未分类），纯 DB 聚合，不调 AI
-- `GET /api/sync/summary` — 返回最近一次同步的新增 / 消失 / 变化仓库摘要（数据来自 `sync_changes` 表）
+- `GET /api/sync/summary` — 返回指定时间之后检测到的新增 / 取消 Star 摘要。当前根据 `last_synced_at` 和 `unstarred_at` 推断，`added` 可能包含元数据更新，`changed` 暂为空
 - `POST /api/ai/analyze` — 仓库分析 + AI 生成标签/备注建议（CLI / Web 入口）
 - `POST /api/ai/recommend` — 基于任务描述做 AI 重排的仓库推荐（CLI / Web 入口）
 - `POST /api/ai/related` — 基于给定仓库做 AI 重排的关联仓库发现（CLI / Web 入口）
 - `POST /api/repos/analyze-data` / `POST /api/repos/recommend-data` / `POST /api/repos/related-data` — 上述三个接口的 **数据版**（agent/MCP 场景），不调后端 AI、不消耗 AI 配额，只返回原始 DB/GitHub 数据供调用方自行分析重排
+- `POST /api/ai/chat` 与 `/api/ai/chat/conversations/*` — SSE 多轮聊天和会话历史管理，详见 9.4–9.5

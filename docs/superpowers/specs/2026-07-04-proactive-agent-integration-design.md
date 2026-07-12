@@ -1,5 +1,7 @@
 # Starlens 主动型 Agent 集成设计
 
+> **状态：2026-07-04 的实现规格快照。** Skill 目录和 CLI 安装流程随后已迁移到 `skills/starlens/`、`npx skills add`、`stars setup`；当前接入方式以 `docs/agent-integration.md` 为准。下文的旧路径保留用于解释当时的迁移背景。
+
 ## 1. 文档目标
 
 定义 Starlens 从"被动响应型 agent 工具集"向"主动型 agent 集成体验"演进的设计方案。让 Hermes、Codex、Claude Code、Cursor、opencode 等 AI agent 在合适的场景下**主动调用** Starlens，而非等用户显式指示。
@@ -16,8 +18,8 @@
 
 - 9 个 agent tools：`search_stars`、`show_star`、`sync_stars`、`favorite_star`、`unfavorite_star`、`set_star_note`、`add_star_tag`、`remove_star_tag`、`ask_stars`
 - 工具定义在 [packages/agent-tools/src/index.ts](../../../packages/agent-tools/src/index.ts)
-- SKILL.md 在 [agent-skills/starlens/SKILL.md](../../../agent-skills/starlens/SKILL.md) 与 [apps/cli/skills/starlens/SKILL.md](../../../apps/cli/skills/starlens/SKILL.md) 双写
-- HTTP API 文档在 [agent-skills/starlens/references/http-api.md](../../../agent-skills/starlens/references/http-api.md)
+- 当时的 SKILL.md 位于 `agent-skills/starlens/SKILL.md`，并与 `apps/cli/skills/starlens/SKILL.md` 双写
+- 当时的 HTTP API 文档位于 `agent-skills/starlens/references/http-api.md`
 
 ### 2.2 当前问题
 
@@ -84,7 +86,7 @@
 2. **等价优先**：第 1 层和第 3 层不改变现有工具行为，只优化描述和返回值结构。第 2 层新增工具是纯增量，不影响现有 9 个工具
 3. **工具描述即触发器**：对于 MCP-based agent，工具的 `description` 字段是 agent 决定"是否主动调用"的主要依据，新工具的 description 要写得像"触发条件"而非"功能说明"
 4. **SKILL.md 双写**：`agent-skills/starlens/` 和 `apps/cli/skills/starlens/` 两处保持同步
-   - 更新（star_repo/unstar_repo 集成时改造）：手动双写已改为 `scripts/sync-skill.mjs` 自动生成——`agent-skills/starlens/` 是唯一手写源，`apps/cli/skills/starlens/` 是构建产物（已加入 `.gitignore`），在 `apps/cli` 的 `prepack`/`pretest` 和仓库根 `postinstall` 时自动同步，不再手动维护第二份。
+   - 后续更新：手动双写已改为 `scripts/sync-skill.mjs` 自动生成；当前 `skills/starlens/` 是唯一手写源，`apps/cli/skills/starlens/` 是构建产物（已加入 `.gitignore`），在 `apps/cli` 的 `prepack`/`pretest` 和仓库根 `postinstall` 时自动同步。
 5. **GitHub API 能力足够**：5 个工具不需要新的 GitHub API 能力，都是基于已有数据或已有 sync 链路的增量
 
 ## 5. 第 1 层：Skill 触发描述层

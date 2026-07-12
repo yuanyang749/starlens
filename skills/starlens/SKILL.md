@@ -48,7 +48,7 @@ Note: In this local profile, the user's Starlens instance is deployed on the sam
 
 ### Scenario 4: Sync Status & Changes
 触发条件：新会话开始时做轻量状态汇报；用户问"最近有什么新"、"上次同步后变了什么"、"上次新增了什么"。
-推荐调用：`get_sync_summary`（`GET /api/sync/summary`，pull-based）。返回最近一次同步的 added / removed / changed 摘要。
+推荐调用：`get_sync_summary`（`GET /api/sync/summary`，pull-based）。这是基于同步时间戳的轻量摘要：`added` 可能包含元数据更新，`changed` 当前不做精确区分；回答时不要描述成完整变更日志。
 
 ### Scenario 5: Repo Analysis & Smart Tagging
 触发条件：用户丢一个仓库（`owner/repo`）让分析，或问"这个仓库适合做什么"、"它适合用什么场景"。

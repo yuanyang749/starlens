@@ -13,7 +13,7 @@ The project is currently in active `v1` development. The main goal is to make a 
 - Provides a desktop workbench at `/app` and a mobile workbench at `/mobile`.
 - Supports keyword search, filters, sorting, repository detail inspection, tag editing, note editing, and favorite management.
 - Supports advanced search filters: star count range, starred date range, last push date, note content, and note presence.
-- Supports AI-powered natural language queries with 8 intent types: count, existence, comparison, stats, recommendation, single-repo analysis, structured filtering, and semantic search.
+- Supports tool-calling AI queries that can search, inspect, aggregate, recommend, organize, and update a user's repository knowledge base.
 - Exposes personal API tokens for CLI, MCP, and agent workflows.
 - One-command setup: Agent Skill (via `npx skills add`) + MCP Server config via `stars setup`, or MCP-only via `stars install-mcp`.
 - Includes static product documentation under `/docs`.
@@ -27,7 +27,7 @@ Implemented or actively wired:
 - Mobile workbench shell and shared mobile workbench state.
 - Shared API route implementation through `packages/server`.
 - GitHub Stars sync and repository search with advanced filters.
-- AI provider configuration, validation, and AI ask route with 8 intent types.
+- AI provider configuration and validation, one-shot Agent ask, and persistent SSE multi-turn chat.
 - CLI (`@starlens-app/cli`) published to npm: `stars` commands for login, status, sync, search, show, open, ask, favorite, notes, tags, `setup`, and `install-mcp`.
 - MCP stdio server for IDE and local agent clients.
 - HTTP MCP endpoint for hosted clients (Claude Code, Cursor).
@@ -119,6 +119,8 @@ SYSTEM_AI_BASE_URL=
 SYSTEM_AI_MODEL=
 SYSTEM_AI_PROVIDER_TYPE=openai_compatible
 SYSTEM_AI_ENABLED=true
+SYSTEM_AI_FALLBACK_MODEL=
+SYSTEM_AI_EXTRA_HEADERS=
 ```
 
 Run database migrations:
@@ -154,6 +156,8 @@ corepack pnpm dev:mobile
 | `SYSTEM_AI_MODEL`         | Optional | System-level fallback model name.                                    |
 | `SYSTEM_AI_PROVIDER_TYPE` | Optional | System-level provider type, defaults to `openai_compatible`.         |
 | `SYSTEM_AI_ENABLED`       | Optional | Set to `false` to disable the system-level fallback.                 |
+| `SYSTEM_AI_FALLBACK_MODEL` | Optional | Retry model on the same gateway and API key after a primary failure. |
+| `SYSTEM_AI_EXTRA_HEADERS` | Optional | JSON object string containing extra headers required by a gateway.   |
 
 Legacy `OPENAI_*` keys are still read for migration compatibility, but new deployments should use `SYSTEM_AI_*`.
 
@@ -175,6 +179,7 @@ For hosted Neon validation, copy `.env.neon.example` to `.env.neon` and use the 
 | `corepack pnpm db:migrate:local` | Apply migrations to local PostgreSQL.                            |
 | `corepack pnpm db:check:local`   | Check the local database connection.                             |
 | `corepack pnpm mcp:start`        | Start the local Starlens MCP server.                             |
+| `corepack pnpm check:docs`       | Validate current documentation links and retired terminology.   |
 
 Package-level tests:
 
@@ -339,21 +344,25 @@ Do not commit real API tokens or MCP client configs containing secrets.
 
 ## Documentation
 
-User-facing docs are available in the running Web app at `/docs`:
+User-facing docs are published with the Web app:
 
-- [Features](/docs/features) — search, filters, AI ask intent types, tags, notes
-- [Architecture](/docs/architecture) — module layout and data flow
-- [Integrations](/docs/integrations) — GitHub OAuth, API Token, AI Provider, CLI, MCP
-- [Deployment](/docs/deployment) — Docker self-hosting, Node.js, local dev
+- [Features](https://starlens.520ai.xin/docs/features) — search, filters, AI Agent queries, tags, notes
+- [Architecture](https://starlens.520ai.xin/docs/architecture) — module layout and data flow
+- [Integrations](https://starlens.520ai.xin/docs/integrations) — GitHub OAuth, API Token, AI Provider, CLI, MCP
+- [Deployment](https://starlens.520ai.xin/docs/deployment) — Docker self-hosting, Node.js, local dev
 
-Internal design and API notes:
+Engineering references:
 
-- [Project plan](docs/project-plan.md)
+- [Documentation map and source-of-truth policy](docs/README.md)
 - [Environment guide](docs/environments.md)
 - [API contract](docs/api-contract.md)
 - [Database schema](docs/database-schema.md)
-- [Sync flow design](docs/sync-flow-design.md)
 - [Agent integration](docs/agent-integration.md)
+- [Historical project plan](docs/archive/project-plan.md)
+
+Runtime code and database migrations remain authoritative. The documentation map
+explains which files describe current behavior and which files are historical
+design records.
 
 ## Deployment Notes
 
@@ -374,13 +383,14 @@ Before deploying:
 ```bash
 corepack pnpm test
 corepack pnpm lint
+corepack pnpm check:docs
 ```
 
 ## Security Notes
 
 - Personal API tokens are only shown once at creation time.
 - Stored token and provider secrets are encrypted or hashed server-side.
-- MCP runs as a local stdio process and does not open a public network port.
+- The local MCP mode uses stdio and does not open a network port; hosted HTTP MCP is served by the existing Web deployment.
 - `v1` uses user-level token ownership as the authorization boundary; fine-grained token scopes are not part of the current scope.
 
 ## Contributing

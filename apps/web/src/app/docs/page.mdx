@@ -15,16 +15,18 @@ Starlens 是一个面向 GitHub Stars 的个人知识工作台。它会把收藏
   <figcaption>GitHub Stars 是原始输入，Starlens 负责同步、整理、索引和对接，让收藏仓库进入日常开发工具链。</figcaption>
 </figure>
 
-## 快速安装与体验 (Agent Skill)
+## 快速安装与体验（Agent Skill + MCP）
 
-Skill 是最轻量的接入方式，适合 Claude Code、Cursor、VS Code、OpenClaw、Hermes 等支持 Skill 文件的客户端。安装后无需手动配置 MCP，Agent 会自动读取 Skill 文件中声明的能力和端点。
+Skill 是最轻量的行为说明层，适合 Claude Code、Cursor、VS Code、OpenClaw、Hermes 等支持 Skill 文件的客户端。`stars setup` 会先通过 `npx skills add` 安装 Skill，再引导你为支持的客户端配置 MCP。
 
 推荐使用 CLI 一键安装：
 
 ```bash
-npm install -g @starlens-app/cli
-stars install-skill
+npm install -g @starlens-app/cli@latest
+stars setup
 ```
+
+如果 Skill 已经安装，只需要配置 MCP，请运行 `stars install-mcp`。如果只需要 Skill、不需要 MCP，可以直接运行 `npx skills add https://github.com/yuanyang749/starlens`。
 
 ## 适合谁使用
 

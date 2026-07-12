@@ -1,0 +1,36 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".env*.example"
+      - "deploy/.env.production.example"
+      - "scripts/check-docs.mjs"
+      - "package.json"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".env*.example"
+      - "deploy/.env.production.example"
+      - "scripts/check-docs.mjs"
+      - "package.json"
+      - ".github/workflows/docs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check documentation links and terminology
+        run: node scripts/check-docs.mjs
