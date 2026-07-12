@@ -39,6 +39,19 @@ function booleanParam(value: string | null) {
   return undefined;
 }
 
+function optionalNonNegativeIntegerParam(value: string | null) {
+  if (!value?.trim()) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.max(Math.trunc(parsed), 0);
+}
+
+function dateParam(value: string | null) {
+  if (!value?.trim()) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 function sortParam(value: string | null) {
   const normalized = value?.trim().toLowerCase() as SearchSort | undefined;
 
@@ -64,6 +77,13 @@ export function normalizeSearchParams(params: URLSearchParams): SearchReposInput
     tag: stringParam(params.get("tag"), { lowercase: true }),
     favorite: booleanParam(params.get("favorite")),
     sort: sortParam(params.get("sort")),
+    minStars: optionalNonNegativeIntegerParam(params.get("minStars")),
+    maxStars: optionalNonNegativeIntegerParam(params.get("maxStars")),
+    starredAfter: dateParam(params.get("starredAfter")),
+    starredBefore: dateParam(params.get("starredBefore")),
+    pushedAfter: dateParam(params.get("pushedAfter")),
+    hasNote: booleanParam(params.get("hasNote")),
+    noteContains: stringParam(params.get("noteContains")),
   };
 }
 

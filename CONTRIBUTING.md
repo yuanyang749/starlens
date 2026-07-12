@@ -27,7 +27,7 @@ You don't need to write code to contribute. Here's what helps:
 | --- | --- |
 | **Found a bug?** | [Open an issue](https://github.com/yuanyang749/starlens/issues/new) with steps to reproduce |
 | **Have a feature idea?** | Open an issue and describe the use case |
-| **Improved docs?** | Edit a `.mdx` file under `apps/web/src/app/docs/` and open a PR |
+| **Improved docs?** | Edit user docs under `apps/web/src/app/docs/` or the matching engineering reference listed in `docs/README.md`, then run `corepack pnpm check:docs` |
 | **Fixed a typo?** | PR welcome, no issue needed |
 | **Wrote a blog post?** | Share it in Issues — I'll link it |
 | **Built an integration?** | Open an issue to discuss adding it to the docs |
@@ -144,6 +144,7 @@ cd apps/web && npx vitest run src/test/<filename>
 
 ```bash
 corepack pnpm lint
+corepack pnpm check:docs
 ```
 
 ### Database changes
@@ -171,7 +172,7 @@ Always commit generated migration files alongside your schema changes.
 
 3. **Run tests and lint** before pushing:
    ```bash
-   corepack pnpm test && corepack pnpm lint
+   corepack pnpm test && corepack pnpm lint && corepack pnpm check:docs
    ```
 
 4. **Open a PR** against `main`. In the description, include:

@@ -34,7 +34,7 @@ describe("search API contract", () => {
   it("normalizes combined filters before searching", async () => {
     const { GET } = await import("@/app/api/search/route");
     const request = new Request(
-      "https://starlens.test/api/search?q=%20React%20&language=%20TypeScript%20&owner=%20Vercel%20&tag=%20Frontend%20&favorite=TRUE&sort=STARS&page=2&pageSize=50",
+      "https://starlens.test/api/search?q=%20React%20&language=%20TypeScript%20&owner=%20Vercel%20&tag=%20Frontend%20&favorite=TRUE&sort=STARS&page=2&pageSize=50&minStars=100&maxStars=10000&starredAfter=2026-01-01&starredBefore=2026-07-01&pushedAfter=2025-01-01&hasNote=false&noteContains=%20review%20",
     );
 
     const response = await GET(request);
@@ -49,6 +49,13 @@ describe("search API contract", () => {
       tag: "frontend",
       favorite: true,
       sort: "stars",
+      minStars: 100,
+      maxStars: 10000,
+      starredAfter: new Date("2026-01-01"),
+      starredBefore: new Date("2026-07-01"),
+      pushedAfter: new Date("2025-01-01"),
+      hasNote: false,
+      noteContains: "review",
     } satisfies SearchReposInput);
     await expect(json(response)).resolves.toMatchObject({ ok: true });
   });
@@ -56,7 +63,7 @@ describe("search API contract", () => {
   it("clamps pagination and falls back to recent sort for invalid input", async () => {
     const { GET } = await import("@/app/api/search/route");
     const request = new Request(
-      "https://starlens.test/api/search?q=%20%20&language=&owner=&tag=&favorite=maybe&sort=random&page=-7&pageSize=1000",
+      "https://starlens.test/api/search?q=%20%20&language=&owner=&tag=&favorite=maybe&sort=random&page=-7&pageSize=1000&minStars=nope&maxStars=&starredAfter=bad-date&starredBefore=&pushedAfter=invalid&hasNote=maybe&noteContains=",
     );
 
     await GET(request);
@@ -70,6 +77,13 @@ describe("search API contract", () => {
       tag: undefined,
       favorite: undefined,
       sort: "recent",
+      minStars: undefined,
+      maxStars: undefined,
+      starredAfter: undefined,
+      starredBefore: undefined,
+      pushedAfter: undefined,
+      hasNote: undefined,
+      noteContains: undefined,
     } satisfies SearchReposInput);
   });
 
@@ -90,6 +104,13 @@ describe("search API contract", () => {
       tag: "ui",
       favorite: undefined,
       sort: "relevance",
+      minStars: undefined,
+      maxStars: undefined,
+      starredAfter: undefined,
+      starredBefore: undefined,
+      pushedAfter: undefined,
+      hasNote: undefined,
+      noteContains: undefined,
     } satisfies SearchReposInput);
   });
 });

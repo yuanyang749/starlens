@@ -13,7 +13,7 @@ Starlens 是一个面向个人使用的 GitHub Stars 知识工作台。它会把
 - 提供桌面工作台 `/app` 和移动工作台 `/mobile`。
 - 支持关键词搜索、过滤、排序、仓库详情查看、标签编辑、备注编辑和收藏管理。
 - 支持高级搜索过滤：Star 数区间、收藏时间范围、最近推送时间、备注内容关键词等。
-- 支持基于自然语言的 AI 问答，内置 8 种意图类型：统计数量、存在性检查、双仓库对比、分布统计、推荐、单仓库分析、条件过滤和语义搜索。
+- 支持基于工具调用的 AI 问答，可搜索、查看、聚合、推荐、整理并按用户明确要求更新仓库知识库。
 - 为 CLI、MCP 和 Agent 工作流提供个人 API Token。
 - 通过 `stars setup` 一键安装 Agent Skill（基于 `npx skills add`）并配置 MCP Server，或通过 `stars install-mcp` 仅配置 MCP。
 - 在 `/docs` 提供静态产品文档。
@@ -27,7 +27,7 @@ Starlens 是一个面向个人使用的 GitHub Stars 知识工作台。它会把
 - 移动工作台壳和共享移动状态逻辑。
 - 通过 `packages/server` 统一承载 API route 实现。
 - GitHub Stars 同步与仓库搜索（含高级过滤字段）。
-- AI provider 配置、校验和 8 种意图的 AI 问答链路。
+- AI Provider 配置与校验、单次 Agent 问答，以及持久化的 SSE 多轮对话。
 - CLI（`@starlens-app/cli`）已发布至 npm：`stars` 命令支持登录、状态、同步、搜索、查看、打开、问答、收藏、备注、标签、`setup` 和 `install-mcp`。
 - MCP stdio server，供 IDE 和本地 Agent 使用。
 - HTTP MCP 端点，供托管客户端（Claude Code、Cursor）使用。
@@ -119,6 +119,8 @@ SYSTEM_AI_BASE_URL=
 SYSTEM_AI_MODEL=
 SYSTEM_AI_PROVIDER_TYPE=openai_compatible
 SYSTEM_AI_ENABLED=true
+SYSTEM_AI_FALLBACK_MODEL=
+SYSTEM_AI_EXTRA_HEADERS=
 ```
 
 执行数据库迁移：
@@ -154,6 +156,8 @@ corepack pnpm dev:mobile
 | `SYSTEM_AI_MODEL`         | 可选     | 系统级兜底模型名。                                     |
 | `SYSTEM_AI_PROVIDER_TYPE` | 可选     | 系统级 Provider 类型，默认 `openai_compatible`。       |
 | `SYSTEM_AI_ENABLED`       | 可选     | 设为 `false` 可关闭系统级兜底。                        |
+| `SYSTEM_AI_FALLBACK_MODEL` | 可选    | 主模型失败后，在同一网关和 API Key 下重试的备用模型。  |
+| `SYSTEM_AI_EXTRA_HEADERS` | 可选     | AI 网关要求的额外 Header，值为 JSON 对象字符串。       |
 
 旧的 `OPENAI_*` 变量仍会被读取以兼容迁移，但新部署应使用 `SYSTEM_AI_*`。
 
@@ -175,6 +179,7 @@ corepack pnpm dev:mobile
 | `corepack pnpm db:migrate:local` | 应用本地数据库迁移。                     |
 | `corepack pnpm db:check:local`   | 检查本地数据库连接。                     |
 | `corepack pnpm mcp:start`        | 启动本地 Starlens MCP server。           |
+| `corepack pnpm check:docs`       | 检查当前文档链接和已废弃术语。           |
 
 包级测试：
 
@@ -339,21 +344,23 @@ Cursor 风格的 stdio 配置：
 
 ## 文档
 
-用户文档可在 Web 运行后通过 `/docs` 访问：
+用户文档随 Web 应用发布：
 
-- [功能说明](/docs/features) — 搜索、过滤、AI 问答意图类型、标签、备注
-- [技术架构](/docs/architecture) — 模块划分与数据流
-- [对接配置](/docs/integrations) — GitHub OAuth、API Token、AI Provider、CLI、MCP
-- [部署方式](/docs/deployment) — Docker 自托管、Node.js、本地开发
+- [功能说明](https://starlens.520ai.xin/docs/features) — 搜索、过滤、AI Agent 问答、标签、备注
+- [技术架构](https://starlens.520ai.xin/docs/architecture) — 模块划分与数据流
+- [对接配置](https://starlens.520ai.xin/docs/integrations) — GitHub OAuth、API Token、AI Provider、CLI、MCP
+- [部署方式](https://starlens.520ai.xin/docs/deployment) — Docker 自托管、Node.js、本地开发
 
-内部设计与 API 文档：
+工程参考文档：
 
-- [项目计划](docs/project-plan.md)
+- [文档地图与权威来源规则](docs/README.md)
 - [环境分层说明](docs/environments.md)
 - [API contract](docs/api-contract.md)
 - [数据库 schema](docs/database-schema.md)
-- [同步流程设计](docs/sync-flow-design.md)
 - [Agent 集成](docs/agent-integration.md)
+- [历史项目计划](docs/archive/project-plan.md)
+
+运行时代码和数据库迁移始终是最终权威来源。文档地图会说明哪些文件描述当前行为，哪些文件只保留历史设计决策。
 
 ## 部署说明
 
@@ -374,13 +381,14 @@ docker compose -f deploy/docker-compose.yml up -d --build starlens-web
 ```bash
 corepack pnpm test
 corepack pnpm lint
+corepack pnpm check:docs
 ```
 
 ## 安全说明
 
 - 个人 API token 只会在创建时明文展示一次。
 - 存储在服务端的 token 和 provider secret 都会被加密或哈希处理。
-- MCP 以本地 stdio 进程运行，不开放公网端口。
+- 本地 MCP 模式使用 stdio，不开放网络端口；托管 HTTP MCP 复用现有 Web 部署。
 - `v1` 以 token 所属用户作为授权边界，不做细粒度 scope 控制。
 
 ## 参与贡献

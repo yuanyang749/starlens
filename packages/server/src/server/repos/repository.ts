@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, gte, getTableColumns, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, getTableColumns, ilike, inArray, lte, not, or, sql } from "drizzle-orm";
 import {
   DEFAULT_SEARCH_PAGE,
   DEFAULT_SEARCH_PAGE_SIZE,
@@ -176,15 +176,14 @@ function repoWhere(userId: string, input: SearchReposInput) {
   if (input.pushedAfter) {
     conditions.push(gte(starredRepos.pushedAtGithub, input.pushedAfter));
   }
-  if (input.hasNote === true) {
-    conditions.push(
-      sql`exists (
+  if (input.hasNote !== undefined) {
+    const noteExists = sql`exists (
         select 1 from ${repoNotes}
         where ${repoNotes.starredRepoId} = ${starredRepos.id}
           and ${repoNotes.userId} = ${userId}
           and length(trim(${repoNotes.note})) > 0
-      )`,
-    );
+      )`;
+    conditions.push(input.hasNote ? noteExists : not(noteExists));
   }
   if (input.noteContains) {
     const notePat = `%${input.noteContains}%`;

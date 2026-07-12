@@ -1,8 +1,10 @@
 # Starlens 架构优化方案
 
-## 0. 执行状态更新（2026-07-08）
+> **状态：执行计划，不是当前行为契约。** 已完成/未完成项以本页状态表为参考，具体实现仍以代码、`docs/api-contract.md` 和 `docs/database-schema.md` 为准。
 
-- **P0 已完成**：`WorkbenchView` 已拆分（`apps/web/src/components/workbench/` 下的 topbar/sidebar/repo-table-pane/repo-detail-panel 等）；`ai/ask/route.ts` 已拆分为 `intent.ts`/`recall.ts`/`ranking.ts`/`provider.ts`/`rate-limit.ts`/`answer.ts`，路由入口本身已收敛到约 60 行。
+## 0. 执行状态更新（2026-07-11）
+
+- **P0 已完成**：`WorkbenchView` 已拆分（`apps/web/src/components/workbench/` 下的 topbar/sidebar/repo-table-pane/repo-detail-panel 等）；AI 问答已演进为工具调用 Agent，主要职责分布在 `ask/agent/loop.ts`、`dispatch.ts`、`tool-schemas.ts`、`sql-validator.ts` 和 `provider.ts`，`ai/ask/route.ts` 保持薄入口。
 - **P1 尚未完成**：
   - 限流仍是进程内 `Map`（`packages/server/src/server/ai/rate-limit.ts:7`），未迁移到 Redis/DB，多实例部署下限流状态仍不一致。
   - 未发现 `sync_runs` 或等价的同步历史持久化表，同步历史仍依赖单进程内存。

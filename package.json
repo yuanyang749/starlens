@@ -27,6 +27,7 @@
     "db:check:local": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env",
     "db:check:neon": "corepack pnpm --filter @starlens/web exec node scripts/check-db.mjs ../../.env.neon",
     "check:api-shims": "node scripts/check-api-shims.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
     "deploy": "node scripts/deploy.mjs"
   },
   "devDependencies": {
