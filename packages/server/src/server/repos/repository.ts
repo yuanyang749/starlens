@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, desc, eq, gte, getTableColumns, ilike, inArray, lte, not, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, getTableColumns, ilike, inArray, isNull, lt, lte, not, or, sql } from "drizzle-orm";
 import {
   DEFAULT_SEARCH_PAGE,
   DEFAULT_SEARCH_PAGE_SIZE,
@@ -16,6 +16,12 @@ import {
   buildRepoSummaryDetails,
   buildSearchDocument,
 } from "./text";
+import {
+  DASHBOARD_COMMUNITY_REPO_LIMIT,
+  buildAttentionReasons,
+  completeMonthlyTrend,
+  toIsoDateString,
+} from "./dashboard-stats";
 
 type RepoRow = typeof starredRepos.$inferSelect;
 type NoteRow = typeof repoNotes.$inferSelect;
@@ -466,6 +472,23 @@ export type RepoStats = {
   total: number;
   byLanguage: Array<{ language: string; count: number }>;
   totalFavorites: number;
+  recentAdded: number;
+  attention: {
+    total: number;
+    stale: number;
+    archived: number;
+    untagged: number;
+    missingMetadata: number;
+  };
+  attentionRepos: Array<{
+    id: string;
+    fullName: string;
+    language: string | null;
+    stargazersCount: number;
+    pushedAtGithub: string | null;
+    reasons: string[];
+  }>;
+  lastSyncedAt: string | null;
   mostStarredRepo: { fullName: string; stargazersCount: number } | null;
   monthlyTrend: Array<{ month: string; count: number }>;
   topRepos: Array<{ fullName: string; language: string | null; stargazersCount: number }>;
@@ -474,8 +497,41 @@ export type RepoStats = {
 export async function getRepoStats(userId: string): Promise<RepoStats> {
   const db = getDb();
   const base = and(eq(starredRepos.userId, userId), eq(starredRepos.isStarred, true));
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+  const staleBefore = new Date(now);
+  staleBefore.setUTCFullYear(staleBefore.getUTCFullYear() - 2);
+  const trendStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+  const isStale = or(isNull(starredRepos.pushedAtGithub), lt(starredRepos.pushedAtGithub, staleBefore));
+  const isUntagged = sql<boolean>`not exists (
+    select 1 from ${repoTags}
+    where ${repoTags.starredRepoId} = ${starredRepos.id}
+  )`;
+  const needsAttention = or(
+    eq(starredRepos.archived, true),
+    eq(starredRepos.disabled, true),
+    isStale,
+    isNull(starredRepos.language),
+    isUntagged,
+  );
 
-  const [totalRows, langRows, favRows, topStarRows, trendRows, topReposRows] = await Promise.all([
+  const [
+    totalRows,
+    langRows,
+    favRows,
+    recentRows,
+    attentionRows,
+    staleRows,
+    archivedRows,
+    untaggedRows,
+    missingMetadataRows,
+    lastSyncRows,
+    topStarRows,
+    trendRows,
+    topReposRows,
+    attentionRepoRows,
+  ] = await Promise.all([
     db.select({ value: count() }).from(starredRepos).where(base),
     db
       .select({ language: starredRepos.language, cnt: count() })
@@ -487,6 +543,20 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
     db.select({ value: count() }).from(starredRepos).where(
       and(base, eq(starredRepos.isFavorite, true)),
     ),
+    db.select({ value: count() }).from(starredRepos).where(
+      and(base, gte(starredRepos.starredAtGithub, thirtyDaysAgo)),
+    ),
+    db.select({ value: count() }).from(starredRepos).where(and(base, needsAttention)),
+    db.select({ value: count() }).from(starredRepos).where(and(base, isStale)),
+    db.select({ value: count() }).from(starredRepos).where(
+      and(base, eq(starredRepos.archived, true)),
+    ),
+    db.select({ value: count() }).from(starredRepos).where(and(base, isUntagged)),
+    db.select({ value: count() }).from(starredRepos).where(and(base, isNull(starredRepos.language))),
+    db
+      .select({ value: sql<Date | string | null>`max(${starredRepos.lastSyncedAt})` })
+      .from(starredRepos)
+      .where(base),
     db
       .select({ fullName: starredRepos.fullName, stargazersCount: starredRepos.stargazersCount })
       .from(starredRepos)
@@ -499,7 +569,7 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
         cnt: count(),
       })
       .from(starredRepos)
-      .where(and(base, sql`${starredRepos.starredAtGithub} is not null`))
+      .where(and(base, gte(starredRepos.starredAtGithub, trendStart)))
       .groupBy(sql`to_char(${starredRepos.starredAtGithub}, 'YYYY-MM')`)
       .orderBy(sql`to_char(${starredRepos.starredAtGithub}, 'YYYY-MM')`),
     db
@@ -511,17 +581,55 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
       .from(starredRepos)
       .where(base)
       .orderBy(desc(starredRepos.stargazersCount))
-      .limit(5),
+      .limit(DASHBOARD_COMMUNITY_REPO_LIMIT),
+    db
+      .select({
+        id: starredRepos.id,
+        fullName: starredRepos.fullName,
+        language: starredRepos.language,
+        stargazersCount: starredRepos.stargazersCount,
+        pushedAtGithub: starredRepos.pushedAtGithub,
+        archived: starredRepos.archived,
+        disabled: starredRepos.disabled,
+        hasTags: sql<boolean>`exists (
+          select 1 from ${repoTags}
+          where ${repoTags.starredRepoId} = ${starredRepos.id}
+        )`,
+      })
+      .from(starredRepos)
+      .where(and(base, needsAttention))
+      .orderBy(desc(starredRepos.archived), desc(starredRepos.disabled), asc(starredRepos.pushedAtGithub))
+      .limit(6),
   ]);
 
   return {
     total: totalRows[0]?.value ?? 0,
     byLanguage: langRows.map((r) => ({ language: r.language ?? "Unknown", count: Number(r.cnt) })),
     totalFavorites: favRows[0]?.value ?? 0,
+    recentAdded: recentRows[0]?.value ?? 0,
+    attention: {
+      total: attentionRows[0]?.value ?? 0,
+      stale: staleRows[0]?.value ?? 0,
+      archived: archivedRows[0]?.value ?? 0,
+      untagged: untaggedRows[0]?.value ?? 0,
+      missingMetadata: missingMetadataRows[0]?.value ?? 0,
+    },
+    attentionRepos: attentionRepoRows.map((row) => ({
+      id: row.id,
+      fullName: row.fullName,
+      language: row.language,
+      stargazersCount: row.stargazersCount ?? 0,
+      pushedAtGithub: toIsoDateString(row.pushedAtGithub),
+      reasons: buildAttentionReasons(row, now),
+    })),
+    lastSyncedAt: toIsoDateString(lastSyncRows[0]?.value),
     mostStarredRepo: topStarRows[0]
       ? { fullName: topStarRows[0].fullName, stargazersCount: topStarRows[0].stargazersCount ?? 0 }
       : null,
-    monthlyTrend: trendRows.map((r) => ({ month: r.month, count: Number(r.cnt) })),
+    monthlyTrend: completeMonthlyTrend(
+      trendRows.map((r) => ({ month: r.month, count: Number(r.cnt) })),
+      now,
+    ),
     topRepos: topReposRows.map((r) => ({
       fullName: r.fullName,
       language: r.language,
