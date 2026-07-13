@@ -41,6 +41,7 @@ function repo(id: string, fullName: string) {
     isFavorite: false,
     note: "",
     starredAtGithub: "2026-07-01T00:00:00.000Z",
+    pushedAtGithub: "2026-07-12T00:00:00.000Z",
   };
 }
 
@@ -96,6 +97,42 @@ describe("agent loop (runAgentLoop)", () => {
     expect(result?.answer).toBe("找到了 owner/agent-repo。");
     expect(result?.candidates).toHaveLength(1);
     expect(result?.candidates[0]).toMatchObject({ id: "repo-1", fullName: "owner/agent-repo", source: "agent_tool_result" });
+  });
+
+  it("uses the compact prompt, restricted tools, and lower output cap for a preset", async () => {
+    searchReposMock.mockResolvedValue({
+      items: [repo("repo-1", "owner/recent-repo")],
+      page: 1, pageSize: 10, total: 1, hasMore: false, allStarsTotal: 1,
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(toolCallResponse([{ id: "call-1", name: "search_repos", args: { sort: "updated", pageSize: 10 } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ id: "call-2", name: "submit_answer", args: { answer: "最近值得重看。", repoIds: ["repo-1"] } }]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { runAgentLoop } = await import("@starlens/server/server/ai/ask/agent/loop");
+    await runAgentLoop("最近更新", "user-1", chatConfig, {
+      systemPrompt: "预设专用提示：只调用 search_repos，然后调用 submit_answer。",
+      allowedToolNames: ["search_repos", "submit_answer"],
+      maxIterations: 3,
+      maxTokens: 600,
+    });
+
+    const firstRequest = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(firstRequest.max_tokens).toBe(600);
+    expect(firstRequest.messages[0]).toEqual({
+      role: "system",
+      content: "预设专用提示：只调用 search_repos，然后调用 submit_answer。",
+    });
+    expect(firstRequest.tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual([
+      "search_repos",
+      "submit_answer",
+    ]);
+    const secondRequest = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
+    const toolResult = JSON.parse(secondRequest.messages.find((message: { role: string }) => message.role === "tool").content);
+    expect(toolResult.items[0]).toMatchObject({
+      fullName: "owner/recent-repo",
+      pushedAt: "2026-07-12T00:00:00.000Z",
+    });
   });
 
   it("ignores repoIds that never appeared in a tool result (no fabricated candidates)", async () => {

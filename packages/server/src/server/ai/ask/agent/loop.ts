@@ -3,7 +3,7 @@ import "server-only";
 import { callChatCompletionsWithTools, callChatCompletionsWithToolsStream, stripThinkBlocks, wrapUserQuestion, type AgentChatMessage, type AgentTurnResult } from "../provider";
 import { toRecalledCandidate } from "../ranking";
 import { type AskResult, ANSWER_CANDIDATE_LIMIT, MAX_AGENT_ITERATIONS, type ChatRuntimeConfig, type RecalledCandidate, type SearchRepoItem } from "../types";
-import { agentToolSchemas } from "./tool-schemas";
+import { agentToolSchemas, type AgentToolName } from "./tool-schemas";
 import { executeToolCall } from "./dispatch";
 import { extractAnswerString } from "./partial-json";
 
@@ -88,6 +88,10 @@ export type AgentLoopEvent =
 export type RunAgentLoopOptions = {
   // 覆盖 MAX_AGENT_ITERATIONS，仅供调试脚本使用；不传时行为与生产环境完全一致
   maxIterations?: number;
+  // 中文注释：欢迎页预设可覆盖系统提示、工具集和单轮输出上限，普通自由提问保持原配置。
+  systemPrompt?: string;
+  allowedToolNames?: readonly AgentToolName[];
+  maxTokens?: number;
   onEvent?: (event: AgentLoopEvent) => void;
   // 多轮上下文：之前的 Q&A 原文 + 摘要 system 消息（不含工具调用细节），由 SSE 路由组装
   priorContext?: AgentChatMessage[];
@@ -126,9 +130,9 @@ export async function runAgentLoop(
   // 中文注释：聊天模式（priorContext 存在）用 buildChatSystemPrompt，补充多轮指引；
   // 一次性问答（/api/ai/ask，无 priorContext）仍用 buildAgentSystemPrompt，行为不变。
   const useChatMode = Boolean(opts?.priorContext && opts.priorContext.length > 0);
-  const systemPrompt = useChatMode
+  const systemPrompt = opts?.systemPrompt ?? (useChatMode
     ? buildChatSystemPrompt(today, opts?.hasSummary ?? false)
-    : buildAgentSystemPrompt(today);
+    : buildAgentSystemPrompt(today));
 
   const messages: AgentChatMessage[] = [
     { role: "system", content: systemPrompt },
@@ -137,6 +141,12 @@ export async function runAgentLoop(
   ];
 
   const maxIterations = opts?.maxIterations ?? MAX_AGENT_ITERATIONS;
+  const maxTokens = opts?.maxTokens ?? 800;
+  const allowedToolNameSet = opts?.allowedToolNames ? new Set<AgentToolName>(opts.allowedToolNames) : null;
+  const activeToolSchemas = allowedToolNameSet
+    ? agentToolSchemas.filter((tool) => allowedToolNameSet.has(tool.function.name as AgentToolName))
+    : agentToolSchemas;
+  const activeToolNames = activeToolSchemas.map((tool) => tool.function.name).join(" / ");
   const onEvent = opts?.onEvent;
   const onStream = opts?.onStream;
   let noToolCallStreak = 0;
@@ -159,7 +169,7 @@ export async function runAgentLoop(
     const callProvider = async (cfg: ChatRuntimeConfig): Promise<AgentTurnResult | null> => {
       if (!onStream) {
         return callChatCompletionsWithTools({
-          messages, tools: agentToolSchemas, config: cfg, userId, maxTokens: 800,
+          messages, tools: activeToolSchemas, config: cfg, userId, maxTokens,
         });
       }
 
@@ -169,10 +179,10 @@ export async function runAgentLoop(
 
       return callChatCompletionsWithToolsStream({
         messages,
-        tools: agentToolSchemas,
+        tools: activeToolSchemas,
         config: cfg,
         userId,
-        maxTokens: 800,
+        maxTokens,
         onToolCallDelta: (toolName, argumentsDelta) => {
           // 每个工具首次出现时发一次 status + tool_call 事件（避免逐 delta 重复发）
           if (!emittedToolStatuses.has(toolName)) {
@@ -274,14 +284,21 @@ export async function runAgentLoop(
       }
       messages.push({
         role: "user",
-        content: "你必须调用一个工具（search_repos / get_repo_detail / get_repo_stats / run_readonly_query / submit_answer），不能只回复文字。",
+        content: `你必须调用一个可用工具（${activeToolNames}），不能只回复文字。`,
       });
       continue;
     }
 
     noToolCallStreak = 0;
     for (const call of toolCalls) {
-      const resultMessage = await executeToolCall(call, userId, cache);
+      // 中文注释：服务端再次校验预设工具白名单，防止模型调用未下发的通用或写操作工具。
+      const resultMessage = allowedToolNameSet && !allowedToolNameSet.has(call.function.name as AgentToolName)
+        ? {
+            role: "tool" as const,
+            tool_call_id: call.id,
+            content: JSON.stringify({ error: "tool is not available for this preset" }),
+          }
+        : await executeToolCall(call, userId, cache);
       onEvent?.({ type: "tool_call", iteration, name: call.function.name, arguments: call.function.arguments, result: resultMessage.content });
       messages.push(resultMessage);
       if (call.function.name === "search_repos") searchReposCallCount += 1;

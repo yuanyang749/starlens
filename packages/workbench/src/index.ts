@@ -13,6 +13,8 @@ import {
 // 中文注释：共享 AI 对话流式 Hook 及类型，供 Web 端和移动端导入
 export { useChatStream } from "./use-chat-stream";
 export type { ChatCandidate, ChatMessage } from "./use-chat-stream";
+export { CHAT_PRESETS, isChatPresetId } from "./chat-presets";
+export type { ChatPresetId } from "./chat-presets";
 
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = { ok: false; error: { code: string; message: string } };

@@ -50,6 +50,8 @@ function compactRepo(item: SearchRepoItem) {
     tags: item.tags,
     note: item.note || undefined,
     starredAt: item.starredAtGithub,
+    // 中文注释：近期活跃预设按 pushedAt 排序，结果必须携带该日期才能给出有依据的说明。
+    pushedAt: item.pushedAtGithub,
   };
 }
 
@@ -172,13 +174,13 @@ async function runRecommendForTask(userId: string, args: Record<string, unknown>
     items: candidates.map((c) => ({
       id: c.id,
       fullName: c.fullName,
-      description: c.description,
       stars: c.stargazersCount,
       language: c.language,
-      topics: c.topics,
+      // 中文注释：任务推荐会进入下一轮模型上下文，限制长摘要、备注和 topics，避免十条结果放大 Token。
+      summary: (c.repoSummary?.trim() || c.description?.trim() || "").slice(0, 200),
+      topics: c.topics.slice(0, 8),
       tags: c.tags,
-      note: c.note,
-      repoSummary: c.repoSummary,
+      note: c.note?.slice(0, 120),
       tsRank: c.tsRank,
     })),
   };

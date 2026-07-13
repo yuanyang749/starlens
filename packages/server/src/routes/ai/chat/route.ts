@@ -14,6 +14,7 @@ import { getApiUser } from "@starlens/server/server/auth/api-user";
 import { asChatRuntimeConfig } from "@starlens/server/server/ai/ask/provider";
 import type { AgentChatMessage } from "@starlens/server/server/ai/ask/provider";
 import { runAgentLoop, type ChatStreamEvent } from "@starlens/server/server/ai/ask/agent/loop";
+import { resolveChatPresetAgentOptions } from "@starlens/server/server/ai/ask/agent/presets";
 import { MAX_QUESTION_LENGTH } from "@starlens/server/server/ai/ask/types";
 import { compactConversationIfNeeded } from "@starlens/server/server/chat/compaction";
 import {
@@ -48,6 +49,12 @@ export async function POST(request: Request) {
   const question = body.question.trim();
   if (question.length > MAX_QUESTION_LENGTH) {
     return fail("question_too_long", `Question must be ${MAX_QUESTION_LENGTH} characters or fewer.`);
+  }
+
+  // 中文注释：只有共享契约中的稳定 presetId 才能进入低 Token 路径，未知值直接拒绝。
+  const presetOptions = resolveChatPresetAgentOptions(body.presetId);
+  if (body.presetId !== undefined && !presetOptions) {
+    return fail("invalid_chat_preset", "Chat preset is invalid.");
   }
 
   const conversationId: string | undefined =
@@ -90,21 +97,23 @@ export async function POST(request: Request) {
     activeConversationId = conv.id;
   }
 
-  // 中文注释：compaction——检查是否需要压缩历史，返回摘要 + 最近窗口消息
-  const compaction = await compactConversationIfNeeded(activeConversationId, user.id, chatConfig);
-
   // 中文注释：组装 priorContext——摘要作为 system 消息 + 最近消息原文（不含 tool_calls）
   // 对 assistant 消息做轻量清洗（折叠空行 + 移除标题符号），减少 token 消耗；
   // user 消息保持原文避免破坏语义。DB 仍存原文，清洗只作用于传给模型的副本。
   const priorContext: AgentChatMessage[] = [];
-  if (compaction.summary) {
-    priorContext.push({ role: "system", content: `之前的对话摘要：\n${compaction.summary}` });
+  let hasSummary = false;
+  if (!presetOptions) {
+    // 中文注释：预设仅出现在空白欢迎页，跳过历史压缩与上下文加载，避免额外摘要调用和 Token。
+    const compaction = await compactConversationIfNeeded(activeConversationId, user.id, chatConfig);
+    if (compaction.summary) {
+      priorContext.push({ role: "system", content: `之前的对话摘要：\n${compaction.summary}` });
+    }
+    for (const msg of compaction.recentMessages) {
+      const role = msg.role as "user" | "assistant";
+      priorContext.push({ role, content: role === "assistant" ? sanitizeAssistantForContext(msg.content) : msg.content });
+    }
+    hasSummary = Boolean(compaction.summary);
   }
-  for (const msg of compaction.recentMessages) {
-    const role = msg.role as "user" | "assistant";
-    priorContext.push({ role, content: role === "assistant" ? sanitizeAssistantForContext(msg.content) : msg.content });
-  }
-  const hasSummary = Boolean(compaction.summary);
 
   // 写入 user 消息到 DB（regenerate 场景下 user 消息已存在，跳过）
   if (!isRegenerate) {
@@ -128,6 +137,7 @@ export async function POST(request: Request) {
           priorContext,
           hasSummary,
           onStream: send,
+          ...(presetOptions ?? {}),
         });
 
         if (result) {

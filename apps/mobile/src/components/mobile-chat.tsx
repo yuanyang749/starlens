@@ -24,7 +24,6 @@ import {
   Search,
   Sparkles,
   Square,
-  Stethoscope,
   Terminal,
   Trash2,
   User,
@@ -34,7 +33,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Highlight, themes } from "prism-react-renderer";
-import { fetchApi, useChatStream, type ChatCandidate, type ChatMessage } from "@starlens/workbench";
+import { CHAT_PRESETS, fetchApi, useChatStream, type ChatCandidate, type ChatMessage, type ChatPresetId } from "@starlens/workbench";
 
 // ───────────────────────── 类型定义 ─────────────────────────
 
@@ -62,33 +61,13 @@ type MobileChatProps = {
 
 // ───────────────────────── 常量配置 ─────────────────────────
 
-// 中文注释：欢迎页示例问题，2x2 网格布局适配窄屏
-const EXAMPLE_QUESTIONS = [
-  {
-    title: "语言分布",
-    desc: "统计收藏仓库的语言分布",
-    question: "统计我收藏的仓库按语言分布",
-    icon: PieChart,
-  },
-  {
-    title: "CLI 工具",
-    desc: "推荐 CLI 开发相关仓库",
-    question: "推荐适合做 CLI 工具的仓库",
-    icon: Terminal,
-  },
-  {
-    title: "诊断建议",
-    desc: "扫描重复或过时仓库",
-    question: "帮我看看收藏里有没有重复或过时的仓库",
-    icon: Stethoscope,
-  },
-  {
-    title: "项目参考",
-    desc: "寻找实时聊天应用参考",
-    question: "我要做一个实时聊天应用，有哪些收藏可以参考",
-    icon: MessageCircle,
-  },
-];
+// 中文注释：移动端复用共享预设，只在本地配置适配窄屏的图标。
+const PRESET_ICONS: Record<ChatPresetId, typeof PieChart> = {
+  collection_profile: PieChart,
+  recently_active: RefreshCw,
+  hidden_gems: Sparkles,
+  local_ai_stack: MessageCircle,
+};
 
 // 代码块语言别名
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -612,16 +591,16 @@ export function MobileChat({ userName, userAvatarUrl, onNavigateToRepo }: Mobile
                   支持多轮对话，AI 会基于你收藏的仓库回答问题、推荐项目。
                 </p>
                 <div className="mobile-chat-examples">
-                  {EXAMPLE_QUESTIONS.map((item, i) => {
-                    const Icon = item.icon;
+                  {CHAT_PRESETS.map((item) => {
+                    const Icon = PRESET_ICONS[item.id];
                     return (
                       <button
-                        key={i}
+                        key={item.id}
                         type="button"
                         className="mobile-chat-example"
                         onClick={() => {
                           setChatInput(item.question);
-                          void sendMessage(item.question).then(() => loadConversations());
+                          void sendMessage(item.question, { presetId: item.id }).then(() => loadConversations());
                         }}
                         disabled={isStreaming}
                       >
@@ -629,7 +608,7 @@ export function MobileChat({ userName, userAvatarUrl, onNavigateToRepo }: Mobile
                           <Icon className="h-4 w-4" />
                         </div>
                         <span className="mobile-chat-example-title">{item.title}</span>
-                        <span className="mobile-chat-example-desc">{item.desc}</span>
+                        <span className="mobile-chat-example-desc">{item.description}</span>
                       </button>
                     );
                   })}

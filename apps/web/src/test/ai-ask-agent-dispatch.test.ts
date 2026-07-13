@@ -1,17 +1,24 @@
 /** @vitest-environment node */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { searchReposMock, getRepoDetailMock, getRepoStatsMock, runReadonlyQueryMock } = vi.hoisted(() => ({
+const { searchReposMock, searchReposRankedMock, getRepoDetailMock, getRepoStatsMock, runReadonlyQueryMock, hasStarredReposMock } = vi.hoisted(() => ({
   searchReposMock: vi.fn(),
+  searchReposRankedMock: vi.fn(),
   getRepoDetailMock: vi.fn(),
   getRepoStatsMock: vi.fn(),
   runReadonlyQueryMock: vi.fn(),
+  hasStarredReposMock: vi.fn(),
 }));
 
 vi.mock("@starlens/server/server/repos/repository", () => ({
   searchRepos: searchReposMock,
+  searchReposRanked: searchReposRankedMock,
   getRepoDetail: getRepoDetailMock,
   getRepoStats: getRepoStatsMock,
+}));
+
+vi.mock("@starlens/server/server/ai/recommend", () => ({
+  hasStarredRepos: hasStarredReposMock,
 }));
 
 vi.mock("@starlens/server/server/ai/ask/agent/sql-executor", () => ({
@@ -53,6 +60,33 @@ describe("agent tool dispatch (executeToolCall)", () => {
     await executeToolCall(call("c1", "search_repos", { pageSize: 999 }), "user-1", new Map());
 
     expect(searchReposMock).toHaveBeenCalledWith("user-1", expect.objectContaining({ pageSize: 20 }));
+  });
+
+  it("compacts recommendation results before adding them to the model context", async () => {
+    hasStarredReposMock.mockResolvedValue(true);
+    searchReposRankedMock.mockResolvedValue([
+      {
+        ...repo("repo-1", "owner/local-ai"),
+        description: "d".repeat(400),
+        repoSummary: "s".repeat(600),
+        note: "n".repeat(300),
+        topics: Array.from({ length: 20 }, (_, index) => `topic-${index}`),
+        tsRank: 0.8,
+      },
+    ]);
+    const { executeToolCall } = await import("@starlens/server/server/ai/ask/agent/dispatch");
+
+    const result = await executeToolCall(
+      call("c1", "recommend_for_task", { taskDescription: "本地 RAG", limit: 10 }),
+      "user-1",
+      new Map(),
+    );
+
+    const item = JSON.parse(result.content).items[0];
+    expect(item.summary).toHaveLength(200);
+    expect(item.note).toHaveLength(120);
+    expect(item.topics).toHaveLength(8);
+    expect(item).not.toHaveProperty("repoSummary");
   });
 
   it("returns an error payload (not a thrown exception) for malformed arguments JSON", async () => {

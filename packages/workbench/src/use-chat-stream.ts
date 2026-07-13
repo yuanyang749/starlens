@@ -5,6 +5,7 @@
 // 不依赖 @ai-sdk/react，直接用 fetch + ReadableStream 解析自定义 SSE 协议
 
 import { useCallback, useRef, useState } from "react";
+import type { ChatPresetId } from "./chat-presets";
 
 // 候选仓库（与 /api/ai/ask 的 candidates 同构）
 export type ChatCandidate = {
@@ -62,6 +63,7 @@ export function useChatStream() {
   messagesRef.current = messages;
   // 中文注释：记录最后一次发送的文本，用于断线重连
   const lastSentTextRef = useRef<string | null>(null);
+  const lastSentPresetIdRef = useRef<ChatPresetId | undefined>(undefined);
 
   // 中文注释：打字机相关 ref。
   // AI 提供商不流式返回 tool_calls.arguments，整个 answer 一次性到达。
@@ -116,7 +118,7 @@ export function useChatStream() {
   // 发送消息并接收流式响应
   // 选项 skipAddUser/regenerate：regenerate 场景下 user 消息已存在，只添加 assistant 占位
   const sendMessage = useCallback(
-    async (text: string, opts?: { skipAddUser?: boolean; regenerate?: boolean }) => {
+    async (text: string, opts?: { skipAddUser?: boolean; regenerate?: boolean; presetId?: ChatPresetId }) => {
       const trimmed = text.trim();
       if (!trimmed || isStreaming) return;
 
@@ -142,6 +144,7 @@ export function useChatStream() {
 
       // 中文注释：记录本次发送的文本，用于断线重连
       lastSentTextRef.current = trimmed;
+      lastSentPresetIdRef.current = opts?.presetId;
 
       const abortController = new AbortController();
       abortRef.current = abortController;
@@ -154,6 +157,7 @@ export function useChatStream() {
             question: trimmed,
             conversationId: conversationId ?? undefined,
             regenerate: opts?.regenerate === true,
+            presetId: opts?.presetId,
           }),
           signal: abortController.signal,
         });
@@ -311,7 +315,7 @@ export function useChatStream() {
     });
     setConnectionError(false);
     setError(null);
-    await sendMessage(lastSentTextRef.current);
+    await sendMessage(lastSentTextRef.current, { presetId: lastSentPresetIdRef.current });
   }, [isStreaming, sendMessage]);
 
   return { messages, isStreaming, conversationId, error, connectionError, sendMessage, stop, loadHistory, reset, regenerate, retry };

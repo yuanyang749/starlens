@@ -30,7 +30,6 @@ import {
   Sparkles,
   Star,
   StarOff,
-  Stethoscope,
   Tag,
   Terminal,
   Trash2,
@@ -52,36 +51,16 @@ import {
 import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/components/ui/message";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
-import { useChatStream, type ChatCandidate, type ChatMessage } from "@starlens/workbench";
+import { CHAT_PRESETS, useChatStream, type ChatCandidate, type ChatMessage, type ChatPresetId } from "@starlens/workbench";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-// 中文注释：欢迎页示例问题，覆盖不同工具类型（统计/推荐/分析），支持丰富的图文配置
-const EXAMPLE_QUESTIONS = [
-  {
-    title: "语言分布统计",
-    desc: "统计我收藏的仓库按主要语言的分布情况",
-    question: "统计我收藏的仓库按语言分布",
-    icon: PieChart,
-  },
-  {
-    title: "精选命令行工具",
-    desc: "推荐适合做 CLI 工具开发的收藏仓库",
-    question: "推荐适合做 CLI 工具的仓库",
-    icon: Terminal,
-  },
-  {
-    title: "诊断整理建议",
-    desc: "扫描我收藏里有没有重复或过时的仓库",
-    question: "帮我看看收藏里有没有重复或过时的仓库",
-    icon: Stethoscope,
-  },
-  {
-    title: "实时项目参考",
-    desc: "寻找构建实时聊天应用的参考收藏项目",
-    question: "我要做一个实时聊天应用，有哪些收藏可以参考",
-    icon: BookOpen,
-  },
-];
+// 中文注释：图标保留在视图层，共享包只维护跨端一致的预设文案和稳定标识。
+const PRESET_ICONS: Record<ChatPresetId, typeof PieChart> = {
+  collection_profile: PieChart,
+  recently_active: RefreshCw,
+  hidden_gems: Sparkles,
+  local_ai_stack: BookOpen,
+};
 
 // 中文注释：代码块语言别名映射，prism 部分语言名需要归一化
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -607,16 +586,16 @@ export function ChatView({
                       支持多轮对话，AI 会基于你收藏的仓库回答问题、推荐项目。
                     </p>
                     <div className="chat-view__examples">
-                      {EXAMPLE_QUESTIONS.map((item, index) => {
-                        const Icon = item.icon;
+                      {CHAT_PRESETS.map((item) => {
+                        const Icon = PRESET_ICONS[item.id];
                         return (
                           <button
-                            key={index}
+                            key={item.id}
                             type="button"
                             className="chat-view__example-item"
                             onClick={() => {
                               setInput(item.question);
-                              void sendMessage(item.question).then(() => loadConversations());
+                              void sendMessage(item.question, { presetId: item.id }).then(() => loadConversations());
                             }}
                             disabled={isStreaming}
                           >
@@ -626,7 +605,7 @@ export function ChatView({
                               </div>
                               <span className="chat-view__example-item-title">{item.title}</span>
                             </div>
-                            <p className="chat-view__example-item-desc">{item.desc}</p>
+                            <p className="chat-view__example-item-desc">{item.description}</p>
                           </button>
                         );
                       })}
