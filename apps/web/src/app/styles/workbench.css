@@ -370,6 +370,14 @@
   overflow: auto;
 }
 
+/* 中文注释：看板内部已有主卡片，移除外层面板的重复边框、背景和阴影。 */
+.workbench-settings-pane--dashboard {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 /* ============ AI 对话视图 ============ */
 /* chat 面板：撑满高度，去掉外层滚动（内部 MessageScroller 自管滚动） */
 .workbench-settings-pane--chat {

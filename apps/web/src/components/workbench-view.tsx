@@ -268,7 +268,7 @@ export function WorkbenchView({
             {settingsPanelContent}
           </section>
         ) : contentMode === "dashboard" ? (
-          <section className="workbench-settings-pane">
+          <section className="workbench-settings-pane workbench-settings-pane--dashboard">
             <DashboardView
               onNavigateToRepo={(repoId) => {
                 // 中文注释：看板的待关注项直接复用工作台详情面板，避免用户离开当前整理流程。
