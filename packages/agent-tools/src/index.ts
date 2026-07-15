@@ -419,8 +419,14 @@ export async function callAgentTool(
       const detail = await resolveRepo(repo, context);
       return textResult(detail);
     }
-    case "sync_stars":
-      return textResult(await apiRequest("/api/sync", { context, method: "POST" }));
+    case "sync_stars": {
+      // HTTP 同步按页返回 running；Agent 工具保留“一次调用完成同步”的既有语义。
+      let result: unknown;
+      do {
+        result = await apiRequest("/api/sync", { context, method: "POST" });
+      } while (Boolean(result) && typeof result === "object" && (result as { status?: unknown }).status === "running");
+      return textResult(result);
+    }
     case "favorite_star":
       return textResult(await patchRepo(stringArg(args, "repo"), { isFavorite: true }, context));
     case "unfavorite_star":

@@ -213,12 +213,25 @@ export function useWorkbenchData(
     setError(null);
 
     try {
-      const result = await apiJson<SyncResult>("/api/sync", { method: "POST" });
-      setLastSync(result);
+      let result: SyncResult;
+      do {
+        result = await apiJson<SyncResult>("/api/sync", { method: "POST" });
+        setLastSync(result);
+
+        if (result.status === "running") {
+          setSyncMessage(
+            `正在同步第 ${result.pageCount} 页：已导入 ${result.counts.insertedOrUpdated} 个仓库，可以先浏览已导入内容。`,
+          );
+          // 每完成一页就更新列表，首次同步不再等所有 Star 与 README 都处理完才可用。
+          refreshList();
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, result.continuation.nextRequestAfterMs ?? 150);
+          });
+        }
+      } while (result.status === "running");
+
       const statusText = result.status === "success" ? "完成" : "失败";
-      setSyncMessage(
-        `同步${statusText}：获取 ${result.counts.fetched} 个，取消 Star ${result.counts.unstarred} 个。`,
-      );
+      setSyncMessage(`同步${statusText}：获取 ${result.counts.fetched} 个，取消 Star ${result.counts.unstarred} 个。`);
 
       if (result.status === "error") {
         const levelHint =
@@ -257,7 +270,7 @@ export function useWorkbenchData(
 
   const lastSyncText = (() => {
     if (lastSync) {
-      return formatDateTime(lastSync.finishedAt);
+      return formatDateTime(lastSync.finishedAt ?? lastSync.startedAt);
     }
     if (selectedRepo) {
       return formatDateTime(selectedRepo.lastSyncedAt);

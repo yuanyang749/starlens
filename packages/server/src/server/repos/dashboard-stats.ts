@@ -1,6 +1,22 @@
 export type MonthlyTrendPoint = { month: string; count: number };
 
-export const DASHBOARD_COMMUNITY_REPO_LIMIT = 10;
+// 这是当前用户收藏中 Star 数最高的项目，不是 GitHub 全站热榜。
+export const DASHBOARD_TOP_STARRED_REPO_LIMIT = 10;
+
+export const ATTENTION_FILTERS = [
+  "all",
+  "stale",
+  "archived",
+  "disabled",
+  "untagged",
+  "missingMetadata",
+] as const;
+
+export type AttentionFilter = (typeof ATTENTION_FILTERS)[number];
+
+export function isAttentionFilter(value: unknown): value is AttentionFilter {
+  return typeof value === "string" && (ATTENTION_FILTERS as readonly string[]).includes(value);
+}
 
 export type AttentionCandidate = {
   archived: boolean;

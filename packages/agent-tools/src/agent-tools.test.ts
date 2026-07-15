@@ -59,6 +59,37 @@ describe("agent tools", () => {
     expect(result.content[0]?.text).toContain("owner/repo");
   });
 
+  it("sync_stars follows paged sync responses until the run completes", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(apiResponse({
+        status: "running",
+        pageCount: 1,
+        counts: { fetched: 25, insertedOrUpdated: 25, unstarred: 0 },
+        continuation: { required: true, nextRequestAfterMs: 0 },
+      }))
+      .mockResolvedValueOnce(apiResponse({
+        status: "success",
+        pageCount: 2,
+        counts: { fetched: 31, insertedOrUpdated: 31, unstarred: 0 },
+        continuation: { required: false, nextRequestAfterMs: null },
+      }));
+
+    const result = await callAgentTool(
+      "sync_stars",
+      {},
+      { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://starlens.test/api/sync",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(result.content[0]?.text).toContain("success");
+  });
+
   it("set_star_note patches repo curation", async () => {
     const fetchMock = vi.fn(async () => apiResponse({ fullName: "owner/repo", note: "review later" }));
 

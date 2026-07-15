@@ -51,6 +51,29 @@ export const githubAccounts = pgTable("github_accounts", {
   ),
 }));
 
+// 同步任务必须独立持久化：首次导入可能包含数千个 Star，不能把进度只留在单次 HTTP 请求或进程内内存中。
+export const syncRuns = pgTable("sync_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("running"),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  nextPage: integer("next_page").notNull().default(1),
+  pageCount: integer("page_count").notNull().default(0),
+  fetched: integer("fetched").notNull().default(0),
+  insertedOrUpdated: integer("inserted_or_updated").notNull().default(0),
+  unstarred: integer("unstarred").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  errorSummary: text("error_summary"),
+  errorLevel: text("error_level"),
+  ...timestamps,
+}, (table) => ({
+  userStatusIndex: index("sync_runs_user_status_idx").on(table.userId, table.status),
+  userStartedIndex: index("sync_runs_user_started_idx").on(table.userId, table.startedAt),
+}));
+
 export const starredRepos = pgTable("starred_repos", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -193,6 +216,7 @@ export const userAiConfigs = pgTable("user_ai_configs", {
 
 export type User = typeof users.$inferSelect;
 export type GitHubAccount = typeof githubAccounts.$inferSelect;
+export type SyncRun = typeof syncRuns.$inferSelect;
 export type StarredRepo = typeof starredRepos.$inferSelect;
 export type RepoTag = typeof repoTags.$inferSelect;
 export type RepoNote = typeof repoNotes.$inferSelect;

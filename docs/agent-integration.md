@@ -88,7 +88,7 @@ Authorization: Bearer stl_xxx
 | --- | --- | --- |
 | `search_stars` | `/api/search?q={query}&pageSize={pageSize}` | `GET` |
 | `show_star` | `/api/repos/{repoIdOrFullName}` | `GET` |
-| `sync_stars` | `/api/sync` | `POST` |
+| `sync_stars` | `/api/sync` | `POST`（工具会在服务端返回 `running` 时自动续跑） |
 | `favorite_star` | `/api/repos/{repoIdOrFullName}`（仅本地标记） | `PATCH` |
 | `unfavorite_star` | `/api/repos/{repoIdOrFullName}`（仅本地标记） | `PATCH` |
 | `star_repo` | `/api/repos/star`（真实 GitHub star） | `POST` |

@@ -58,7 +58,9 @@ export async function syncCommand(args, config) {
   const spinner = startSpinner("Syncing...");
   let data;
   try {
-    data = await apiRequest("/api/sync", { method: "POST", config });
+    do {
+      data = await apiRequest("/api/sync", { method: "POST", config });
+    } while (data?.status === "running");
   } finally {
     stopSpinner(spinner);
   }

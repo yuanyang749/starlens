@@ -1,7 +1,7 @@
 # Starlens 数据库结构
 
 > 当前工程参考。最后按 `packages/server/src/db/schema.ts` 和
-> `apps/web/drizzle/` 核对：2026-07-11。Drizzle schema 与已提交迁移是最终权威来源。
+> `apps/web/drizzle/` 核对：2026-07-15。Drizzle schema 与已提交迁移是最终权威来源。
 
 ## 1. 文档目标
 
@@ -29,6 +29,7 @@
 核心关系如下：
 
 - 一个 `user` 当前最多绑定一个 `github_accounts`
+- 一个 `user` 拥有多条 `sync_runs`
 - 一个 `user` 拥有多条 `starred_repos`
 - 一条 `starred_repos` 可以关联多条 `repo_tags`
 - 一条 `starred_repos` 最多关联一条 `repo_notes`
@@ -100,7 +101,36 @@
 - `v1` 默认一个应用用户只绑定一个 GitHub 账号，因此 `user_id` 可以唯一
 - 如果以后要支持多 GitHub 身份，可放宽这个唯一约束
 
-### 4.3 `starred_repos`
+### 4.3 `sync_runs`
+
+用途：
+
+- 持久化 GitHub Stars 分页同步的断点、累计统计、错误和最近历史
+
+当前字段：
+
+- `id` `uuid` 主键
+- `user_id` `uuid` 外键 -> `users.id`
+- `status` `text`，取值为 `running`、`success` 或 `error`
+- `started_at` / `finished_at` `timestamptz`
+- `next_page` / `page_count` `integer`
+- `fetched` / `inserted_or_updated` / `unstarred` / `failed_count` `integer`
+- `error_summary` / `error_level` `text` 可空
+- `created_at` / `updated_at` `timestamptz`
+
+约束与索引：
+
+- 主键：`id`
+- 外键：`user_id`
+- 索引：`(user_id, status)`，用于恢复未完成任务
+- 索引：`(user_id, started_at)`，用于读取最近同步历史
+
+说明：
+
+- 一次 HTTP 请求最多处理一页；`next_page` 在页成功写入后前进，因此刷新页面、实例重启或可恢复错误重试都能继续同一个任务。
+- 只有最后一页成功时才会收敛已取消的 GitHub Star，避免中断时误标记本地记录。
+
+### 4.4 `starred_repos`
 
 用途：
 
@@ -160,7 +190,7 @@
 - `search_document` 作为数据库搜索输入文本
 - `repo_summary` 优先给 UI 和 AI 使用
 
-### 4.4 `repo_tags`
+### 4.5 `repo_tags`
 
 用途：
 
@@ -186,7 +216,7 @@
 - `user_id` 冗余保留，便于审计和用户维度查询
 - 实现时应保证 `repo_tags.user_id = starred_repos.user_id`
 
-### 4.5 `repo_notes`
+### 4.6 `repo_notes`
 
 用途：
 
@@ -212,7 +242,7 @@
 
 - `v1` 一个仓库只保留一条当前备注，不做备注历史
 
-### 4.6 `personal_api_tokens`
+### 4.7 `personal_api_tokens`
 
 用途：
 
@@ -244,7 +274,7 @@
 - `token_prefix` 和 `token_suffix` 用于 UI 上识别和审计
 - 当前没有持久化 scope 字段；Token 是用户级粗粒度凭据
 
-### 4.7 `user_ai_configs`
+### 4.8 `user_ai_configs`
 
 用途：
 
@@ -282,7 +312,7 @@
   - `deepseek_native`
 - `v1` 需要在应用层保证同一用户最多只有一条 `is_default = true`
 
-### 4.8 `ai_usage_logs`
+### 4.9 `ai_usage_logs`
 
 用于记录每次 AI 调用的用量，供后续限流/计费/排查参考。
 
@@ -305,7 +335,7 @@
 
 - 只记录用量统计，不存储 prompt/completion 原文，不是完整的调用审计日志
 
-### 4.9 `conversations`
+### 4.10 `conversations`
 
 用于保存多轮 AI 会话元数据和压缩摘要。
 
@@ -324,7 +354,7 @@
 - `user_id`
 - `(user_id, updated_at)`
 
-### 4.10 `chat_messages`
+### 4.11 `chat_messages`
 
 用于保存会话中的 user / assistant 消息和 assistant 候选仓库。
 

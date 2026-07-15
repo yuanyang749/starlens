@@ -12,6 +12,6 @@ describeDb("dashboard stats (DB integration)", () => {
     expect(stats.monthlyTrend).toHaveLength(12);
     expect(stats.attention.total).toBeGreaterThanOrEqual(stats.attentionRepos.length);
     expect(stats.attentionRepos.every((repo) => repo.reasons.length > 0)).toBe(true);
-    expect(stats.topRepos).toHaveLength(Math.min(stats.total, 10));
+    expect(stats.topStarredRepos).toHaveLength(Math.min(stats.total, 10));
   });
 });

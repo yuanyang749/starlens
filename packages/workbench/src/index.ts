@@ -21,10 +21,12 @@ type ApiFailure = { ok: false; error: { code: string; message: string } };
 type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
 export type SyncResult = {
-  status: "success" | "error";
+  runId: string | null;
+  status: "running" | "success" | "error";
   startedAt: string;
-  finishedAt: string;
+  finishedAt: string | null;
   durationMs: number;
+  nextPage: number;
   pageCount: number;
   failedCount: number;
   errorSummary: string | null;
@@ -35,11 +37,21 @@ export type SyncResult = {
     unstarred: number;
   };
   history: Array<{
+    id: string;
     startedAt: string;
-    status: "success" | "error";
+    finishedAt: string | null;
+    durationMs: number | null;
+    pageCount: number;
+    failedCount: number;
+    status: "running" | "success" | "error";
     counts: { fetched: number; insertedOrUpdated: number; unstarred: number };
     errorSummary: string | null;
+    errorLevel: "auth" | "rate_limit" | "network" | "unknown" | null;
   }>;
+  continuation: {
+    required: boolean;
+    nextRequestAfterMs: number | null;
+  };
 };
 
 export type AiAskResult = {
@@ -329,8 +341,20 @@ export function useMobileWorkbench(): MobileWorkbenchState {
     setMessage(null);
     setError(null);
     try {
-      const result = await fetchApi<SyncResult>("/api/sync", { method: "POST" });
-      setLastSync(result);
+      let result: SyncResult;
+      do {
+        result = await fetchApi<SyncResult>("/api/sync", { method: "POST" });
+        setLastSync(result);
+
+        if (result.status === "running") {
+          setMessage(`正在同步第 ${result.pageCount} 页：已导入 ${result.counts.insertedOrUpdated} 个仓库。`);
+          await refreshList();
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, result.continuation.nextRequestAfterMs ?? 150);
+          });
+        }
+      } while (result.status === "running");
+
       setMessage(`同步${result.status === "success" ? "完成" : "失败"}：获取 ${result.counts.fetched} 个。`);
       await refreshList();
     } catch (caught) {

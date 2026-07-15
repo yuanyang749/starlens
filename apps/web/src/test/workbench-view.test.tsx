@@ -99,12 +99,16 @@ beforeEach(() => {
                   { language: "Python", count: 1 },
                 ],
                 totalFavorites: 1,
+                recentAdded: 0,
+                attention: { total: 0, stale: 0, archived: 0, disabled: 0, untagged: 0, missingMetadata: 0 },
+                attentionRepos: [],
+                lastSyncedAt: null,
                 mostStarredRepo: { fullName: "owner/repo", stargazersCount: 100 },
                 monthlyTrend: [
                   { month: "2026-05", count: 1 },
                   { month: "2026-06", count: 2 },
                 ],
-                topRepos: [
+                topStarredRepos: [
                   { fullName: "owner/repo", language: "TypeScript", stargazersCount: 100 }
                 ],
               },
@@ -114,7 +118,24 @@ beforeEach(() => {
       }
 
       return Promise.resolve(
-        new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 3, unstarred: 0 } } })),
+        new Response(JSON.stringify({
+          ok: true,
+          data: {
+            runId: "sync-1",
+            status: "success",
+            startedAt: "2026-07-15T00:00:00.000Z",
+            finishedAt: "2026-07-15T00:00:01.000Z",
+            durationMs: 1000,
+            nextPage: 2,
+            pageCount: 1,
+            failedCount: 0,
+            errorSummary: null,
+            errorLevel: null,
+            counts: { fetched: 3, insertedOrUpdated: 3, unstarred: 0 },
+            history: [],
+            continuation: { required: false, nextRequestAfterMs: null },
+          },
+        })),
       );
     }),
   );
@@ -665,12 +686,46 @@ describe("workbench view", () => {
 
       if (url === "/api/sync" && init?.method === "POST") {
         return Promise.resolve(
-          new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+          new Response(JSON.stringify({
+            ok: true,
+            data: {
+              runId: "sync-empty",
+              status: "success",
+              startedAt: "2026-07-15T00:00:00.000Z",
+              finishedAt: "2026-07-15T00:00:00.000Z",
+              durationMs: 0,
+              nextPage: 1,
+              pageCount: 1,
+              failedCount: 0,
+              errorSummary: null,
+              errorLevel: null,
+              counts: { fetched: 0, insertedOrUpdated: 0, unstarred: 0 },
+              history: [],
+              continuation: { required: false, nextRequestAfterMs: null },
+            },
+          })),
         );
       }
 
       return Promise.resolve(
-        new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+        new Response(JSON.stringify({
+          ok: true,
+          data: {
+            runId: "sync-empty",
+            status: "success",
+            startedAt: "2026-07-15T00:00:00.000Z",
+            finishedAt: "2026-07-15T00:00:00.000Z",
+            durationMs: 0,
+            nextPage: 1,
+            pageCount: 1,
+            failedCount: 0,
+            errorSummary: null,
+            errorLevel: null,
+            counts: { fetched: 0, insertedOrUpdated: 0, unstarred: 0 },
+            history: [],
+            continuation: { required: false, nextRequestAfterMs: null },
+          },
+        })),
       );
     });
 

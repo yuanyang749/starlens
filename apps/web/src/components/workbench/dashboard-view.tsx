@@ -30,6 +30,7 @@ interface RepoStats {
     total: number;
     stale: number;
     archived: number;
+    disabled: number;
     untagged: number;
     missingMetadata: number;
   };
@@ -44,12 +45,23 @@ interface RepoStats {
   lastSyncedAt: string | null;
   mostStarredRepo: { fullName: string; stargazersCount: number } | null;
   monthlyTrend: Array<{ month: string; count: number }>;
-  topRepos: Array<{ fullName: string; language: string | null; stargazersCount: number }>;
+  topStarredRepos: Array<{ fullName: string; language: string | null; stargazersCount: number }>;
 }
 
 type DashboardViewProps = {
   onNavigateToRepo?: (repoId: string, fullName: string) => void;
 };
+
+type AttentionFilter = "all" | "stale" | "archived" | "disabled" | "untagged" | "missingMetadata";
+
+const ATTENTION_FILTERS: Array<{ id: AttentionFilter; label: string; countKey: keyof RepoStats["attention"] | null }> = [
+  { id: "all", label: "全部", countKey: "total" },
+  { id: "stale", label: "过时", countKey: "stale" },
+  { id: "archived", label: "归档", countKey: "archived" },
+  { id: "disabled", label: "停用", countKey: "disabled" },
+  { id: "untagged", label: "未分类", countKey: "untagged" },
+  { id: "missingMetadata", label: "数据缺失", countKey: "missingMetadata" },
+];
 
 const LANGUAGE_COLORS = ["#2563eb", "#0ea5e9", "#14b8a6", "#f59e0b", "#8b5cf6", "#94a3b8"];
 
@@ -106,11 +118,13 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
   const [stats, setStats] = useState<RepoStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [attentionFilter, setAttentionFilter] = useState<AttentionFilter>("all");
 
   // 中文注释：统一通过 fetchApi 获取统计数据，并在切换工作台页签时取消旧请求，避免竞态更新。
   useEffect(() => {
     const controller = new AbortController();
-    fetchApi<RepoStats>("/api/stats", { signal: controller.signal })
+    const params = attentionFilter === "all" ? "" : `?attention=${attentionFilter}`;
+    fetchApi<RepoStats>(`/api/stats${params}`, { signal: controller.signal })
       .then((data) => {
         setStats(data);
         setError(null);
@@ -125,7 +139,7 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [attentionFilter]);
 
   const languageRows = useMemo(() => {
     if (!stats) return [];
@@ -167,6 +181,7 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
   const trendRange = stats.monthlyTrend.length > 0
     ? `${stats.monthlyTrend[0]?.month.replace("-", "年")}月 — ${stats.monthlyTrend.at(-1)?.month.replace("-", "年")}月`
     : "暂无时间范围";
+  const activeAttentionFilter = ATTENTION_FILTERS.find((item) => item.id === attentionFilter) ?? ATTENTION_FILTERS[0];
 
   return (
     <div className="h-full overflow-auto">
@@ -299,13 +314,26 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                     <TriangleAlert className="h-4 w-4 text-amber-500" />需要关注
                   </h3>
-                  <p className="mt-1 text-xs text-neutral-400">点击仓库进入详情，补充标签或判断是否继续保留。</p>
+                  <p className="mt-1 text-xs text-neutral-400">按原因筛选后，点击仓库进入详情进行标记、补充标签或判断是否继续保留。</p>
                 </div>
-                <div className="flex flex-wrap gap-1.5 text-[11px]">
-                  <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">过时 {stats.attention.stale}</span>
-                  <span className="rounded-full bg-rose-50 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">归档 {stats.attention.archived}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">未分类 {stats.attention.untagged}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">数据缺失 {stats.attention.missingMetadata}</span>
+                <div className="flex flex-wrap gap-1.5 text-[11px]" aria-label="待关注仓库筛选">
+                  {ATTENTION_FILTERS.map((filter) => {
+                    const count = filter.countKey ? stats.attention[filter.countKey] : 0;
+                    const active = filter.id === attentionFilter;
+                    return (
+                      <button
+                        key={filter.id}
+                        type="button"
+                        onClick={() => setAttentionFilter(filter.id)}
+                        aria-pressed={active}
+                        className={active
+                          ? "rounded-full bg-blue-600 px-2 py-1 text-white shadow-sm"
+                          : "rounded-full bg-slate-100 px-2 py-1 text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-200"}
+                      >
+                        {filter.label} {count}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -342,7 +370,7 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center text-sm text-neutral-400">收藏整理得很好，暂时没有待关注仓库。</div>
+                  <div className="p-8 text-center text-sm text-neutral-400">{activeAttentionFilter.label}分类下暂时没有待关注仓库。</div>
                 )}
               </div>
             </article>
@@ -354,9 +382,9 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-                    <Github className="h-4 w-4" />社区热门
+                    <Github className="h-4 w-4" />收藏中高 Star 项目
                   </h3>
-                  <p className="mt-1 text-xs text-neutral-400">GitHub 社区 Stars 排名前 10，仅作发现参考</p>
+                  <p className="mt-1 text-xs text-neutral-400">按你已收藏项目的 GitHub Star 数排序</p>
                 </div>
                 <Archive className="h-4 w-4 text-neutral-300" />
               </div>
@@ -364,7 +392,7 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
                 data-testid="dashboard-community-scroll"
                 className="mt-4 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1"
               >
-                {stats.topRepos.map((repo, index) => (
+                {stats.topStarredRepos.map((repo, index) => (
                   <a
                     key={repo.fullName}
                     href={`https://github.com/${repo.fullName}`}
@@ -386,7 +414,7 @@ export function DashboardView({ onNavigateToRepo }: DashboardViewProps = {}) {
                 ))}
               </div>
               <div className="mt-3 flex shrink-0 items-center gap-2 rounded-xl bg-[color:var(--surface-2)] px-3 py-2 text-[11px] text-neutral-500">
-                <Tags className="h-3.5 w-3.5" />社区 Stars 仅用于发现，不代表你的使用优先级。
+                <Tags className="h-3.5 w-3.5" />GitHub Star 仅是热度信号，不代表你的使用优先级。
               </div>
             </aside>
           </div>

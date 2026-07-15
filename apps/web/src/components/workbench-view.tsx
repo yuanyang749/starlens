@@ -257,7 +257,9 @@ export function WorkbenchView({
           favoriteCount={favoriteCount}
           lastSyncText={lastSyncText}
           syncStatusText={
-            lastSync ? `${lastSync.counts.fetched} 个仓库 · ${lastSync.status === "success" ? "成功" : "失败"}` : `已追踪 ${allStarsTotal} 个仓库`
+            lastSync
+              ? `${lastSync.counts.fetched} 个仓库 · ${lastSync.status === "running" ? "同步中" : lastSync.status === "success" ? "成功" : "失败"}`
+              : `已追踪 ${allStarsTotal} 个仓库`
           }
           collapsed={sidebarCollapsed}
           onCollapsedChange={setSidebarCollapsed}
