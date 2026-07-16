@@ -150,6 +150,8 @@ export function WorkbenchView({
   const displayedTotal = aiSearchMode ? aiSearchTotal : total;
   const displayedSort = aiSearchMode ? "relevance" : sort;
   const showingSettingsPanel = contentMode !== "repos" && contentMode !== "dashboard" && contentMode !== "chat";
+  // 中文注释：同步失败是需要立即注意的状态，不能沿用普通信息提示的蓝色样式。
+  const syncMessageIsError = syncMessage?.startsWith("同步失败") ?? false;
 
   let settingsPanelContent: React.ReactNode = null;
 
@@ -192,7 +194,11 @@ export function WorkbenchView({
         </div>
       ) : null}
       {syncMessage && aiSearchInsights.length === 0 ? (
-        <div className="workbench-banner workbench-banner--info" role="status" aria-live="polite">
+        <div
+          className={`workbench-banner ${syncMessageIsError ? "workbench-banner--error" : "workbench-banner--info"}`}
+          role={syncMessageIsError ? "alert" : "status"}
+          aria-live={syncMessageIsError ? "assertive" : "polite"}
+        >
           <div className="workbench-banner__content">
             <span>{syncMessage}</span>
           </div>

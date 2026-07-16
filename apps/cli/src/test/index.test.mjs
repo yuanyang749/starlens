@@ -179,10 +179,12 @@ test("sync follows running pages with a Bearer token and renders the completed r
 
   try {
     let syncCalls = 0;
+    const requestTimes = [];
     await withApiServer((request, response) => {
       assert.equal(request.method, "POST");
       assert.equal(request.url, "/api/sync");
       syncCalls += 1;
+      requestTimes.push(Date.now());
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({
         ok: true,
@@ -191,6 +193,7 @@ test("sync follows running pages with a Bearer token and renders the completed r
           startedAt: "2026-05-05T12:00:00.000Z",
           finishedAt: syncCalls === 1 ? null : "2026-05-05T12:00:03.000Z",
           counts: { fetched: 3, insertedOrUpdated: 2, unstarred: 1 },
+          continuation: { required: syncCalls === 1, nextRequestAfterMs: syncCalls === 1 ? 25 : null },
         },
       }));
     }, async (apiBaseUrl, requests) => {
@@ -199,6 +202,7 @@ test("sync follows running pages with a Bearer token and renders the completed r
       assert.equal(result.code, 0, result.stderr);
       assert.equal(requests[0].authorization, "Bearer stl_sync_token");
       assert.equal(requests.length, 2);
+      assert.ok(requestTimes[1] - requestTimes[0] >= 20, "续跑请求应遵守服务端建议的等待时间");
       assert.match(result.stdout, /Status/);
       assert.match(result.stdout, /success/);
       assert.match(result.stdout, /Fetched/);

@@ -283,6 +283,21 @@ function noteArg(args: Record<string, unknown>) {
   return value.trim();
 }
 
+// 中文注释：Agent 分页续跑时遵守服务端建议的节流时间，避免短时间内集中请求同步接口。
+function waitForSyncContinuation(result: unknown) {
+  const suggestedDelay = typeof result === "object" && result !== null
+    && "continuation" in result
+    && typeof result.continuation === "object"
+    && result.continuation !== null
+    && "nextRequestAfterMs" in result.continuation
+    ? result.continuation.nextRequestAfterMs
+    : undefined;
+  const delay = typeof suggestedDelay === "number" && Number.isFinite(suggestedDelay)
+    ? Math.min(30_000, Math.max(0, suggestedDelay))
+    : 150;
+  return new Promise<void>((resolve) => setTimeout(resolve, delay));
+}
+
 async function apiRequest<T>(
   path: string,
   {
@@ -424,6 +439,9 @@ export async function callAgentTool(
       let result: unknown;
       do {
         result = await apiRequest("/api/sync", { context, method: "POST" });
+        if (typeof result === "object" && result !== null && (result as { status?: unknown }).status === "running") {
+          await waitForSyncContinuation(result);
+        }
       } while (Boolean(result) && typeof result === "object" && (result as { status?: unknown }).status === "running");
       return textResult(result);
     }

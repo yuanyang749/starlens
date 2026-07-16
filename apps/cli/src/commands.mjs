@@ -18,6 +18,15 @@ import {
 } from "./renderers.mjs";
 import { resolveRepo, patchRepoCuration, addTag, removeTag, openUrl } from "./repo.mjs";
 
+// 中文注释：分页同步由服务端给出节流建议，CLI 必须等待后再请求下一页，避免集中请求 GitHub API。
+function waitForSyncContinuation(result) {
+  const suggestedDelay = result?.continuation?.nextRequestAfterMs;
+  const delay = typeof suggestedDelay === "number" && Number.isFinite(suggestedDelay)
+    ? Math.min(30_000, Math.max(0, suggestedDelay))
+    : 150;
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
 // stars login (--token <token>|--token-stdin) [--token-path <path>]
 export async function loginCommand(args, config) {
   const tokenOption = readOption(args, "--token");
@@ -60,6 +69,9 @@ export async function syncCommand(args, config) {
   try {
     do {
       data = await apiRequest("/api/sync", { method: "POST", config });
+      if (data?.status === "running") {
+        await waitForSyncContinuation(data);
+      }
     } while (data?.status === "running");
   } finally {
     stopSpinner(spinner);

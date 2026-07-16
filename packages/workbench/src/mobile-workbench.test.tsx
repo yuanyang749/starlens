@@ -307,6 +307,9 @@ describe("useMobileWorkbench", () => {
   it("loads the next repository page without replacing existing results", async () => {
     const hook = renderHook();
 
+    // 中文注释：移动端默认进入对话页；分页行为仅在仓库列表页生效。
+    act(() => hook.current.actions.setMode("all"));
+
     await waitFor(() => expect(hook.current.repos.map((repo) => repo.id)).toEqual([repoOne.id]));
 
     await act(async () => {

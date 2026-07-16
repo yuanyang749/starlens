@@ -59,14 +59,15 @@ describe("agent tools", () => {
     expect(result.content[0]?.text).toContain("owner/repo");
   });
 
-  it("sync_stars follows paged sync responses until the run completes", async () => {
+  it("sync_stars waits for the suggested continuation interval before requesting the next page", async () => {
+    vi.useFakeTimers();
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(apiResponse({
         status: "running",
         pageCount: 1,
         counts: { fetched: 25, insertedOrUpdated: 25, unstarred: 0 },
-        continuation: { required: true, nextRequestAfterMs: 0 },
+        continuation: { required: true, nextRequestAfterMs: 100 },
       }))
       .mockResolvedValueOnce(apiResponse({
         status: "success",
@@ -75,11 +76,16 @@ describe("agent tools", () => {
         continuation: { required: false, nextRequestAfterMs: null },
       }));
 
-    const result = await callAgentTool(
+    const pendingResult = callAgentTool(
       "sync_stars",
       {},
       { apiBaseUrl: "https://starlens.test", token: "stl_test", fetch: fetchMock },
     );
+
+    await vi.advanceTimersByTimeAsync(99);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pendingResult;
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenNthCalledWith(

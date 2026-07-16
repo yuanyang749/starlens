@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LandingPage } from "@/components/landing-page";
 
 const { signInMock } = vi.hoisted(() => ({
@@ -11,6 +11,17 @@ const { signInMock } = vi.hoisted(() => ({
 vi.mock("next-auth/react", () => ({
   signIn: signInMock,
 }));
+
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", vi.fn(() => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })));
+});
 
 function mount(node: React.ReactNode) {
   const el = document.createElement("div");
@@ -26,17 +37,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("landing page workspace links", () => {
-  it("links workspace entry points to the app instead of the NextAuth sign-in page", () => {
+describe("landing page workspace entry", () => {
+  it("renders explicit GitHub login controls instead of a direct workspace link", () => {
     const { el } = mount(<LandingPage githubAuthEnabled />);
 
     const workspaceLinks = Array.from(el.querySelectorAll("a")).filter((link) =>
       link.textContent?.includes("工作台"),
     );
 
-    expect(workspaceLinks.length).toBeGreaterThan(0);
-    expect(workspaceLinks.every((link) => link.getAttribute("href") === "/app"))
-      .toBe(true);
+    expect(workspaceLinks).toHaveLength(0);
+    expect(el.textContent).toContain("使用 GitHub 登录");
+    expect(el.textContent).toContain("进入工作台");
     expect(el.innerHTML).not.toContain("/api/auth/signin");
   });
 
