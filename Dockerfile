@@ -15,6 +15,9 @@ COPY packages/core/package.json packages/core/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/workbench/package.json packages/workbench/package.json
 COPY packages/agent-tools/package.json packages/agent-tools/package.json
+# 补充 postinstall 依赖：sync-skill.mjs 需要 scripts/ 自身和 skills/starlens 源目录
+COPY scripts/sync-skill.mjs scripts/sync-skill.mjs
+COPY skills/starlens skills/starlens
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
