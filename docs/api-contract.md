@@ -260,30 +260,54 @@ Authorization: Bearer <token>
 {}
 ```
 
-响应（同步在当前请求内完成）：
+响应（每次请求处理一页，客户端可按 `continuation` 继续）：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "runId": "1b4db98e-f74a-44f1-b772-2f34554dfcd6",
+    "status": "running",
+    "startedAt": "2026-05-05T12:00:00.000Z",
+    "finishedAt": null,
+    "durationMs": 800,
+    "nextPage": 2,
+    "pageCount": 1,
+    "failedCount": 0,
+    "errorSummary": null,
+    "errorLevel": null,
+    "counts": {
+      "fetched": 25,
+      "insertedOrUpdated": 25,
+      "unstarred": 0
+    },
+    "continuation": {
+      "required": true,
+      "nextRequestAfterMs": 150
+    },
+    "history": [
+      {
+        "id": "1b4db98e-f74a-44f1-b772-2f34554dfcd6",
+        "status": "running",
+        "startedAt": "2026-05-05T12:00:00.000Z",
+        "finishedAt": null
+      }
+    ]
+  }
+}
+```
+
+完成时会返回：
 
 ```json
 {
   "ok": true,
   "data": {
     "status": "success",
-    "startedAt": "2026-05-05T12:00:00.000Z",
     "finishedAt": "2026-05-05T12:00:03.000Z",
-    "durationMs": 3000,
-    "pageCount": 2,
-    "failedCount": 0,
-    "errorSummary": null,
-    "errorLevel": null,
-    "counts": {
-      "fetched": 135,
-      "insertedOrUpdated": 135,
-      "unstarred": 0
-    },
-    "history": [],
-    "scheduler": {
-      "enabled": false,
-      "trigger": "cron every 30 minutes",
-      "retryPolicy": "up to 3 retries with exponential backoff (30s, 2m, 10m)"
+    "continuation": {
+      "required": false,
+      "nextRequestAfterMs": null
     }
   }
 }
@@ -291,9 +315,15 @@ Authorization: Bearer <token>
 
 说明：
 
-- 当前实现会等待本次同步完成，再返回统计和进程内历史记录。
-- 同步业务失败仍返回 `{ ok: true, data: { status: "error", ... } }`，调用方必须检查 `data.status`。
-- `scheduler.enabled` 当前固定为 `false`；字段只描述计划中的调度钩子，不表示已启用定时同步。
+- 每次请求最多处理 25 个收藏；当 `status` 为 `running` 或 `continuation.required` 为 `true` 时，调用方应在 `nextRequestAfterMs` 后再次 `POST /api/sync`。Web、Mobile、CLI 和 Agent 工具已自动执行该续跑逻辑。
+- 同步进度与历史记录保存在数据库的 `sync_runs` 表中。刷新页面、实例重启或重新发起同步后，均会从已完成页继续。
+- 同步业务失败仍返回 `{ ok: true, data: { status: "error", ... } }`，调用方必须检查 `data.status`。下一次手动触发会恢复同一任务；未连接 GitHub 账号等前置错误不创建任务。
+
+### 6.1.1 `GET /api/sync`
+
+用途：
+
+- 获取当前用户最近同步任务；`latest` 为最近一次任务，`history` 最多保留 8 条。
 
 ### 6.2 `GET /api/search`
 

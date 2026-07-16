@@ -17,7 +17,8 @@ import {
   buildSearchDocument,
 } from "./text";
 import {
-  DASHBOARD_COMMUNITY_REPO_LIMIT,
+  DASHBOARD_TOP_STARRED_REPO_LIMIT,
+  type AttentionFilter,
   buildAttentionReasons,
   completeMonthlyTrend,
   toIsoDateString,
@@ -477,6 +478,7 @@ export type RepoStats = {
     total: number;
     stale: number;
     archived: number;
+    disabled: number;
     untagged: number;
     missingMetadata: number;
   };
@@ -491,10 +493,14 @@ export type RepoStats = {
   lastSyncedAt: string | null;
   mostStarredRepo: { fullName: string; stargazersCount: number } | null;
   monthlyTrend: Array<{ month: string; count: number }>;
-  topRepos: Array<{ fullName: string; language: string | null; stargazersCount: number }>;
+  topStarredRepos: Array<{ fullName: string; language: string | null; stargazersCount: number }>;
 };
 
-export async function getRepoStats(userId: string): Promise<RepoStats> {
+export type RepoStatsOptions = {
+  attentionFilter?: AttentionFilter;
+};
+
+export async function getRepoStats(userId: string, options: RepoStatsOptions = {}): Promise<RepoStats> {
   const db = getDb();
   const base = and(eq(starredRepos.userId, userId), eq(starredRepos.isStarred, true));
   const now = new Date();
@@ -515,6 +521,22 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
     isNull(starredRepos.language),
     isUntagged,
   );
+  const attentionRepoCondition = (() => {
+    switch (options.attentionFilter) {
+      case "stale":
+        return isStale;
+      case "archived":
+        return eq(starredRepos.archived, true);
+      case "disabled":
+        return eq(starredRepos.disabled, true);
+      case "untagged":
+        return isUntagged;
+      case "missingMetadata":
+        return isNull(starredRepos.language);
+      default:
+        return needsAttention;
+    }
+  })();
 
   const [
     totalRows,
@@ -524,6 +546,7 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
     attentionRows,
     staleRows,
     archivedRows,
+    disabledRows,
     untaggedRows,
     missingMetadataRows,
     lastSyncRows,
@@ -550,6 +573,9 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
     db.select({ value: count() }).from(starredRepos).where(and(base, isStale)),
     db.select({ value: count() }).from(starredRepos).where(
       and(base, eq(starredRepos.archived, true)),
+    ),
+    db.select({ value: count() }).from(starredRepos).where(
+      and(base, eq(starredRepos.disabled, true)),
     ),
     db.select({ value: count() }).from(starredRepos).where(and(base, isUntagged)),
     db.select({ value: count() }).from(starredRepos).where(and(base, isNull(starredRepos.language))),
@@ -581,7 +607,7 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
       .from(starredRepos)
       .where(base)
       .orderBy(desc(starredRepos.stargazersCount))
-      .limit(DASHBOARD_COMMUNITY_REPO_LIMIT),
+      .limit(DASHBOARD_TOP_STARRED_REPO_LIMIT),
     db
       .select({
         id: starredRepos.id,
@@ -597,7 +623,7 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
         )`,
       })
       .from(starredRepos)
-      .where(and(base, needsAttention))
+      .where(and(base, attentionRepoCondition))
       .orderBy(desc(starredRepos.archived), desc(starredRepos.disabled), asc(starredRepos.pushedAtGithub))
       .limit(6),
   ]);
@@ -611,6 +637,7 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
       total: attentionRows[0]?.value ?? 0,
       stale: staleRows[0]?.value ?? 0,
       archived: archivedRows[0]?.value ?? 0,
+      disabled: disabledRows[0]?.value ?? 0,
       untagged: untaggedRows[0]?.value ?? 0,
       missingMetadata: missingMetadataRows[0]?.value ?? 0,
     },
@@ -630,7 +657,7 @@ export async function getRepoStats(userId: string): Promise<RepoStats> {
       trendRows.map((r) => ({ month: r.month, count: Number(r.cnt) })),
       now,
     ),
-    topRepos: topReposRows.map((r) => ({
+    topStarredRepos: topReposRows.map((r) => ({
       fullName: r.fullName,
       language: r.language,
       stargazersCount: r.stargazersCount ?? 0,

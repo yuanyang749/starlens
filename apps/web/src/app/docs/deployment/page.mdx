@@ -226,7 +226,7 @@ corepack pnpm mcp:start
 - 数据库迁移需要在首次上线前执行。
 - 如果启用 AI 功能，需要在设置页配置对应 Provider。
 - 如果要给 CLI 使用，需要在 Tokens 页面创建个人 API Token。
-- `/api/sync` 能成功触发同步，并在 GitHub 速率限制内完成。
+- `/api/sync` 能成功触发同步；首次导入按页续跑，刷新页面或重试后仍能从已完成页继续，并在 GitHub 速率限制内完成。
 - `/api/search` 能返回当前用户的数据，且不会返回其他用户仓库。
 - Token 撤销后，旧 Bearer Token 不能继续访问 API。
 - 生产环境不要暴露 `.env`、数据库连接串或 AI API Key。

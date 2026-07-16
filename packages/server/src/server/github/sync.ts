@@ -1,57 +1,115 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { githubAccounts, repoNotes, repoTags, starredRepos } from "../../db/schema";
+import { githubAccounts, repoNotes, repoTags, starredRepos, syncRuns, type SyncRun } from "../../db/schema";
 import { decryptSecret } from "../crypto/secrets";
 import {
   fetchReadmeExcerpt,
-  listAllStarredRepos,
+  listStarredReposPage,
   summarizeSyncedRepo,
 } from "./client";
 import { buildSearchDocument } from "@starlens-app/core";
-import { findUnstarredRepoIds } from "./sync-utils";
 import type { NormalizedGitHubStarredRepo } from "./normalize";
 
-type SyncCounts = {
+export type SyncCounts = {
   fetched: number;
   insertedOrUpdated: number;
   unstarred: number;
 };
 
-type SyncErrorLevel = "auth" | "rate_limit" | "network" | "unknown";
+export type SyncStatus = "running" | "success" | "error";
+export type SyncErrorLevel = "auth" | "rate_limit" | "network" | "unknown";
 
 export type SyncHistoryEntry = {
+  id: string;
   startedAt: string;
-  finishedAt: string;
-  durationMs: number;
+  finishedAt: string | null;
+  durationMs: number | null;
   pageCount: number;
   failedCount: number;
   errorSummary: string | null;
-  status: "success" | "error";
+  status: SyncStatus;
   counts: SyncCounts;
   errorLevel: SyncErrorLevel | null;
 };
 
 export type SyncGitHubStarsResult = {
+  runId: string;
+  status: SyncStatus;
+  startedAt: Date;
+  finishedAt: Date | null;
+  nextPage: number;
   counts: SyncCounts;
   pageCount: number;
   failedCount: number;
+  errorSummary: string | null;
+  errorLevel: SyncErrorLevel | null;
 };
 
 const SYNC_HISTORY_LIMIT = 8;
-// 中文注释：当前为进程内实现，多实例部署需迁移至 sync_runs 表（见架构优化方案 6.3）。
-// githubAccounts 表已持久化最近一次同步状态，此历史仅用于短期 UI 展示。
-const syncHistoryByUser = new Map<string, SyncHistoryEntry[]>();
+const SYNC_PAGE_SIZE = 25;
+const SYNC_ENRICHMENT_CONCURRENCY = 4;
 
-export function addSyncHistory(userId: string, entry: SyncHistoryEntry) {
-  const history = syncHistoryByUser.get(userId) ?? [];
-  const nextHistory = [entry, ...history].slice(0, SYNC_HISTORY_LIMIT);
-  syncHistoryByUser.set(userId, nextHistory);
+function asSyncStatus(value: string): SyncStatus {
+  return value === "success" || value === "error" ? value : "running";
 }
 
-export function getSyncHistory(userId: string) {
-  return syncHistoryByUser.get(userId) ?? [];
+function asSyncErrorLevel(value: string | null): SyncErrorLevel | null {
+  return value === "auth" || value === "rate_limit" || value === "network" || value === "unknown"
+    ? value
+    : null;
+}
+
+function resultFromRun(run: SyncRun): SyncGitHubStarsResult {
+  return {
+    runId: run.id,
+    status: asSyncStatus(run.status),
+    startedAt: run.startedAt,
+    finishedAt: run.finishedAt,
+    nextPage: run.nextPage,
+    pageCount: run.pageCount,
+    failedCount: run.failedCount,
+    errorSummary: run.errorSummary,
+    errorLevel: asSyncErrorLevel(run.errorLevel),
+    counts: {
+      fetched: run.fetched,
+      insertedOrUpdated: run.insertedOrUpdated,
+      unstarred: run.unstarred,
+    },
+  };
+}
+
+function historyFromRun(run: SyncRun): SyncHistoryEntry {
+  return {
+    id: run.id,
+    startedAt: run.startedAt.toISOString(),
+    finishedAt: run.finishedAt?.toISOString() ?? null,
+    durationMs: run.finishedAt ? run.finishedAt.getTime() - run.startedAt.getTime() : null,
+    pageCount: run.pageCount,
+    failedCount: run.failedCount,
+    errorSummary: run.errorSummary,
+    status: asSyncStatus(run.status),
+    counts: {
+      fetched: run.fetched,
+      insertedOrUpdated: run.insertedOrUpdated,
+      unstarred: run.unstarred,
+    },
+    errorLevel: asSyncErrorLevel(run.errorLevel),
+  };
+}
+
+// sync_runs 让刷新页面、重启实例或多次请求时都能从已完成页继续。
+export async function getSyncHistory(userId: string): Promise<SyncHistoryEntry[]> {
+  const db = getDb();
+  const runs = await db
+    .select()
+    .from(syncRuns)
+    .where(eq(syncRuns.userId, userId))
+    .orderBy(desc(syncRuns.startedAt))
+    .limit(SYNC_HISTORY_LIMIT);
+
+  return runs.map(historyFromRun);
 }
 
 export function resolveSyncErrorLevel(error: unknown): SyncErrorLevel {
@@ -74,6 +132,120 @@ export function resolveSyncErrorLevel(error: unknown): SyncErrorLevel {
   }
 
   return "unknown";
+}
+
+async function runWithConcurrency<T>(
+  items: readonly T[],
+  worker: (item: T) => Promise<void>,
+  concurrency = SYNC_ENRICHMENT_CONCURRENCY,
+) {
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      if (item !== undefined) await worker(item);
+    }
+  }));
+}
+
+async function getOrCreateResumableSyncRun(userId: string, accountId: string) {
+  const db = getDb();
+  const [existing] = await db
+    .select()
+    .from(syncRuns)
+    .where(
+      and(
+        eq(syncRuns.userId, userId),
+        or(eq(syncRuns.status, "running"), eq(syncRuns.status, "error")),
+      ),
+    )
+    .orderBy(desc(syncRuns.startedAt))
+    .limit(1);
+
+  if (existing) {
+    // 可恢复错误（例如网络瞬断或 GitHub 限流）保留已经完成的页数；下一次 POST
+    // 继续同一个 run，而不是从第一页重新导入。
+    if (existing.status === "error") {
+      const now = new Date();
+      const [resumed] = await db
+        .update(syncRuns)
+        .set({
+          status: "running",
+          finishedAt: null,
+          errorSummary: null,
+          errorLevel: null,
+          updatedAt: now,
+        })
+        .where(eq(syncRuns.id, existing.id))
+        .returning();
+
+      await db
+        .update(githubAccounts)
+        .set({
+          lastSyncStartedAt: now,
+          lastSyncStatus: "running",
+          lastSyncError: null,
+          updatedAt: now,
+        })
+        .where(eq(githubAccounts.id, accountId));
+
+      return resumed;
+    }
+
+    return existing;
+  }
+
+  const now = new Date();
+  const [created] = await db
+    .insert(syncRuns)
+    .values({ userId, status: "running", startedAt: now })
+    .returning();
+
+  await db
+    .update(githubAccounts)
+    .set({
+      lastSyncStartedAt: now,
+      lastSyncStatus: "running",
+      lastSyncError: null,
+      updatedAt: now,
+    })
+    .where(eq(githubAccounts.id, accountId));
+
+  return created;
+}
+
+async function markSyncRunFailed(run: SyncRun, accountId: string, error: unknown) {
+  const db = getDb();
+  const now = new Date();
+  const errorSummary = error instanceof Error ? error.message : "Unknown sync error";
+  const errorLevel = resolveSyncErrorLevel(error);
+  const [failed] = await db
+    .update(syncRuns)
+    .set({
+      status: "error",
+      finishedAt: now,
+      failedCount: run.failedCount + 1,
+      errorSummary,
+      errorLevel,
+      updatedAt: now,
+    })
+    .where(eq(syncRuns.id, run.id))
+    .returning();
+
+  await db
+    .update(githubAccounts)
+    .set({
+      lastSyncFinishedAt: now,
+      lastSyncStatus: "error",
+      lastSyncError: errorSummary,
+      updatedAt: now,
+    })
+    .where(eq(githubAccounts.id, accountId));
+
+  return failed;
 }
 
 // 中文注释：导出供 analyze.ts 等需要直接调 GitHub API 的模块复用——避免在每个调用方
@@ -207,85 +379,84 @@ export async function upsertSyncedRepo(
 export async function syncGitHubStars(userId: string): Promise<SyncGitHubStarsResult> {
   const db = getDb();
   const { account, token } = await getGitHubAccessToken(userId);
-  const now = new Date();
-
-  await db
-    .update(githubAccounts)
-    .set({
-      lastSyncStartedAt: now,
-      lastSyncStatus: "running",
-      lastSyncError: null,
-      updatedAt: now,
-    })
-    .where(eq(githubAccounts.id, account.id));
+  const run = await getOrCreateResumableSyncRun(userId, account.id);
 
   try {
-    const { repos, pages } = await listAllStarredRepos(token);
-    const syncedIds: string[] = [];
+    const page = await listStarredReposPage(token, run.nextPage, SYNC_PAGE_SIZE);
+    await runWithConcurrency(page.repos, async (repo) => {
+      await upsertSyncedRepo(userId, token, repo);
+    });
 
-    for (const repo of repos) {
-      syncedIds.push(await upsertSyncedRepo(userId, token, repo));
-    }
+    const nextPageCount = run.pageCount + 1;
+    const nextFetched = run.fetched + page.repos.length;
+    const nextInsertedOrUpdated = run.insertedOrUpdated + page.repos.length;
+    const now = new Date();
 
-    const existingStarredRows = await db
-      .select({ id: starredRepos.id })
-      .from(starredRepos)
-      .where(and(eq(starredRepos.userId, userId), eq(starredRepos.isStarred, true)));
-    const unstarredIds = findUnstarredRepoIds(
-      existingStarredRows.map((repo) => repo.id),
-      syncedIds,
-    );
-    let unstarred = 0;
-
-    if (unstarredIds.length > 0) {
-      const result = await db
-        .update(starredRepos)
+    if (page.hasNextPage) {
+      const [continued] = await db
+        .update(syncRuns)
         .set({
-          isStarred: false,
-          unstarredAt: now,
+          nextPage: run.nextPage + 1,
+          pageCount: nextPageCount,
+          fetched: nextFetched,
+          insertedOrUpdated: nextInsertedOrUpdated,
           updatedAt: now,
         })
-        .where(
-          and(
-            eq(starredRepos.userId, userId),
-            eq(starredRepos.isStarred, true),
-            inArray(starredRepos.id, unstarredIds),
-          ),
-        )
-        .returning({ id: starredRepos.id });
-      unstarred = result.length;
+        .where(eq(syncRuns.id, run.id))
+        .returning();
+
+      return resultFromRun(continued);
     }
 
+    // 只在最后一页完成后收敛取消 Star：本轮开始后未被刷新过的记录才是真正已取消的收藏。
+    // 因而中断、刷新或重试都不会提前把用户的仓库标成未收藏。
+    const unstarredRows = await db
+      .update(starredRepos)
+      .set({
+        isStarred: false,
+        unstarredAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(starredRepos.userId, userId),
+          eq(starredRepos.isStarred, true),
+          or(
+            isNull(starredRepos.lastSyncedAt),
+            lt(starredRepos.lastSyncedAt, run.startedAt),
+          ),
+        ),
+      )
+      .returning({ id: starredRepos.id });
+
+    const [completed] = await db
+      .update(syncRuns)
+      .set({
+        status: "success",
+        finishedAt: now,
+        pageCount: nextPageCount,
+        fetched: nextFetched,
+        insertedOrUpdated: nextInsertedOrUpdated,
+        unstarred: unstarredRows.length,
+        errorSummary: null,
+        errorLevel: null,
+        updatedAt: now,
+      })
+      .where(eq(syncRuns.id, run.id))
+      .returning();
+
     await db
       .update(githubAccounts)
       .set({
-        lastSyncFinishedAt: new Date(),
+        lastSyncFinishedAt: now,
         lastSyncStatus: "success",
         lastSyncError: null,
-        updatedAt: new Date(),
+        updatedAt: now,
       })
       .where(eq(githubAccounts.id, account.id));
 
-    return {
-      counts: {
-        fetched: repos.length,
-        insertedOrUpdated: repos.length,
-        unstarred,
-      },
-      pageCount: pages,
-      failedCount: 0,
-    };
+    return resultFromRun(completed);
   } catch (error) {
-    await db
-      .update(githubAccounts)
-      .set({
-        lastSyncFinishedAt: new Date(),
-        lastSyncStatus: "error",
-        lastSyncError: error instanceof Error ? error.message : "Unknown sync error",
-        updatedAt: new Date(),
-      })
-      .where(eq(githubAccounts.id, account.id));
-
-    throw error;
+    return resultFromRun(await markSyncRunFailed(run, account.id, error));
   }
 }

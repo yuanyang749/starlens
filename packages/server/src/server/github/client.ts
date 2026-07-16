@@ -38,6 +38,39 @@ async function githubFetch(token: string, url: string, accept: string) {
   return response;
 }
 
+export type StarredReposPage = {
+  repos: NormalizedGitHubStarredRepo[];
+  hasNextPage: boolean;
+};
+
+// 首次同步按页处理，而不是先把全部收藏拉到内存再逐个写库。
+// 单页结果可以安全重试；由 sync_runs.next_page 持久化断点。
+export async function listStarredReposPage(
+  token: string,
+  page: number,
+  perPage = 50,
+): Promise<StarredReposPage> {
+  const safePage = Math.max(1, Math.floor(page));
+  const safePerPage = Math.min(100, Math.max(1, Math.floor(perPage)));
+  const url = new URL("https://api.github.com/user/starred");
+  url.searchParams.set("sort", "created");
+  url.searchParams.set("direction", "desc");
+  url.searchParams.set("per_page", String(safePerPage));
+  url.searchParams.set("page", String(safePage));
+
+  const response = await githubFetch(
+    token,
+    url.toString(),
+    "application/vnd.github.star+json",
+  );
+  const repos = ((await response.json()) as GitHubStarredPayload[]).map(normalizeGitHubStarredRepo);
+
+  return {
+    repos,
+    hasNextPage: Boolean(nextPageUrl(response.headers.get("link"))),
+  };
+}
+
 export async function listAllStarredRepos(token: string) {
   const repos: NormalizedGitHubStarredRepo[] = [];
   let pages = 0;

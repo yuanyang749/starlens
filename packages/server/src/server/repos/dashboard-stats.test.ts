@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
-  DASHBOARD_COMMUNITY_REPO_LIMIT,
+  DASHBOARD_TOP_STARRED_REPO_LIMIT,
   buildAttentionReasons,
   completeMonthlyTrend,
+  isAttentionFilter,
   toIsoDateString,
 } from "./dashboard-stats";
 
 describe("dashboard stats", () => {
-  it("社区热门固定展示 10 个仓库", () => {
-    expect(DASHBOARD_COMMUNITY_REPO_LIMIT).toBe(10);
+  it("收藏中高星项目固定展示 10 个仓库", () => {
+    expect(DASHBOARD_TOP_STARRED_REPO_LIMIT).toBe(10);
+  });
+
+  it("只接受稳定的待关注筛选项", () => {
+    expect(isAttentionFilter("stale")).toBe(true);
+    expect(isAttentionFilter("unknown")).toBe(false);
   });
 
   it("补齐跨年的最近 12 个月并保持时间顺序", () => {

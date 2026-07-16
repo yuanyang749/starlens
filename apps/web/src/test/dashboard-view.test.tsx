@@ -44,7 +44,7 @@ beforeEach(() => {
               ],
               totalFavorites: 5,
               recentAdded: 12,
-              attention: { total: 28, stale: 16, archived: 2, untagged: 11, missingMetadata: 3 },
+              attention: { total: 28, stale: 16, archived: 2, disabled: 1, untagged: 11, missingMetadata: 3 },
               attentionRepos: [
                 {
                   id: "repo-1",
@@ -61,7 +61,7 @@ beforeEach(() => {
                 { month: "2026-06", count: 5 },
                 { month: "2026-07", count: 7 },
               ],
-              topRepos: [{ fullName: "owner/popular", language: "TypeScript", stargazersCount: 100000 }],
+              topStarredRepos: [{ fullName: "owner/popular", language: "TypeScript", stargazersCount: 100000 }],
             },
           }),
         ),
@@ -77,7 +77,7 @@ afterEach(() => {
 });
 
 describe("DashboardView", () => {
-  it("优先展示个人收藏洞察而不是重复的社区热度指标", async () => {
+  it("展示个人收藏洞察，并准确标注高星项目的数据来源", async () => {
     const element = mount(<DashboardView />);
     await flushDashboard();
 
@@ -87,7 +87,23 @@ describe("DashboardView", () => {
     expect(element.textContent).toContain("近 30 天新增");
     expect(element.textContent).toContain("待关注仓库");
     expect(element.textContent).toContain("每月新增 Stars");
+    expect(element.textContent).toContain("收藏中高 Star 项目");
+    expect(element.textContent).not.toContain("GitHub 社区 Stars 排名前 10");
     expect(element.textContent).not.toContain("最热门标星");
+  });
+
+  it("按待关注原因重新请求对应仓库列表", async () => {
+    const element = mount(<DashboardView />);
+    await flushDashboard();
+
+    const staleFilter = Array.from(element.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("过时 16"),
+    );
+    act(() => staleFilter?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await flushDashboard();
+
+    const requests = vi.mocked(fetch).mock.calls.map(([input]) => String(input));
+    expect(requests).toContain("/api/stats?attention=stale");
   });
 
   it("点击待关注仓库会进入对应详情", async () => {

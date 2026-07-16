@@ -21,6 +21,11 @@ function mount(node: React.ReactNode) {
   document.body.appendChild(el);
   const root = createRoot(el);
   act(() => root.render(<TooltipProvider>{node}</TooltipProvider>));
+  // 中文注释：本组用例验证仓库列表与详情交互，显式切换到当前产品提供的仓库页。
+  const reposEntry = Array.from(el.querySelectorAll("button")).find((button) =>
+    button.getAttribute("aria-label") === "全部 Stars",
+  );
+  act(() => reposEntry?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
   mountedRoots.push(root);
   return { el, root };
 }
@@ -99,12 +104,16 @@ beforeEach(() => {
                   { language: "Python", count: 1 },
                 ],
                 totalFavorites: 1,
+                recentAdded: 0,
+                attention: { total: 0, stale: 0, archived: 0, disabled: 0, untagged: 0, missingMetadata: 0 },
+                attentionRepos: [],
+                lastSyncedAt: null,
                 mostStarredRepo: { fullName: "owner/repo", stargazersCount: 100 },
                 monthlyTrend: [
                   { month: "2026-05", count: 1 },
                   { month: "2026-06", count: 2 },
                 ],
-                topRepos: [
+                topStarredRepos: [
                   { fullName: "owner/repo", language: "TypeScript", stargazersCount: 100 }
                 ],
               },
@@ -114,7 +123,24 @@ beforeEach(() => {
       }
 
       return Promise.resolve(
-        new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 3, unstarred: 0 } } })),
+        new Response(JSON.stringify({
+          ok: true,
+          data: {
+            runId: "sync-1",
+            status: "success",
+            startedAt: "2026-07-15T00:00:00.000Z",
+            finishedAt: "2026-07-15T00:00:01.000Z",
+            durationMs: 1000,
+            nextPage: 2,
+            pageCount: 1,
+            failedCount: 0,
+            errorSummary: null,
+            errorLevel: null,
+            counts: { fetched: 3, insertedOrUpdated: 3, unstarred: 0 },
+            history: [],
+            continuation: { required: false, nextRequestAfterMs: null },
+          },
+        })),
       );
     }),
   );
@@ -665,12 +691,46 @@ describe("workbench view", () => {
 
       if (url === "/api/sync" && init?.method === "POST") {
         return Promise.resolve(
-          new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+          new Response(JSON.stringify({
+            ok: true,
+            data: {
+              runId: "sync-empty",
+              status: "success",
+              startedAt: "2026-07-15T00:00:00.000Z",
+              finishedAt: "2026-07-15T00:00:00.000Z",
+              durationMs: 0,
+              nextPage: 1,
+              pageCount: 1,
+              failedCount: 0,
+              errorSummary: null,
+              errorLevel: null,
+              counts: { fetched: 0, insertedOrUpdated: 0, unstarred: 0 },
+              history: [],
+              continuation: { required: false, nextRequestAfterMs: null },
+            },
+          })),
         );
       }
 
       return Promise.resolve(
-        new Response(JSON.stringify({ ok: true, data: { status: "success", counts: { fetched: 0, unstarred: 0 } } })),
+        new Response(JSON.stringify({
+          ok: true,
+          data: {
+            runId: "sync-empty",
+            status: "success",
+            startedAt: "2026-07-15T00:00:00.000Z",
+            finishedAt: "2026-07-15T00:00:00.000Z",
+            durationMs: 0,
+            nextPage: 1,
+            pageCount: 1,
+            failedCount: 0,
+            errorSummary: null,
+            errorLevel: null,
+            counts: { fetched: 0, insertedOrUpdated: 0, unstarred: 0 },
+            history: [],
+            continuation: { required: false, nextRequestAfterMs: null },
+          },
+        })),
       );
     });
 
@@ -683,5 +743,61 @@ describe("workbench view", () => {
       (typeof input === "string" ? input : input.toString()) === "/api/sync" && init?.method === "POST",
     );
     expect(syncCalls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders a failed sync message as an error banner", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.startsWith("/api/search")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: createSearchPayload(mockRepoDetails.slice(0, 3)),
+        })));
+      }
+
+      if (url === "/api/repos/repo-1") {
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: mockRepoDetails[0] })));
+      }
+
+      if (url === "/api/sync" && init?.method === "POST") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: {
+            runId: null,
+            status: "error",
+            startedAt: "2026-07-16T03:27:48.659Z",
+            finishedAt: "2026-07-16T03:27:48.659Z",
+            durationMs: 0,
+            nextPage: 1,
+            pageCount: 0,
+            failedCount: 1,
+            errorSummary: "sync_runs relation does not exist",
+            errorLevel: "unknown",
+            counts: { fetched: 0, insertedOrUpdated: 0, unstarred: 0 },
+            history: [],
+            continuation: { required: false, nextRequestAfterMs: null },
+          },
+        })));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: {} })));
+    }));
+
+    const { el } = mount(<WorkbenchView userName="Tester" />);
+    await flushWorkbench();
+
+    const syncButton = el.querySelector('button[aria-label="立即同步"]') as HTMLButtonElement | null;
+    await act(async () => {
+      syncButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+    await flushWorkbench();
+
+    const banner = Array.from(el.querySelectorAll(".workbench-banner")).find((node) =>
+      node.textContent?.includes("同步失败"),
+    );
+    expect(banner?.className).toContain("workbench-banner--error");
+    expect(banner?.getAttribute("role")).toBe("alert");
   });
 });

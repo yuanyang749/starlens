@@ -103,10 +103,12 @@ function paginated(items: RepoSummary[], page = 1, total = items.length): Pagina
 
 function syncFixture(): SyncResult {
   return {
+    runId: "sync-run-1",
     status: "success",
     startedAt: "2026-05-28T00:00:00.000Z",
     finishedAt: "2026-05-28T00:00:01.000Z",
     durationMs: 1000,
+    nextPage: 2,
     pageCount: 1,
     failedCount: 0,
     errorSummary: null,
@@ -117,6 +119,7 @@ function syncFixture(): SyncResult {
       unstarred: 0,
     },
     history: [],
+    continuation: { required: false, nextRequestAfterMs: null },
   };
 }
 
@@ -303,6 +306,9 @@ describe("useMobileWorkbench", () => {
 
   it("loads the next repository page without replacing existing results", async () => {
     const hook = renderHook();
+
+    // 中文注释：移动端默认进入对话页；分页行为仅在仓库列表页生效。
+    act(() => hook.current.actions.setMode("all"));
 
     await waitFor(() => expect(hook.current.repos.map((repo) => repo.id)).toEqual([repoOne.id]));
 

@@ -63,6 +63,8 @@ Use this endpoint before detail lookup when the user provides a topic, partial n
 
 Trigger GitHub Stars sync for the authenticated StarLens user. Use only when the user asks to refresh or sync.
 
+The endpoint processes one page per request. The bundled `sync_stars` tool already follows `status: "running"` automatically. Raw HTTP callers must repeat `POST /api/sync` while `data.continuation.required` is `true`; an interrupted or failed run resumes from its stored page on the next request.
+
 ## Update Repository State
 
 `PATCH /api/repos/{idOrFullName}`

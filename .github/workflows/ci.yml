@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.task }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - lint
+          - test
+          - build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enable Corepack
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run lint checks
+        if: matrix.task == 'lint'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          # 中文注释：全量 lint 仍有既有基线债务；当前 PR 先严格检查实际修改的 Web/Mobile 源码。
+          lint_changed_files() {
+            local package_name="$1"
+            local source_path="$2"
+            local package_path="$3"
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$GITHUB_SHA" -- "$source_path" \
+              | rg '\.(ts|tsx)$' \
+              | sed "s#^${package_path}/##" \
+              | xargs -r pnpm --filter "$package_name" exec eslint
+          }
+          lint_changed_files @starlens/web apps/web/src apps/web
+          lint_changed_files @starlens/mobile apps/mobile/src apps/mobile
+      - name: Run automated tests
+        if: matrix.task == 'test'
+        run: |
+          pnpm build:packages
+          pnpm check:api-shims
+          pnpm check:docs
+          pnpm --filter @starlens/web test
+          pnpm --filter @starlens/mobile test
+          pnpm --filter @starlens/server test
+          pnpm --filter @starlens/workbench test
+          pnpm --filter @starlens-app/agent-tools test
+          pnpm --filter @starlens-app/cli test
+      - name: Build packages and applications
+        if: matrix.task == 'build'
+        run: |
+          pnpm build:packages
+          pnpm --filter @starlens/web build
+          pnpm --filter @starlens/mobile build

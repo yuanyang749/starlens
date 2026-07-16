@@ -103,7 +103,7 @@ Token 适合调用：
 | --- | --- |
 | 搜索仓库 | `GET /api/search` |
 | 查看详情 | `GET /api/repos/:id` |
-| 触发同步 | `POST /api/sync` |
+| 触发同步 | `POST /api/sync`（响应为 `running` 时按 `continuation` 续跑） |
 | 更新收藏和备注 | `PATCH /api/repos/:id` |
 | 添加标签 | `POST /api/repos/:id/tags` |
 | 删除标签 | `DELETE /api/repos/:id/tags/:tag` |
@@ -366,7 +366,7 @@ corepack pnpm mcp:start
 | --- | --- |
 | `search_stars` | 搜索和过滤 starred repositories |
 | `show_star` | 查看单个仓库详情 |
-| `sync_stars` | 触发 GitHub Stars 同步 |
+| `sync_stars` | 触发 GitHub Stars 同步（工具会自动完成分页续跑） |
 | `favorite_star` | 标记重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态） |
 | `unfavorite_star` | 取消重点收藏（仅本地标记，不影响 GitHub 上的真实 star 状态） |
 | `star_repo` | 真实调用 GitHub star API（支持任意 owner/repo，哪怕之前从未收藏过） |

@@ -172,22 +172,28 @@ test("search calls /api/search with a Bearer token and emits json results", asyn
   }
 });
 
-test("sync posts to /api/sync with a Bearer token and renders a table", async () => {
+test("sync follows running pages with a Bearer token and renders the completed result", async () => {
   const dir = await mkdtemp(join(tmpdir(), "starlens-cli-"));
   const tokenPath = join(dir, "token");
   await runCli(["login", "--token", "stl_sync_token", "--token-path", tokenPath]);
 
   try {
+    let syncCalls = 0;
+    const requestTimes = [];
     await withApiServer((request, response) => {
       assert.equal(request.method, "POST");
       assert.equal(request.url, "/api/sync");
+      syncCalls += 1;
+      requestTimes.push(Date.now());
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({
         ok: true,
         data: {
-          status: "started",
+          status: syncCalls === 1 ? "running" : "success",
           startedAt: "2026-05-05T12:00:00.000Z",
+          finishedAt: syncCalls === 1 ? null : "2026-05-05T12:00:03.000Z",
           counts: { fetched: 3, insertedOrUpdated: 2, unstarred: 1 },
+          continuation: { required: syncCalls === 1, nextRequestAfterMs: syncCalls === 1 ? 25 : null },
         },
       }));
     }, async (apiBaseUrl, requests) => {
@@ -195,8 +201,10 @@ test("sync posts to /api/sync with a Bearer token and renders a table", async ()
 
       assert.equal(result.code, 0, result.stderr);
       assert.equal(requests[0].authorization, "Bearer stl_sync_token");
+      assert.equal(requests.length, 2);
+      assert.ok(requestTimes[1] - requestTimes[0] >= 20, "续跑请求应遵守服务端建议的等待时间");
       assert.match(result.stdout, /Status/);
-      assert.match(result.stdout, /started/);
+      assert.match(result.stdout, /success/);
       assert.match(result.stdout, /Fetched/);
     });
   } finally {
