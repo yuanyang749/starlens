@@ -174,6 +174,8 @@ export function ChatView({
   useEffect(() => {
     if (!restoredRef.current) return;
     if (conversationId && conversationId !== activeConvId) {
+      // 中文注释：conversationId 来自对话流这个外部状态源；这里有意同步侧栏选中项，避免首次创建会话后仍显示未选中。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveConvId(conversationId);
       loadConversations();
     }
@@ -794,6 +796,7 @@ const TOOL_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ c
   
   // 危险操作与同步
   unstar_repo: { label: "取消 GitHub 星标", icon: StarOff },
+  sync_stars: { label: "同步 GitHub 收藏", icon: RefreshCw },
   
   // 流程控制
   submit_answer: { label: "输出最终解答", icon: CheckCircle2 },

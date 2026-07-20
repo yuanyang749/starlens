@@ -1,16 +1,21 @@
 /** @vitest-environment node */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { searchReposMock, getRepoDetailMock, getRepoStatsMock } = vi.hoisted(() => ({
+const { searchReposMock, getRepoDetailMock, getRepoStatsMock, syncGitHubStarsMock } = vi.hoisted(() => ({
   searchReposMock: vi.fn(),
   getRepoDetailMock: vi.fn(),
   getRepoStatsMock: vi.fn(),
+  syncGitHubStarsMock: vi.fn(),
 }));
 
 vi.mock("@starlens/server/server/repos/repository", () => ({
   searchRepos: searchReposMock,
   getRepoDetail: getRepoDetailMock,
   getRepoStats: getRepoStatsMock,
+}));
+
+vi.mock("@starlens/server/server/github/sync", () => ({
+  syncGitHubStars: syncGitHubStarsMock,
 }));
 
 // 中文注释：guardedFetch 会做真实 DNS 校验，测试环境里透传给（已 stub 的）全局 fetch。
@@ -97,6 +102,24 @@ describe("agent loop (runAgentLoop)", () => {
     expect(result?.answer).toBe("找到了 owner/agent-repo。");
     expect(result?.candidates).toHaveLength(1);
     expect(result?.candidates[0]).toMatchObject({ id: "repo-1", fullName: "owner/agent-repo", source: "agent_tool_result" });
+  });
+
+  it("prompts the user to refresh after a successful chat-triggered sync", async () => {
+    syncGitHubStarsMock.mockResolvedValue({
+      status: "success",
+      pageCount: 1,
+      counts: { fetched: 165, insertedOrUpdated: 165, unstarred: 10 },
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(toolCallResponse([{ id: "call-1", name: "sync_stars", args: {} }]))
+      .mockResolvedValueOnce(toolCallResponse([{ id: "call-2", name: "submit_answer", args: { answer: "同步已完成。", repoIds: [] } }]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { runAgentLoop } = await import("@starlens/server/server/ai/ask/agent/loop");
+    const result = await runAgentLoop("同步一下仓库", "user-1", chatConfig);
+
+    expect(syncGitHubStarsMock).toHaveBeenCalledWith("user-1");
+    expect(result?.answer).toContain("请手动刷新页面");
   });
 
   it("uses the compact prompt, restricted tools, and lower output cap for a preset", async () => {

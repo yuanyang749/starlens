@@ -13,6 +13,7 @@ import { unstarRepoOnGithubForUser } from "../../../repos/github-star";
 import { hasStarredRepos } from "../../recommend";
 import { recallByLanguage, recallByOwner, recallByTopics, resolveTargetRepo } from "../../related";
 import { suggestOrganization, type OrganizationFocus } from "../../../repos/organization";
+import { syncGitHubStars } from "../../../github/sync";
 import type { SearchRepoItem } from "../types";
 import { buildSingleRepoContext } from "../ranking";
 import { runReadonlyQuery } from "./sql-executor";
@@ -93,6 +94,22 @@ async function runGetRepoDetail(userId: string, args: Record<string, unknown>, c
 
 async function runGetRepoStats(userId: string) {
   return getRepoStats(userId);
+}
+
+function waitForSyncContinuation() {
+  // 中文注释：同步服务每次只处理一页；Agent 在服务端按固定短间隔续跑，避免把中间状态交给模型处理。
+  return new Promise<void>((resolve) => setTimeout(resolve, 150));
+}
+
+async function runSyncStars(userId: string) {
+  // 中文注释：与外部 Agent 的 sync_stars 保持一致，一次工具调用完成所有分页同步后再将最终结果交给模型。
+  let result;
+  do {
+    result = await syncGitHubStars(userId);
+    if (result.status === "running") await waitForSyncContinuation();
+  } while (result.status === "running");
+
+  return result;
 }
 
 async function runReadonlyQueryTool(userId: string, args: Record<string, unknown>) {
@@ -271,6 +288,9 @@ export async function executeToolCall(
         break;
       case "get_repo_stats":
         payload = await runGetRepoStats(userId);
+        break;
+      case "sync_stars":
+        payload = await runSyncStars(userId);
         break;
       case "run_readonly_query":
         payload = await runReadonlyQueryTool(userId, args);

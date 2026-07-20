@@ -60,6 +60,14 @@ export const agentToolSchemas = [
   {
     type: "function",
     function: {
+      name: "sync_stars",
+      description: "立即同步当前用户的 GitHub 收藏到 Starlens。同步会处理所有分页；仅在用户明确要求同步、刷新或更新收藏数据时调用。",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "run_readonly_query",
       description:
         "长尾兜底工具：只有当 search_repos 的参数表达不了你需要的过滤/聚合/排序逻辑时才用（比如复杂的多条件组合、按标签数量分组统计这类）。只能写单条 SELECT（或 WITH ... SELECT）语句，只能查 starred_repos / repo_tags / repo_notes 三张表（数据库权限层面强制隔离到当前用户自己的数据，即使 SQL 里完全不写 WHERE user_id 也一样，不需要也不应该自己拼 user_id 过滤）。禁止任何写操作，禁止访问其他表。starred_repos 主要字段：id, full_name, owner_login, description, language, stargazers_count, topics(jsonb), is_favorite, starred_at_github, pushed_at_github, repo_summary, ai_summary。repo_tags: starred_repo_id, tag。repo_notes: starred_repo_id, note。",
@@ -223,6 +231,7 @@ export type AgentToolName =
   | "search_repos"
   | "get_repo_detail"
   | "get_repo_stats"
+  | "sync_stars"
   | "run_readonly_query"
   | "add_tag"
   | "remove_tag"

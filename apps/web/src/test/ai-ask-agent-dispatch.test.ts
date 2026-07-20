@@ -1,13 +1,22 @@
 /** @vitest-environment node */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { searchReposMock, searchReposRankedMock, getRepoDetailMock, getRepoStatsMock, runReadonlyQueryMock, hasStarredReposMock } = vi.hoisted(() => ({
+const {
+  searchReposMock,
+  searchReposRankedMock,
+  getRepoDetailMock,
+  getRepoStatsMock,
+  runReadonlyQueryMock,
+  hasStarredReposMock,
+  syncGitHubStarsMock,
+} = vi.hoisted(() => ({
   searchReposMock: vi.fn(),
   searchReposRankedMock: vi.fn(),
   getRepoDetailMock: vi.fn(),
   getRepoStatsMock: vi.fn(),
   runReadonlyQueryMock: vi.fn(),
   hasStarredReposMock: vi.fn(),
+  syncGitHubStarsMock: vi.fn(),
 }));
 
 vi.mock("@starlens/server/server/repos/repository", () => ({
@@ -23,6 +32,10 @@ vi.mock("@starlens/server/server/ai/recommend", () => ({
 
 vi.mock("@starlens/server/server/ai/ask/agent/sql-executor", () => ({
   runReadonlyQuery: runReadonlyQueryMock,
+}));
+
+vi.mock("@starlens/server/server/github/sync", () => ({
+  syncGitHubStars: syncGitHubStarsMock,
 }));
 
 function repo(id: string, fullName: string) {
@@ -126,5 +139,32 @@ describe("agent tool dispatch (executeToolCall)", () => {
     const result = await executeToolCall(call("c1", "run_readonly_query", { sql: "DELETE FROM starred_repos" }), "user-1", new Map());
 
     expect(JSON.parse(result.content).error).toMatch(/SELECT/);
+  });
+
+  it("exposes sync_stars and returns the authenticated user's sync result", async () => {
+    syncGitHubStarsMock
+      .mockResolvedValueOnce({
+        status: "running",
+        pageCount: 1,
+        counts: { fetched: 25, insertedOrUpdated: 25, unstarred: 0 },
+      })
+      .mockResolvedValueOnce({
+        status: "success",
+        pageCount: 2,
+        counts: { fetched: 40, insertedOrUpdated: 40, unstarred: 3 },
+      });
+    const { agentToolSchemas } = await import("@starlens/server/server/ai/ask/agent/tool-schemas");
+    const { executeToolCall } = await import("@starlens/server/server/ai/ask/agent/dispatch");
+
+    expect(agentToolSchemas.some((tool) => tool.function.name === "sync_stars")).toBe(true);
+
+    const result = await executeToolCall(call("c1", "sync_stars", {}), "user-1", new Map());
+
+    expect(syncGitHubStarsMock).toHaveBeenCalledTimes(2);
+    expect(syncGitHubStarsMock).toHaveBeenNthCalledWith(1, "user-1");
+    expect(JSON.parse(result.content)).toMatchObject({
+      status: "success",
+      counts: { fetched: 40, unstarred: 3 },
+    });
   });
 });

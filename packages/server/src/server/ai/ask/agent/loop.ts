@@ -15,6 +15,7 @@ function buildAgentSystemPrompt(today: string): string {
 - search_repos 最多尝试 3 次单独关键词。像"content"→"generation"→"creator"→"video"→"image"→"audio"→"prompt"→"writing"这种逐个试单词、指望撞中一个的策略，即使每次换的词表面不同，本质上也是同一种低效重试，一样要避免——第 3 次搜索仍不满意时，直接改用 run_readonly_query 写一条 SQL，用 description ILIKE '%关键词A%' OR description ILIKE '%关键词B%' OR ... 一次性覆盖多个关键词，而不是继续一个词一个词地试
 - get_repo_detail 用于深入了解某个已经在之前工具结果里出现过的具体仓库
 - get_repo_stats 用于统计/分布类问题；注意它返回的仓库不带 id，如果之后要具体引用某个仓库，需要再调 search_repos 或 get_repo_detail 补一个 id
+- sync_stars 用于立即同步 GitHub 收藏；仅当用户明确要求同步、刷新或更新收藏数据时调用。工具会自行完成所有分页同步，再根据最终结果说明成功或失败
 - run_readonly_query 是长尾兜底，只有当 search_repos 的参数表达不了你需要的复杂过滤/聚合/join 逻辑时才用，优先尝试用 search_repos 解决
 - recommend_for_task 适用于"我要做 XX，有哪些仓库可以参考"类任务推荐，基于全文检索召回候选
 - find_related 用于查找与某个仓库相关的其他收藏（同 owner/同语言/同 topic）
@@ -30,6 +31,7 @@ function buildAgentSystemPrompt(today: string): string {
 - 只能引用工具结果里真实出现过的仓库（id、名称、star 数等），绝对不能凭空编造
 - 如果多次尝试后确实找不到匹配的仓库，如实告诉用户"没有找到匹配的仓库"，不要为了给出答案而编造或用不相关的结果凑数
 - 写操作执行后，在回答中告知用户操作结果（成功/失败）
+- sync_stars 执行后，在回答中告知用户同步结果（获取、导入更新、取消 Star 数量）；失败时如实说明错误信息，不要声称会自动定期同步
 - unstar_repo 必须双轮确认：第一次用户要求取消 star 时，不要立即调用 unstar_repo，先用 submit_answer 回复"确认要取消 star [owner/repo] 吗？此操作不可逆，请回复'确认'继续"。只有当用户在下一轮明确回复"确认"时，才调用 unstar_repo 执行。如果用户回复其他内容或改主意，则不执行
 - 你的工具调用预算比较充裕（最多约 ${MAX_AGENT_ITERATIONS - 1} 次），不需要因为怕超预算而仓促给答案，但每次调用都应该带来新信息，不要浪费在语义重复的搜索上；预算快用完时系统会额外提醒你
 - 必须以调用 submit_answer 结束整个流程，这是唯一被接受的终止方式。一旦你觉得信息已经足够写出答案，下一步动作就必须是调用 submit_answer，不能先用纯文字回复"总结"一遍再等下一轮才提交——那一轮会被视为无效，白白浪费预算
@@ -72,6 +74,7 @@ const ITERATIONS_REMAINING_WARNING_THRESHOLD = 3;
 // 每次换的词表面不同，系统提示词里"别换同义词重试"的静态约束堵不住这种模式。跟"剩余轮次
 // 预警"同一个思路，用代码层面的调用计数强制插入一次性提醒，比继续加提示词文案更可靠。
 const SEARCH_REPOS_NUDGE_THRESHOLD = 3;
+const SYNC_REFRESH_GUIDANCE = "提示：同步数据已经写入，请手动刷新页面后查看最新的仓库列表、数量和数据看板。";
 
 // 中文注释：调试专用事件钩子——生产路径（route.ts → answerWithAgent，不传 opts）完全不受影响，
 // 只有显式传入 onEvent 的调用方（目前只有 scripts/debug-ai-ask.ts）才会收到逐轮事件。
@@ -110,6 +113,20 @@ function buildAskResult(answer: string, repoIds: unknown, cache: Map<string, Sea
     .map((item, index) => toRecalledCandidate(item, index, "AI Agent 在检索过程中确认的相关仓库"));
 
   return { answer: stripThinkBlocks(answer).trim() || "已完成检索，但没有生成文字说明。", candidates };
+}
+
+function isSuccessfulSyncResult(content: string) {
+  try {
+    const payload = JSON.parse(content) as { status?: unknown };
+    return payload.status === "success";
+  } catch {
+    return false;
+  }
+}
+
+function appendSyncRefreshGuidance(answer: string) {
+  // 中文注释：对话侧缓存不会因服务端同步自动失效，成功同步后统一补充刷新提示，避免左侧计数与新数据不一致。
+  return answer.includes("刷新页面") ? answer : `${answer.trim()}\n\n${SYNC_REFRESH_GUIDANCE}`;
 }
 
 // 中文注释：主人明确要求不做"答案兜底"——判定不支持 tool-calling/循环耗尽都直接返回 null，
@@ -152,6 +169,7 @@ export async function runAgentLoop(
   let noToolCallStreak = 0;
   let searchReposCallCount = 0;
   let searchReposNudgeSent = false;
+  let shouldPromptSyncRefresh = false;
   // 中文注释：主模型请求失败时，整个循环剩余部分改用兜底模型——主模型这次失败大概率不是
   // 偶发抖动（网关/上游挂了），继续拿它试后面的轮次意义不大，切一次就一直用到底。
   let activeConfig = config;
@@ -266,8 +284,9 @@ export async function runAgentLoop(
         onStream?.({ type: "error", message: "回答生成失败，请重试。" });
         return null;
       }
-      onEvent?.({ type: "submit_answer", iteration, answer: args.answer, repoIds: args.repoIds });
-      const result = buildAskResult(args.answer, args.repoIds, cache);
+      const answer = shouldPromptSyncRefresh ? appendSyncRefreshGuidance(args.answer) : args.answer;
+      onEvent?.({ type: "submit_answer", iteration, answer, repoIds: args.repoIds });
+      const result = buildAskResult(answer, args.repoIds, cache);
       // 流式模式下发送 done 事件（token 已在流式过程中逐字转发，这里只发最终完整结果 + candidates）
       onStream?.({ type: "done", answer: result.answer, candidates: result.candidates, usage: totalUsage });
       return result;
@@ -302,6 +321,9 @@ export async function runAgentLoop(
       onEvent?.({ type: "tool_call", iteration, name: call.function.name, arguments: call.function.arguments, result: resultMessage.content });
       messages.push(resultMessage);
       if (call.function.name === "search_repos") searchReposCallCount += 1;
+      if (call.function.name === "sync_stars" && isSuccessfulSyncResult(resultMessage.content)) {
+        shouldPromptSyncRefresh = true;
+      }
     }
 
     if (!searchReposNudgeSent && searchReposCallCount >= SEARCH_REPOS_NUDGE_THRESHOLD) {
