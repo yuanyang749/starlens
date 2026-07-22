@@ -195,25 +195,6 @@ export function LandingPage({ githubAuthEnabled = true }: { githubAuthEnabled?: 
       <main>
         <section id="hero" className="landing-hero landing-section">
           <div className="landing-hero__copy">
-            <a
-              href="https://forum.trae.cn/t/topic/70912"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="landing-contest-banner"
-              aria-label="前往 TRAE AI 创造力大赛为 Starlens 投票"
-            >
-              <div className="landing-contest-banner__badge">
-                <span>TRAE AI 大赛</span>
-              </div>
-              <div className="landing-contest-banner__text">
-                Starlens 正在参加“TRAE AI 创造力大赛”！如果它帮到了你，请为我投票 💜
-              </div>
-              <div className="landing-contest-banner__go">
-                <span>去投票</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </div>
-            </a>
-
             <p className="landing-kicker">
               <Star className="h-4 w-4 fill-current" />
               你的 GitHub Stars 智能搜索与管理中心
